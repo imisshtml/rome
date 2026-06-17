@@ -7,6 +7,7 @@ import {
   useArenaValor,
   useMultiplayerMeta,
   useLocalPlayerKey,
+  useDispatchAction,
 } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { PHASE_LABELS } from '../types/gameTypes';
@@ -18,6 +19,7 @@ export const DebugPanel: React.FC = () => {
   const arenaValor = useArenaValor();
   const mpMeta = useMultiplayerMeta();
   const localPlayerKey = useLocalPlayerKey();
+  const dispatch = useDispatchAction();
   const { joinCode, isOnline, startGame, session } = useMultiplayer();
 
   const currentPlayer = state.players.find(
@@ -50,6 +52,20 @@ export const DebugPanel: React.FC = () => {
             {session?.isHost && state.status === 'lobby' ? (
               <Pressable style={styles.startBtn} onPress={() => startGame()}>
                 <Text style={styles.startBtnText}>Start Game</Text>
+              </Pressable>
+            ) : null}
+            {state.status === 'active' ? (
+              <Pressable
+                style={styles.endBtn}
+                onPress={() =>
+                  dispatch({
+                    type: 'END_GAME',
+                    playerId: localPlayerKey,
+                    timestamp: Date.now(),
+                  })
+                }
+              >
+                <Text style={styles.endBtnText}>End Game (scores)</Text>
               </Pressable>
             ) : null}
           </View>
@@ -258,6 +274,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startBtnText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 11,
+  },
+  endBtn: {
+    backgroundColor: '#8E44AD',
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  endBtnText: {
     color: '#fff',
     fontWeight: '800',
     fontSize: 11,

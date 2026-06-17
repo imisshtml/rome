@@ -1,6 +1,8 @@
 import { CardInstance, CardLocation } from './cardTypes';
 
-export type GamePhase = 'DRAW' | 'MAIN' | 'ARENA' | 'BUY' | 'END';
+export type GamePhase = 'PREGAME' | 'MAIN' | 'CLEANUP';
+
+export type GameStatus = 'lobby' | 'pregame' | 'active' | 'finished';
 
 export type GameActionType =
   | 'PLAY_CARD'
@@ -10,7 +12,9 @@ export type GameActionType =
   | 'DISCARD_CARD'
   | 'END_PHASE'
   | 'MOVE_CARD'
-  | 'START_GAME';
+  | 'START_GAME'
+  | 'PLAYER_READY'
+  | 'END_GAME';
 
 export interface GameAction {
   type: GameActionType;
@@ -39,7 +43,7 @@ export interface PlayerState {
 
 export interface GameState {
   id: string;
-  status?: 'lobby' | 'active' | 'finished';
+  status?: GameStatus;
   version?: number;
   players: PlayerState[];
   arenaCard: CardInstance | null;
@@ -53,6 +57,14 @@ export interface GameState {
   phase: GamePhase;
   turnNumber: number;
   actionLog: GameAction[];
+  /** Player ids who clicked Ready during pregame */
+  readyPlayerIds: string[];
+  /** Coins gathered by the active player this turn (for buys) */
+  turnCoins: number;
+  /** Valor from cards played this turn by the active player */
+  turnValor: number;
+  /** Set when status is finished */
+  winnerId?: string | null;
 }
 
 export interface DropZoneConfig {
@@ -63,9 +75,7 @@ export interface DropZoneConfig {
 }
 
 export const PHASE_LABELS: Record<GamePhase, string> = {
-  DRAW: 'Draw Phase',
+  PREGAME: 'Review Board',
   MAIN: 'Main Phase',
-  ARENA: 'Arena Phase',
-  BUY: 'Buy Phase',
-  END: 'End Phase',
+  CLEANUP: 'Clean Up',
 };

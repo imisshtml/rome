@@ -4,6 +4,7 @@ import {
   applyActionWithPhaseRules,
   buildPlayerSetupsFromDb,
   createInitialGameState,
+  createPregameState,
   createLobbyGameState,
   rehydrateGameState,
   MAX_PLAYERS,
@@ -275,7 +276,7 @@ export class GameSyncService {
       });
     }
 
-    const initialState = createInitialGameState(setups, this.session.gameId);
+    const initialState = createPregameState(setups, this.session.gameId);
     initialState.version = dbGame.version;
 
     return this.persistState(initialState, null);

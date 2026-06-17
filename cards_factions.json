@@ -1,0 +1,1774 @@
+{
+  "version": "0.1-prototype",
+  "currency_name": "Coin",
+  "factions": {
+    "Ludus": {
+      "banding_bonus": "Draw 1 card",
+      "role": "draw, deck refinement, arena pressure"
+    },
+    "Senate": {
+      "banding_bonus": "+2 Coin",
+      "role": "control, sabotage, recursion, gallery/item manipulation"
+    },
+    "Legion": {
+      "banding_bonus": "Gain 1 Favor card",
+      "role": "flexibility, copying, Imperial Favor, Augury"
+    }
+  },
+  "recommended_sql_columns": [
+    {
+      "name": "id",
+      "type": "text primary key"
+    },
+    {
+      "name": "slug",
+      "type": "text unique"
+    },
+    {
+      "name": "image",
+      "type": "text nullable"
+    },
+    {
+      "name": "name",
+      "type": "text"
+    },
+    {
+      "name": "card_type",
+      "type": "text"
+    },
+    {
+      "name": "faction",
+      "type": "text nullable"
+    },
+    {
+      "name": "cost",
+      "type": "integer"
+    },
+    {
+      "name": "valor",
+      "type": "integer"
+    },
+    {
+      "name": "victory_points",
+      "type": "integer nullable"
+    },
+    {
+      "name": "victory_formula",
+      "type": "text nullable"
+    },
+    {
+      "name": "deck_qty",
+      "type": "integer"
+    },
+    {
+      "name": "timing",
+      "type": "text"
+    },
+    {
+      "name": "effect_text",
+      "type": "text"
+    },
+    {
+      "name": "effect_keywords",
+      "type": "jsonb"
+    },
+    {
+      "name": "rules_notes",
+      "type": "text nullable"
+    },
+    {
+      "name": "is_active",
+      "type": "boolean default true"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz default now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz default now()"
+    }
+  ],
+  "cards": [
+    {
+      "id": "LEG-001",
+      "slug": "legion-recruit",
+      "image": "legion-recruit",
+      "name": "Legion Recruit",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. You may destroy a card from your hand or discard. OR destroy this to gain an Imperial Favor.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "favor"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-002",
+      "slug": "augur-s-omen",
+      "image": "augur-s-omen",
+      "name": "Augur's Omen",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "Consult the Augur.",
+      "effect_keywords": [
+        "augury"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-003",
+      "slug": "camp-initiate",
+      "image": "camp-initiate",
+      "name": "Camp Initiate",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. You may destroy a card from your hand or discard. OR destroy this to gain an Imperial Favor.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "favor"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-004",
+      "slug": "field-augury",
+      "image": "field-augury",
+      "name": "Field Augury",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. Consult the Augur.",
+      "effect_keywords": [
+        "Coin",
+        "augury"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-005",
+      "slug": "shield-drill",
+      "image": "shield-drill",
+      "name": "Shield Drill",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. Destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-006",
+      "slug": "auxiliary-envoy",
+      "image": "auxiliary-envoy",
+      "name": "Auxiliary Envoy",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. This card may count as Ludus or Senate this turn.",
+      "effect_keywords": [
+        "Coin",
+        "wild_faction"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-007",
+      "slug": "imperial-commendation",
+      "image": "imperial-commendation",
+      "name": "Imperial Commendation",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "Gain an Imperial Favor.",
+      "effect_keywords": [
+        "favor"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-008",
+      "slug": "scout-formation",
+      "image": "scout-formation",
+      "name": "Scout Formation",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. Look at the top 2 cards of your deck. Put one on top and one on bottom.",
+      "effect_keywords": [
+        "Coin",
+        "scry"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-009",
+      "slug": "tactical-seizure",
+      "image": "tactical-seizure",
+      "name": "Tactical Seizure",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Gain a card from the Gallery costing 4 or less. Then destroy a card in the Gallery.",
+      "effect_keywords": [
+        "gain",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-010",
+      "slug": "battlefield-mimicry",
+      "image": "battlefield-mimicry",
+      "name": "Battlefield Mimicry",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Copy the effect of another card in play costing 5 or less.",
+      "effect_keywords": [
+        "copy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-011",
+      "slug": "standards-raised",
+      "image": "standards-raised",
+      "name": "Standards Raised",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Gain the faction bonus of Ludus, Senate, or Legion this turn.",
+      "effect_keywords": [
+        "faction_bonus"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-012",
+      "slug": "legion-cohort",
+      "image": "legion-cohort",
+      "name": "Legion Cohort",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": null,
+      "victory_formula": "1 VP per Legion card in deck",
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. This card is worth 1 VP for each Legion card in your deck.",
+      "effect_keywords": [
+        "Coin",
+        "scaling_vp"
+      ],
+      "rules_notes": "Scaling VP should be capped during balance testing if it runs away."
+    },
+    {
+      "id": "LEG-013",
+      "slug": "augur-purge",
+      "image": "augur-purge",
+      "name": "Augur Purge",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Consult the Augur, then you may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "augury",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-014",
+      "slug": "spearline-advance",
+      "image": "spearline-advance",
+      "name": "Spearline Advance",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 4,
+      "valor": 3,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Destroy a card in the Gallery.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-015",
+      "slug": "standard-bearer",
+      "image": "standard-bearer",
+      "name": "Standard Bearer",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Gain an Imperial Favor.",
+      "effect_keywords": [
+        "Coin",
+        "favor"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-016",
+      "slug": "eagle-s-reading",
+      "image": "eagle-s-reading",
+      "name": "Eagle's Reading",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Consult the Augur.",
+      "effect_keywords": [
+        "Coin",
+        "augury"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-017",
+      "slug": "recovered-favor",
+      "image": "recovered-favor",
+      "name": "Recovered Favor",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Take an Imperial Favor from the Favor discard pile of your choice.",
+      "effect_keywords": [
+        "favor",
+        "discard_interaction"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-018",
+      "slug": "copied-orders",
+      "image": "copied-orders",
+      "name": "Copied Orders",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Copy any Gallery card effect from a card costing 6 or less.",
+      "effect_keywords": [
+        "copy",
+        "gallery"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-019",
+      "slug": "recruitment-reform",
+      "image": "recruitment-reform",
+      "name": "Recruitment Reform",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. When gained, you may destroy up to 2 cards from your hand and/or discard.",
+      "effect_keywords": [
+        "Coin",
+        "on_gain",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-020",
+      "slug": "marching-orders",
+      "image": "marching-orders",
+      "name": "Marching Orders",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Put a Legion card from your discard pile on top of your deck.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-021",
+      "slug": "augur-s-command",
+      "image": "augur-s-command",
+      "name": "Augur's Command",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 6,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Roll a d12. 1-3: +2 Coin. 4-9: +3 Coin. 10-12: +4 Coin. You may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "augury",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-022",
+      "slug": "praetorian-favor",
+      "image": "praetorian-favor",
+      "name": "Praetorian Favor",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 6,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. Gain an Imperial Favor.",
+      "effect_keywords": [
+        "Coin",
+        "favor"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-023",
+      "slug": "perfect-formation",
+      "image": "perfect-formation",
+      "name": "Perfect Formation",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 6,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Copy the effect of any card in play.",
+      "effect_keywords": [
+        "copy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-024",
+      "slug": "purge-the-fallen",
+      "image": "purge-the-fallen",
+      "name": "Purge the Fallen",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. Destroy any card from any discard pile.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "discard_interaction"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-025",
+      "slug": "spoils-of-war",
+      "image": "spoils-of-war",
+      "name": "Spoils of War",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Draw and play the top card of the Main deck. Destroy it at end of turn.",
+      "effect_keywords": [
+        "Coin",
+        "main_deck",
+        "temporary_play"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-026",
+      "slug": "rally-the-legion",
+      "image": "rally-the-legion",
+      "name": "Rally the Legion",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Put a Legion card from your discard pile into your hand.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-027",
+      "slug": "imperial-augury",
+      "image": "imperial-augury",
+      "name": "Imperial Augury",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 8,
+      "valor": 5,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Roll a d12. 1-3: +3 Coin. 4-9: +4 Coin. 10-12: +5 Coin. You may destroy any Item in play.",
+      "effect_keywords": [
+        "Coin",
+        "augury",
+        "item_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LEG-028",
+      "slug": "war-machine",
+      "image": "war-machine",
+      "name": "War Machine",
+      "card_type": "faction",
+      "faction": "Legion",
+      "cost": 8,
+      "valor": 5,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. Copy the effect of any Item in play.",
+      "effect_keywords": [
+        "Coin",
+        "copy",
+        "item"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-001",
+      "slug": "minor-senator",
+      "image": "minor-senator",
+      "name": "Minor Senator",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin.",
+      "effect_keywords": [
+        "Coin"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-002",
+      "slug": "quiet-purge",
+      "image": "quiet-purge",
+      "name": "Quiet Purge",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. You may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-003",
+      "slug": "temple-whisperer",
+      "image": "temple-whisperer",
+      "name": "Temple Whisperer",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. Look at the top 2 cards of any deck. Put one on top and one on bottom.",
+      "effect_keywords": [
+        "Coin",
+        "scry"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-004",
+      "slug": "party-loyalist",
+      "image": "party-loyalist",
+      "name": "Party Loyalist",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. If you have already played 2 Senate cards this turn, you may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "faction_condition"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-005",
+      "slug": "political-choice",
+      "image": "political-choice",
+      "name": "Political Choice",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin OR destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "choice"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-006",
+      "slug": "patronage",
+      "image": "patronage",
+      "name": "Patronage",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "Gain a card from the Gallery costing 4 or less.",
+      "effect_keywords": [
+        "gain",
+        "gallery"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-007",
+      "slug": "bribed-official",
+      "image": "bribed-official",
+      "name": "Bribed Official",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin OR discard this to discard an Item in play.",
+      "effect_keywords": [
+        "Coin",
+        "item_discard",
+        "reaction"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-008",
+      "slug": "gallery-edict",
+      "image": "gallery-edict",
+      "name": "Gallery Edict",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may destroy a card in the Gallery and replace it.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-009",
+      "slug": "censor-s-review",
+      "image": "censor-s-review",
+      "name": "Censor's Review",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-010",
+      "slug": "restored-decree",
+      "image": "restored-decree",
+      "name": "Restored Decree",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may place a destroyed card onto the Main deck.",
+      "effect_keywords": [
+        "Coin",
+        "destroyed_pile"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-011",
+      "slug": "item-patron",
+      "image": "item-patron",
+      "name": "Item Patron",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin OR gain an Item card costing 4 or less from the Gallery.",
+      "effect_keywords": [
+        "Coin",
+        "item",
+        "gain",
+        "choice"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-012",
+      "slug": "public-accuser",
+      "image": "public-accuser",
+      "name": "Public Accuser",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may destroy a card in the Gallery.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-013",
+      "slug": "senate-bloc",
+      "image": "senate-bloc",
+      "name": "Senate Bloc",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 1,
+      "victory_points": null,
+      "victory_formula": "1 VP per Senate card in deck",
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. This card is worth VP equal to the number of Senate cards in your deck.",
+      "effect_keywords": [
+        "Coin",
+        "scaling_vp"
+      ],
+      "rules_notes": "Scaling VP should be capped during balance testing if it runs away."
+    },
+    {
+      "id": "SEN-014",
+      "slug": "rising-speaker",
+      "image": "rising-speaker",
+      "name": "Rising Speaker",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+1 Coin OR +3 Coin if you have already played a Senate card this turn.",
+      "effect_keywords": [
+        "Coin",
+        "faction_condition"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-015",
+      "slug": "executive-privilege",
+      "image": "executive-privilege",
+      "name": "Executive Privilege",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. The next card you gain this turn goes to your hand.",
+      "effect_keywords": [
+        "Coin",
+        "gain_to_hand"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-016",
+      "slug": "legal-recovery",
+      "image": "legal-recovery",
+      "name": "Legal Recovery",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Shuffle up to 2 cards costing 4 or less from your discard pile into your deck.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-017",
+      "slug": "recovered-relic",
+      "image": "recovered-relic",
+      "name": "Recovered Relic",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 1,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Put an Item from your discard pile into your hand.",
+      "effect_keywords": [
+        "Coin",
+        "item",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-018",
+      "slug": "arena-decree",
+      "image": "arena-decree",
+      "name": "Arena Decree",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 1,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin OR during an Arena attempt, play as Sabotage: -2 Valor.",
+      "effect_keywords": [
+        "Coin",
+        "arena",
+        "sabotage",
+        "choice"
+      ],
+      "rules_notes": "May be used in the Arena response window."
+    },
+    {
+      "id": "SEN-019",
+      "slug": "senate-recall",
+      "image": "senate-recall",
+      "name": "Senate Recall",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may put a Senate card from your discard pile on top of your deck.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-020",
+      "slug": "state-funding",
+      "image": "state-funding",
+      "name": "State Funding",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 5,
+      "valor": 1,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin.",
+      "effect_keywords": [
+        "Coin"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-021",
+      "slug": "imperial-treasury",
+      "image": "imperial-treasury",
+      "name": "Imperial Treasury",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 6,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+4 Coin.",
+      "effect_keywords": [
+        "Coin"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-022",
+      "slug": "ruthless-bargain",
+      "image": "ruthless-bargain",
+      "name": "Ruthless Bargain",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 6,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Destroy a card from your hand or discard to gain +3 Coin.",
+      "effect_keywords": [
+        "Coin",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-023",
+      "slug": "forced-confession",
+      "image": "forced-confession",
+      "name": "Forced Confession",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 6,
+      "valor": 1,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Look at an opponent's hand and force them to discard a card.",
+      "effect_keywords": [
+        "Coin",
+        "opponent_discard"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-024",
+      "slug": "confiscation-order",
+      "image": "confiscation-order",
+      "name": "Confiscation Order",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 6,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. You may discard an Item in play.",
+      "effect_keywords": [
+        "Coin",
+        "item_discard"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-025",
+      "slug": "purge-the-gallery",
+      "image": "purge-the-gallery",
+      "name": "Purge the Gallery",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 7,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. Discard up to 3 cards in the Gallery and replace them.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_replace"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-026",
+      "slug": "political-retrieval",
+      "image": "political-retrieval",
+      "name": "Political Retrieval",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 7,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Put a card from your discard pile into your hand.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-027",
+      "slug": "spoils-of-influence",
+      "image": "spoils-of-influence",
+      "name": "Spoils of Influence",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 7,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Reveal the top card of the Main deck. Destroy it or gain it for free.",
+      "effect_keywords": [
+        "Coin",
+        "main_deck",
+        "destroy",
+        "gain"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-028",
+      "slug": "whispers-across-rome",
+      "image": "whispers-across-rome",
+      "name": "Whispers Across Rome",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 8,
+      "valor": 2,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+4 Coin. Reveal the top card of each player's deck. For each, discard it or return it.",
+      "effect_keywords": [
+        "Coin",
+        "topdeck_manipulation"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "SEN-029",
+      "slug": "imperial-recall",
+      "image": "imperial-recall",
+      "name": "Imperial Recall",
+      "card_type": "faction",
+      "faction": "Senate",
+      "cost": 8,
+      "valor": 2,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+4 Coin. You may place a non-Epic card from your discard pile on top of your deck.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-001",
+      "slug": "pit-initiate",
+      "image": "pit-initiate",
+      "name": "Pit Initiate",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 2,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. Destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-002",
+      "slug": "lanista-s-bargain",
+      "image": "lanista-s-bargain",
+      "name": "Lanista's Bargain",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 8,
+      "valor": 5,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+3 Coin. You may destroy a card. If you do, gain a card costing up to 1 more than the destroyed card.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "gain"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-003",
+      "slug": "spoils-of-the-fallen",
+      "image": "spoils-of-the-fallen",
+      "name": "Spoils of the Fallen",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 8,
+      "valor": 5,
+      "victory_points": 3,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+3 Coin. You may purchase a card from the destroyed pile.",
+      "effect_keywords": [
+        "Coin",
+        "destroyed_pile"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-004",
+      "slug": "epic-patron",
+      "image": "epic-patron",
+      "name": "Epic Patron",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 6,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+3 Coin. Epics cost 1 less this turn.",
+      "effect_keywords": [
+        "Coin",
+        "epic_discount"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-005",
+      "slug": "arena-runner",
+      "image": "arena-runner",
+      "name": "Arena Runner",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 4,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+1 Coin. Draw 1 card.",
+      "effect_keywords": [
+        "Coin",
+        "draw"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-006",
+      "slug": "crowd-sweep",
+      "image": "crowd-sweep",
+      "name": "Crowd Sweep",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. Destroy up to 3 cards in the Gallery and replace them.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-007",
+      "slug": "blood-rush",
+      "image": "blood-rush",
+      "name": "Blood Rush",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 6,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "Draw 3 cards, then discard 1 card.",
+      "effect_keywords": [
+        "draw",
+        "discard"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-008",
+      "slug": "school-loyalty",
+      "image": "school-loyalty",
+      "name": "School Loyalty",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coin. You may place a Ludus card from your discard pile on top of your deck.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-009",
+      "slug": "arena-scout",
+      "image": "arena-scout",
+      "name": "Arena Scout",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Reveal the top card of your deck. You may discard it.",
+      "effect_keywords": [
+        "Coin",
+        "scry"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-010",
+      "slug": "prize-claim",
+      "image": "prize-claim",
+      "name": "Prize Claim",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Gain a card from the Gallery costing 5 or less for free.",
+      "effect_keywords": [
+        "gain",
+        "gallery"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-011",
+      "slug": "relentless-fighter",
+      "image": "relentless-fighter",
+      "name": "Relentless Fighter",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Draw 1 card. You may discard the card drawn to draw a new card.",
+      "effect_keywords": [
+        "Coin",
+        "draw",
+        "filter"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-012",
+      "slug": "closed-gates",
+      "image": "closed-gates",
+      "name": "Closed Gates",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Flip up to 2 cards in the Gallery face down. They cannot be targeted or purchased until your next turn.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_lock"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-013",
+      "slug": "break-the-armory",
+      "image": "break-the-armory",
+      "name": "Break the Armory",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 6,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. During an Arena attempt, you may discard any Item in play.",
+      "effect_keywords": [
+        "Coin",
+        "item_discard",
+        "arena"
+      ],
+      "rules_notes": "Replaces the old FAST EFFECT timing."
+    },
+    {
+      "id": "LUD-014",
+      "slug": "fresh-recruits",
+      "image": "fresh-recruits",
+      "name": "Fresh Recruits",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 6,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coin. When gained, shuffle up to 2 cards from your discard pile into your deck.",
+      "effect_keywords": [
+        "Coin",
+        "on_gain",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-015",
+      "slug": "arena-counter",
+      "image": "arena-counter",
+      "name": "Arena Counter",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Draw 1 card OR during an Arena attempt, discard this to cancel a Sabotage.",
+      "effect_keywords": [
+        "draw",
+        "arena",
+        "cancel_sabotage",
+        "choice"
+      ],
+      "rules_notes": "Narrowed from general STOMP to Arena-only counterplay."
+    },
+    {
+      "id": "LUD-016",
+      "slug": "battle-rhythm",
+      "image": "battle-rhythm",
+      "name": "Battle Rhythm",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 5,
+      "valor": 3,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Draw 2 cards.",
+      "effect_keywords": [
+        "draw"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-017",
+      "slug": "sand-reader",
+      "image": "sand-reader",
+      "name": "Sand Reader",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Look at the top 2 cards of your deck. Put one on top and one on bottom.",
+      "effect_keywords": [
+        "Coin",
+        "scry"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-018",
+      "slug": "weapon-toss",
+      "image": "weapon-toss",
+      "name": "Weapon Toss",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 4,
+      "valor": 3,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Destroy a card in the Gallery.",
+      "effect_keywords": [
+        "Coin",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-019",
+      "slug": "ludus-bond",
+      "image": "ludus-bond",
+      "name": "Ludus Bond",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. If you have 2 other Ludus cards in play, you may destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "faction_condition"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-020",
+      "slug": "desperate-opening",
+      "image": "desperate-opening",
+      "name": "Desperate Opening",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin OR if this is the first card you played this turn, discard your hand and draw 5 cards.",
+      "effect_keywords": [
+        "Coin",
+        "draw",
+        "choice"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-021",
+      "slug": "armory-claim",
+      "image": "armory-claim",
+      "name": "Armory Claim",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Draw 1 card, then gain an Item card costing 5 or less from the Gallery for free.",
+      "effect_keywords": [
+        "draw",
+        "item",
+        "gain"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-022",
+      "slug": "champion-s-return",
+      "image": "champion-s-return",
+      "name": "Champion's Return",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. Put a Ludus card from your discard pile into your hand.",
+      "effect_keywords": [
+        "Coin",
+        "recursion"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-023",
+      "slug": "ludus-renown",
+      "image": "ludus-renown",
+      "name": "Ludus Renown",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 4,
+      "valor": 2,
+      "victory_points": null,
+      "victory_formula": "1 VP per Ludus card in deck",
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin. This card is worth 1 VP for each Ludus card in your deck.",
+      "effect_keywords": [
+        "Coin",
+        "scaling_vp"
+      ],
+      "rules_notes": "Scaling VP should be capped during balance testing if it runs away."
+    },
+    {
+      "id": "LUD-024",
+      "slug": "training-choice",
+      "image": "training-choice",
+      "name": "Training Choice",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coin OR destroy a card from your hand or discard.",
+      "effect_keywords": [
+        "Coin",
+        "destroy",
+        "choice"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-025",
+      "slug": "gladiatorial-celebration",
+      "image": "gladiatorial-celebration",
+      "name": "Gladiatorial Celebration",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Draw 1 card, then destroy a card in the Gallery.",
+      "effect_keywords": [
+        "draw",
+        "gallery_destroy"
+      ],
+      "rules_notes": ""
+    },
+    {
+      "id": "LUD-026",
+      "slug": "practice-bout",
+      "image": "practice-bout",
+      "name": "Practice Bout",
+      "card_type": "faction",
+      "faction": "Ludus",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Draw 2 cards, then discard 1 card from your hand.",
+      "effect_keywords": [
+        "draw",
+        "discard"
+      ],
+      "rules_notes": ""
+    }
+  ]
+}

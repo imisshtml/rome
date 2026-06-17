@@ -10,7 +10,7 @@ import { GameAction, GameState } from '../types/gameTypes';
 import {
   getNextAIAction,
   applyActionWithPhaseRules,
-  createInitialGameState,
+  createPregameState,
   MAX_PLAYERS,
 } from '../game/GameEngine';
 import { getDefaultStore } from 'jotai';
@@ -89,7 +89,7 @@ export class MultiplayerGameClient {
         isAI: true,
       })),
     ];
-    const state = createInitialGameState(setups, 'local');
+    const state = createPregameState(setups, 'local');
     this.pushState(state);
     return state;
   }

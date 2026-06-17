@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import LandingScreen from './LandingScreen';
 import LobbyScreen from './LobbyScreen';
+import PostGameScreen from './PostGameScreen';
 import GameTable from '../components/GameTable';
 import DebugPanel from '../components/DebugPanel';
 
@@ -15,6 +16,10 @@ export const AppShell: React.FC = () => {
 
   if (phase === 'lobby') {
     return <LobbyScreen />;
+  }
+
+  if (phase === 'postgame') {
+    return <PostGameScreen />;
   }
 
   return (

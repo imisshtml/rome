@@ -1,4 +1,4 @@
-import { GamePhase } from '../types/gameTypes';
+import { GamePhase, GameStatus } from '../types/gameTypes';
 
 export interface TurnPhaseConfig {
   phase: GamePhase;
@@ -7,28 +7,25 @@ export interface TurnPhaseConfig {
 }
 
 export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
-  DRAW: {
-    phase: 'DRAW',
-    autoActions: ['DRAW_CARD'],
-    allowedActions: ['END_PHASE'],
+  PREGAME: {
+    phase: 'PREGAME',
+    autoActions: [],
+    allowedActions: ['PLAYER_READY'],
   },
   MAIN: {
     phase: 'MAIN',
     autoActions: [],
-    allowedActions: ['PLAY_CARD', 'DISCARD_CARD', 'MOVE_CARD', 'END_PHASE'],
+    allowedActions: [
+      'PLAY_CARD',
+      'DISCARD_CARD',
+      'MOVE_CARD',
+      'BUY_CARD',
+      'ATTEMPT_ARENA',
+      'END_PHASE',
+    ],
   },
-  ARENA: {
-    phase: 'ARENA',
-    autoActions: [],
-    allowedActions: ['MOVE_CARD', 'ATTEMPT_ARENA', 'END_PHASE'],
-  },
-  BUY: {
-    phase: 'BUY',
-    autoActions: [],
-    allowedActions: ['BUY_CARD', 'END_PHASE'],
-  },
-  END: {
-    phase: 'END',
+  CLEANUP: {
+    phase: 'CLEANUP',
     autoActions: [],
     allowedActions: ['END_PHASE'],
   },
@@ -36,14 +33,24 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
 
 export function canPerformAction(
   phase: GamePhase,
-  actionType: string
+  actionType: string,
+  status?: GameStatus
 ): boolean {
+  if (status === 'pregame' && actionType === 'PLAYER_READY') {
+    return true;
+  }
+  if (status === 'pregame') {
+    return false;
+  }
   const config = TURN_PHASE_CONFIG[phase];
-  return config.allowedActions.includes(actionType) || config.autoActions.includes(actionType);
+  return (
+    config.allowedActions.includes(actionType) ||
+    config.autoActions.includes(actionType)
+  );
 }
 
 export function getNextPhase(current: GamePhase): GamePhase {
-  const order: GamePhase[] = ['DRAW', 'MAIN', 'ARENA', 'BUY', 'END'];
-  const idx = order.indexOf(current);
-  return idx < order.length - 1 ? order[idx + 1] : 'DRAW';
+  if (current === 'MAIN') return 'CLEANUP';
+  if (current === 'CLEANUP') return 'MAIN';
+  return 'MAIN';
 }

@@ -24,7 +24,7 @@ import {
 import { GameState } from '../types/gameTypes';
 import { createLobbyGameState } from '../game/GameEngine';
 
-export type AppPhase = 'landing' | 'lobby' | 'game';
+export type AppPhase = 'landing' | 'lobby' | 'game' | 'postgame';
 
 interface MultiplayerContextValue {
   phase: AppPhase;
@@ -66,8 +66,12 @@ function resolvePhase(
   lobby: LobbyInfo | null
 ): AppPhase {
   if (!session) return 'landing';
-  if (session.gameId === 'local') return 'game';
-  if (state?.status === 'active') return 'game';
+  if (session.gameId === 'local') {
+    if (state?.status === 'finished') return 'postgame';
+    return 'game';
+  }
+  if (state?.status === 'finished') return 'postgame';
+  if (state?.phase === 'PREGAME' || state?.status === 'active') return 'game';
   if (lobby?.status === 'lobby' || state?.status === 'lobby') return 'lobby';
   return 'lobby';
 }

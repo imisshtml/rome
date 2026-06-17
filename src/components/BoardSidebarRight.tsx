@@ -28,53 +28,73 @@ function phaseButtonSize(sidebarWidth: number): { width: number; height: number 
 
 interface BoardSidebarRightProps {
   width: number;
+  isPregame: boolean;
   coinsInPlay: number;
   valorInPlay: number;
   victoryPoints: number;
   phase: GamePhase;
   isLocalTurn: boolean;
+  isLocalReady: boolean;
+  readyCount: number;
+  totalPlayers: number;
   onEndPhase: () => void;
+  onPlayerReady: () => void;
 }
 
 const PHASE_BUTTON_LABELS: Record<GamePhase, string> = {
-  DRAW: 'End Draw',
-  MAIN: 'End Main',
-  ARENA: 'End Arena',
-  BUY: 'End Buys',
-  END: 'End Turn',
+  PREGAME: 'Ready',
+  MAIN: 'End Turn',
+  CLEANUP: 'Clean Up',
 };
 
 export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   width,
+  isPregame,
   coinsInPlay,
   valorInPlay,
   victoryPoints,
   phase,
   isLocalTurn,
+  isLocalReady,
+  readyCount,
+  totalPlayers,
   onEndPhase,
+  onPlayerReady,
 }) => {
-  const buttonLabel = PHASE_BUTTON_LABELS[phase];
+  const buttonLabel = isPregame
+    ? isLocalReady
+      ? 'Waiting…'
+      : 'Ready'
+    : PHASE_BUTTON_LABELS[phase];
   const iconSize = iconSizeForSidebar(width);
   const buttonSize = phaseButtonSize(width);
+  const canPressReady = isPregame && !isLocalReady;
+  const canPressEndTurn = !isPregame && isLocalTurn && phase === 'MAIN';
 
   return (
     <View style={[styles.sidebar, { width }]}>
       <View style={styles.bottomBlock}>
-        <Text style={styles.phaseNote}>{PHASE_LABELS[phase]}</Text>
+        <Text style={styles.phaseNote}>
+          {isPregame
+            ? `Ready ${readyCount}/${totalPlayers}`
+            : PHASE_LABELS[phase]}
+        </Text>
 
-        <View style={styles.statsRow}>
-          <StatBadge icon={costIcon} value={coinsInPlay} size={iconSize} gapAfter />
-          <StatBadge icon={valorIcon} value={valorInPlay} size={iconSize} gapAfter />
-          <StatBadge icon={victoryIcon} value={victoryPoints} size={iconSize} />
-        </View>
+        {!isPregame ? (
+          <View style={styles.statsRow}>
+            <StatBadge icon={costIcon} value={coinsInPlay} size={iconSize} gapAfter />
+            <StatBadge icon={valorIcon} value={valorInPlay} size={iconSize} gapAfter />
+            <StatBadge icon={victoryIcon} value={victoryPoints} size={iconSize} />
+          </View>
+        ) : null}
 
         <Pressable
-          onPress={onEndPhase}
-          disabled={!isLocalTurn}
+          onPress={isPregame ? onPlayerReady : onEndPhase}
+          disabled={isPregame ? !canPressReady : !canPressEndTurn}
           style={({ pressed }) => [
             styles.buttonWrap,
-            !isLocalTurn && styles.buttonDisabled,
-            pressed && isLocalTurn && styles.buttonPressed,
+            (isPregame ? !canPressReady : !canPressEndTurn) && styles.buttonDisabled,
+            pressed && (canPressReady || canPressEndTurn) && styles.buttonPressed,
           ]}
         >
           <ImageBackground

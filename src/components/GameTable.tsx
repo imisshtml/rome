@@ -69,14 +69,20 @@ export const GameTable: React.FC = () => {
   const isLocalTurn = useIsLocalTurn();
   const arenaStats = getArenaChallengeStats(state.arenaCard);
 
+  const isPregame = state.phase === 'PREGAME';
+  const isMainActive = state.status === 'active' && state.phase === 'MAIN';
+  const canInteract = isMainActive && isLocalTurn;
+  const isLocalReady = localPlayer
+    ? state.readyPlayerIds.includes(localPlayer.id)
+    : false;
+  const readyCount = state.readyPlayerIds.length;
+
   const playValor =
     localPlayer?.playArea.reduce((s, c) => s + (c.definition?.valor ?? 0), 0) ?? 0;
-  const valorInPlay = playValor + arenaValor;
-  const coinsInPlay =
-    (localPlayer?.karma ?? 0) +
-    (localPlayer?.playArea.filter(
-      (c) => c.definition.type === 'Favor' || c.definition.faction === 'Favor'
-    ).length ?? 0);
+  const valorInPlay = isMainActive && isLocalTurn
+    ? state.turnValor + playValor + arenaValor
+    : playValor + arenaValor;
+  const coinsInPlay = isMainActive && isLocalTurn ? state.turnCoins : 0;
   const victoryPoints = localPlayer?.victoryPoints ?? 0;
 
   const dispatchAction = useCallback(
@@ -93,9 +99,14 @@ export const GameTable: React.FC = () => {
   );
 
   const handleEndPhase = useCallback(() => {
-    if (!isLocalTurn) return;
+    if (!canInteract) return;
     dispatchAction('END_PHASE');
-  }, [dispatchAction, isLocalTurn]);
+  }, [dispatchAction, canInteract]);
+
+  const handlePlayerReady = useCallback(() => {
+    if (!localPlayer || !isPregame || isLocalReady) return;
+    dispatchAction('PLAYER_READY');
+  }, [dispatchAction, isPregame, isLocalReady, localPlayer]);
 
   const handleHandCardPress = useCallback((card: CardInstance) => {
     setPreviewCard(card);
@@ -107,31 +118,27 @@ export const GameTable: React.FC = () => {
 
   const handlePlayAreaCardPress = useCallback(
     (card: CardInstance) => {
-      if (!isLocalTurn) return;
-      if (state.phase === 'ARENA') {
-        dispatchAction('MOVE_CARD', {
-          cardInstanceId: card.instanceId,
-          targetZone: 'ARENA_COMMIT',
-        });
-      } else {
-        setPreviewCard(card);
-      }
+      if (!canInteract) return;
+      dispatchAction('MOVE_CARD', {
+        cardInstanceId: card.instanceId,
+        targetZone: 'ARENA_COMMIT',
+      });
     },
-    [isLocalTurn, state.phase, dispatchAction]
+    [canInteract, dispatchAction]
   );
 
   const handleBuyCard = useCallback(
     (card: CardInstance) => {
-      if (!isLocalTurn || state.phase !== 'BUY') return;
+      if (!canInteract) return;
       dispatchAction('BUY_CARD', { cardInstanceId: card.instanceId });
     },
-    [isLocalTurn, state.phase, dispatchAction]
+    [canInteract, dispatchAction]
   );
 
   const handleAttemptArena = useCallback(() => {
-    if (!isLocalTurn || state.phase !== 'ARENA') return;
+    if (!canInteract) return;
     dispatchAction('ATTEMPT_ARENA');
-  }, [isLocalTurn, state.phase, dispatchAction]);
+  }, [canInteract, dispatchAction]);
 
   const handleZoneLayout = useCallback(
     (zoneId: string) => (rect: LayoutRectangle) => {
@@ -190,7 +197,7 @@ export const GameTable: React.FC = () => {
   const handleDragEnd = useCallback(
     (card: CardInstance, x: number, y: number) => {
       setDragPosition(null);
-      if (!isLocalTurn) return;
+      if (!canInteract) return;
       const zoneId = findZoneAtPosition(x, y, card);
       setHoveredZone(null);
       if (!zoneId) return;
@@ -210,7 +217,7 @@ export const GameTable: React.FC = () => {
         dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
       }
     },
-    [isLocalTurn, dispatchAction, findZoneAtPosition, setHoveredZone]
+    [canInteract, dispatchAction, findZoneAtPosition, setHoveredZone]
   );
 
   const handleOpponentPress = useCallback((player: PlayerState) => {
@@ -289,6 +296,22 @@ export const GameTable: React.FC = () => {
         />
 
         <View style={[styles.centerColumn, { width: layout.centerW }]}>
+          {isPregame ? (
+            <View style={styles.pregameBanner}>
+              <Text style={styles.pregameTitle}>Review the board</Text>
+              <Text style={styles.pregameSub}>
+                Gallery, epics, and the arena challenge are set. Click Ready when
+                you're set — game starts when everyone is ready ({readyCount}/
+                {state.players.length}).
+              </Text>
+              {state.players.map((p) => (
+                <Text key={p.id} style={styles.pregamePlayer}>
+                  {state.readyPlayerIds.includes(p.id) ? '✓' : '○'} {p.name}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
           {/* Gallery zone — fixed height ratio */}
           <View style={[styles.galleryZone, { height: layout.galleryH }]}>
             <DropZone
@@ -296,7 +319,7 @@ export const GameTable: React.FC = () => {
               zoneType="GALLERY"
               label=""
               onLayout={handleZoneLayout('gallery')}
-              activePhase={state.phase === 'BUY'}
+              activePhase={isMainActive}
               contentColumn
               contentCenter
               style={styles.galleryDrop}
@@ -309,8 +332,8 @@ export const GameTable: React.FC = () => {
                       card={card}
                       size={layout.galleryCardSize}
                       onPress={handleCardPreview}
-                      onLongPress={(c) => state.phase === 'BUY' && handleBuyCard(c)}
-                      disabled={state.phase !== 'BUY'}
+                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                      disabled={!isMainActive}
                     />
                   ))}
                 </View>
@@ -326,7 +349,7 @@ export const GameTable: React.FC = () => {
                     zoneType="ARENA"
                     label=""
                     onLayout={handleZoneLayout('arena_challenge')}
-                    showGlow={state.phase === 'ARENA'}
+                    showGlow={isMainActive}
                     style={styles.arenaGallerySlot}
                   >
                     {state.arenaCard ? (
@@ -349,8 +372,8 @@ export const GameTable: React.FC = () => {
                       card={card}
                       size={layout.galleryCardSize}
                       onPress={handleCardPreview}
-                      onLongPress={(c) => state.phase === 'BUY' && handleBuyCard(c)}
-                      disabled={state.phase !== 'BUY'}
+                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                      disabled={!isMainActive}
                     />
                   ))}
                 </View>
@@ -365,12 +388,12 @@ export const GameTable: React.FC = () => {
               zoneType="PLAY_AREA"
               label=""
               onLayout={handleZoneLayout('play_area')}
-              activePhase={state.phase === 'MAIN'}
-              highlight={state.phase === 'MAIN' && !!draggedCard}
+              activePhase={isMainActive}
+              highlight={isMainActive && !!draggedCard}
               contentColumn
               style={StyleSheet.flatten([styles.playField, { flex: 1 }])}
             >
-              {state.phase === 'ARENA' && state.arenaCard && (
+              {isMainActive && state.arenaCard && (
                 <View style={styles.playFieldArena}>
                   <Card
                     card={state.arenaCard}
@@ -388,7 +411,7 @@ export const GameTable: React.FC = () => {
 
               <View style={styles.playFieldCards}>
                 {(localPlayer?.playArea.length ?? 0) === 0 ? (
-                  state.phase === 'MAIN' ? (
+                  isMainActive ? (
                     <Text style={styles.playFieldEmptyText}>
                       Drag cards here from your hand
                     </Text>
@@ -402,7 +425,7 @@ export const GameTable: React.FC = () => {
                         width={layout.handCardW}
                         height={layout.handCardH}
                         sizeMode="full"
-                        draggable={state.phase === 'ARENA'}
+                        draggable={isMainActive}
                         onPress={handlePlayAreaCardPress}
                         onLongPress={handleCardPreview}
                         onDragEnd={handleDragEnd}
@@ -417,10 +440,10 @@ export const GameTable: React.FC = () => {
                 zoneType="ARENA_COMMIT"
                 label=""
                 onLayout={handleZoneLayout('arena_commit')}
-                activePhase={state.phase === 'ARENA'}
-                highlight={state.phase === 'ARENA' && !!draggedCard}
+                activePhase={isMainActive}
+                highlight={isMainActive && !!draggedCard}
                 emptyText={
-                  state.phase === 'ARENA' ? 'Commit from Play Area' : undefined
+                  isMainActive ? 'Commit from Play Area' : undefined
                 }
                 style={styles.commitZone}
               >
@@ -435,7 +458,7 @@ export const GameTable: React.FC = () => {
                     onLongPress={handleCardPreview}
                   />
                 ))}
-                {state.phase === 'ARENA' && state.arenaCommitZone.length > 0 && (
+                {isMainActive && state.arenaCommitZone.length > 0 && (
                   <Pressable style={styles.attemptBtn} onPress={handleAttemptArena}>
                     <Text style={styles.attemptBtnText}>
                       ⚔ Attempt ({arenaValor}/{arenaStats.requiredValor})
@@ -484,12 +507,17 @@ export const GameTable: React.FC = () => {
 
         <BoardSidebarRight
           width={layout.sidebarW}
+          isPregame={isPregame}
           coinsInPlay={coinsInPlay}
           valorInPlay={valorInPlay}
           victoryPoints={victoryPoints}
           phase={state.phase}
           isLocalTurn={isLocalTurn}
+          isLocalReady={isLocalReady}
+          readyCount={readyCount}
+          totalPlayers={state.players.length}
           onEndPhase={handleEndPhase}
+          onPlayerReady={handlePlayerReady}
         />
       </View>
 
@@ -712,6 +740,33 @@ const styles = StyleSheet.create({
   dragOverlayPortal: {
     position: 'absolute',
     zIndex: 2147483647,
+  },
+  pregameBanner: {
+    backgroundColor: 'rgba(241,196,15,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(241,196,15,0.25)',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  pregameTitle: {
+    color: '#F1C40F',
+    fontWeight: '800',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  pregameSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 14,
+  },
+  pregamePlayer: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    marginTop: 3,
+    textAlign: 'center',
   },
 });
 

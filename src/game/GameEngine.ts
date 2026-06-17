@@ -1,6 +1,7 @@
 import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, GameActionType, GamePhase, GameState, PlayerState } from '../types/gameTypes';
 import { canPerformAction } from './TurnManager';
+import { finishGameIfNeeded, getPlayerTotalVp } from './postGame';
 import {
   CARD_DEFINITIONS,
   GALLERY_CARD_IDS,
@@ -69,13 +70,15 @@ function createStartingDeck(playerId: string): CardInstance[] {
   return shuffle(cards);
 }
 
-function createPlayer(setup: PlayerSetup): PlayerState {
+function createPlayer(setup: PlayerSetup, dealOpeningHand = false): PlayerState {
   const deck = createStartingDeck(setup.id);
-  const hand = deck.splice(0, STARTING_HAND_SIZE).map((c) => ({
-    ...c,
-    location: 'HAND' as const,
-    faceUp: true,
-  }));
+  const hand = dealOpeningHand
+    ? deck.splice(0, STARTING_HAND_SIZE).map((c) => ({
+        ...c,
+        location: 'HAND' as const,
+        faceUp: true,
+      }))
+    : [];
   return {
     id: setup.id,
     name: setup.name,
@@ -87,6 +90,98 @@ function createPlayer(setup: PlayerSetup): PlayerState {
     discard: [],
     playArea: [],
     itemsInPlay: [],
+  };
+}
+
+function createMarketCards() {
+  const galleryPool = shuffle(
+    GALLERY_CARD_IDS.flatMap((id) =>
+      Array.from({ length: 4 }, () =>
+        createCardInstance(id, 'GALLERY', 'market', true)
+      )
+    )
+  );
+  const galleryCards = galleryPool.splice(0, 6);
+
+  const arenaDeck = shuffle(
+    ARENA_CARD_IDS.flatMap((id) =>
+      Array.from({ length: 3 }, () =>
+        createCardInstance(id, 'ARENA_DECK', 'arena')
+      )
+    )
+  );
+  const arenaCard =
+    arenaDeck.length > 0
+      ? { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true }
+      : null;
+
+  const epicCards = EPIC_CARD_IDS.map((id) =>
+    createCardInstance(id, 'EPIC_ROW', 'market', true)
+  );
+
+  const flavorDeck = Array.from({ length: 20 }, () =>
+    createCardInstance('basic_favor', 'FLAVOR_DECK', 'market')
+  );
+
+  const disfavorDeck = Array.from({ length: 15 }, () =>
+    createCardInstance('crowd_disfavor', 'DISFAVOR_DECK', 'market')
+  );
+
+  return {
+    galleryCards,
+    arenaCard,
+    arenaDeck,
+    epicCards,
+    flavorDeck,
+    disfavorDeck,
+  };
+}
+
+function getCardCoinValue(card: CardInstance): number {
+  if (card.definition.type === 'Favor' || card.definition.faction === 'Favor') {
+    return 1;
+  }
+  return 0;
+}
+
+function getCardValorValue(card: CardInstance): number {
+  return card.definition.valor ?? 0;
+}
+
+function applyCardPlayEffects(state: GameState, card: CardInstance): GameState {
+  const coins = getCardCoinValue(card);
+  const valor = getCardValorValue(card);
+  if (coins === 0 && valor === 0) return state;
+  return {
+    ...state,
+    turnCoins: state.turnCoins + coins,
+    turnValor: state.turnValor + valor,
+  };
+}
+
+function findMarketCard(state: GameState, instanceId: string): CardInstance | undefined {
+  return (
+    state.galleryCards.find((c) => c.instanceId === instanceId) ??
+    state.epicCards.find((c) => c.instanceId === instanceId)
+  );
+}
+
+function allPlayersReady(state: GameState): boolean {
+  return state.players.every((p) => state.readyPlayerIds.includes(p.id));
+}
+
+function activateGameFromPregame(state: GameState): GameState {
+  const players = state.players.map((p) => drawCards({ ...p, hand: [] }, STARTING_HAND_SIZE));
+  return {
+    ...state,
+    status: 'active',
+    phase: 'MAIN',
+    players,
+    turnPlayerId: players[0]?.id ?? '',
+    turnNumber: 1,
+    turnCoins: 0,
+    turnValor: 0,
+    readyPlayerIds: state.readyPlayerIds,
   };
 }
 
@@ -156,23 +251,24 @@ function rehydratePlayer(player: PlayerState): PlayerState {
 /** Restore card definitions after Supabase JSON round-trip. */
 export function rehydrateGameState(state: GameState): GameState {
   const players = (state.players ?? []).map(rehydratePlayer);
-  const current = players.find((p) => p.id === state.turnPlayerId);
-  let phase = state.phase;
+  let phase = normalizePhase(state.phase);
+  let status = state.status ?? (state.turnPlayerId ? 'active' : 'lobby');
+
   if (
-    phase === 'DRAW' &&
-    state.status === 'active' &&
-    state.turnNumber >= 1 &&
-    current &&
-    current.hand.length > 0
+    status === 'active' &&
+    (phase === 'PREGAME' || (state as { phase?: string }).phase === 'DRAW')
   ) {
     phase = 'MAIN';
   }
 
   return {
     ...state,
-    status: state.status ?? (state.turnPlayerId ? 'active' : 'lobby'),
+    status,
     phase,
     players,
+    readyPlayerIds: state.readyPlayerIds ?? [],
+    turnCoins: state.turnCoins ?? 0,
+    turnValor: state.turnValor ?? 0,
     arenaCard: state.arenaCard ? rehydrateCard(state.arenaCard) : null,
     arenaDeck: rehydrateCards(state.arenaDeck ?? []),
     arenaCommitZone: rehydrateCards(state.arenaCommitZone ?? []).map((c) => ({
@@ -183,7 +279,24 @@ export function rehydrateGameState(state: GameState): GameState {
     epicCards: rehydrateCards(state.epicCards ?? []),
     flavorDeck: rehydrateCards(state.flavorDeck ?? []),
     disfavorDeck: rehydrateCards(state.disfavorDeck ?? []),
+    winnerId: state.winnerId ?? null,
   };
+}
+
+function normalizePhase(phase: GamePhase | string | undefined): GamePhase {
+  switch (phase) {
+    case 'PREGAME':
+    case 'MAIN':
+    case 'CLEANUP':
+      return phase;
+    case 'DRAW':
+    case 'ARENA':
+    case 'BUY':
+    case 'END':
+      return 'MAIN';
+    default:
+      return 'PREGAME';
+  }
 }
 
 export function validateGameAction(
@@ -191,17 +304,34 @@ export function validateGameAction(
   action: GameAction
 ): string | null {
   if (action.type === 'START_GAME') return null;
+  if (action.type === 'END_GAME') {
+    if (state.status !== 'active') return 'Game is not active';
+    return null;
+  }
+
   if (state.status === 'finished') return 'Game is finished';
   if (state.status === 'lobby') return 'Game has not started';
 
   const player = state.players.find((p) => p.id === action.playerId);
   if (!player) return 'Unknown player';
 
+  if (action.type === 'PLAYER_READY') {
+    if (state.phase !== 'PREGAME') return 'Game is not in pre-start';
+    if (state.readyPlayerIds.includes(action.playerId)) {
+      return 'Already ready';
+    }
+    return null;
+  }
+
+  if (state.phase === 'PREGAME') {
+    return 'Waiting for all players to ready up';
+  }
+
   if (state.turnPlayerId !== action.playerId) {
     return 'Not your turn';
   }
 
-  if (!canPerformAction(state.phase, action.type)) {
+  if (!canPerformAction(state.phase, action.type, state.status)) {
     return `Action ${action.type} not allowed in ${state.phase}`;
   }
 
@@ -218,7 +348,6 @@ export function validateGameAction(
         return 'Missing move payload';
       }
       if (action.payload.targetZone === 'ARENA_COMMIT') {
-        if (state.phase !== 'ARENA') return 'Arena commit only in Arena phase';
         if (state.arenaCommitZone.length >= ARENA_MAX_COMMIT) {
           return `Max ${ARENA_MAX_COMMIT} cards in arena commit`;
         }
@@ -234,16 +363,12 @@ export function validateGameAction(
     }
     case 'BUY_CARD': {
       if (!action.payload?.cardInstanceId) return 'Missing card';
-      const card = state.galleryCards.find(
-        (c) => c.instanceId === action.payload!.cardInstanceId
-      );
-      if (!card) return 'Card not in gallery';
-      const coins = player.karma + countCoinCardsInPlay(player);
-      if (coins < card.definition.cost) return 'Not enough coins';
+      const card = findMarketCard(state, action.payload.cardInstanceId);
+      if (!card) return 'Card not available to buy';
+      if (state.turnCoins < card.definition.cost) return 'Not enough coins';
       return null;
     }
     case 'ATTEMPT_ARENA': {
-      if (state.phase !== 'ARENA') return 'Not arena phase';
       if (!state.arenaCard) return 'No arena challenge';
       if (state.arenaCommitZone.length === 0) return 'No cards committed';
       return null;
@@ -255,12 +380,6 @@ export function validateGameAction(
     default:
       return 'Unknown action';
   }
-}
-
-function countCoinCardsInPlay(player: PlayerState): number {
-  return player.playArea.filter(
-    (c) => c.definition.type === 'Favor' || c.definition.faction === 'Favor'
-  ).length;
 }
 
 function refillGallery(state: GameState): GameState {
@@ -296,68 +415,50 @@ function cleanupTurnPlayer(player: PlayerState): PlayerState {
   const discard = [
     ...player.discard,
     ...player.playArea.map((c) => ({ ...c, location: 'DISCARD' as const })),
+    ...player.itemsInPlay.map((c) => ({ ...c, location: 'DISCARD' as const })),
     ...player.hand.map((c) => ({ ...c, location: 'DISCARD' as const })),
   ];
-  return { ...player, hand: [], playArea: [], discard };
+  return { ...player, hand: [], playArea: [], itemsInPlay: [], discard };
 }
 
-export function createInitialGameState(
+/** Board is visible; hands empty until all players ready. */
+export function createPregameState(
   playerSetups: PlayerSetup[],
   gameId = 'game_1'
 ): GameState {
-  const players = playerSetups
-    .slice(0, MAX_PLAYERS)
-    .map((setup) => createPlayer(setup));
-
-  const galleryPool = shuffle(
-    GALLERY_CARD_IDS.flatMap((id) =>
-      Array.from({ length: 4 }, () =>
-        createCardInstance(id, 'GALLERY', 'market', true)
-      )
-    )
-  );
-  const galleryCards = galleryPool.splice(0, 6);
-
-  const arenaDeck = shuffle(
-    ARENA_CARD_IDS.flatMap((id) =>
-      Array.from({ length: 3 }, () =>
-        createCardInstance(id, 'ARENA_DECK', 'arena')
-      )
-    )
-  );
-  const arenaCard = arenaDeck.length > 0
-    ? { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true }
-    : null;
-
-  const epicCards = EPIC_CARD_IDS.map((id) =>
-    createCardInstance(id, 'EPIC_ROW', 'market', true)
-  );
-
-  const flavorDeck = Array.from({ length: 20 }, () =>
-    createCardInstance('basic_favor', 'FLAVOR_DECK', 'market')
-  );
-
-  const disfavorDeck = Array.from({ length: 15 }, () =>
-    createCardInstance('crowd_disfavor', 'DISFAVOR_DECK', 'market')
-  );
+  const players = playerSetups.slice(0, MAX_PLAYERS).map((setup) => createPlayer(setup, false));
+  const market = createMarketCards();
 
   return {
     id: gameId,
     status: 'active',
     version: 1,
     players,
-    arenaCard,
-    arenaDeck,
+    arenaCard: market.arenaCard,
+    arenaDeck: market.arenaDeck,
     arenaCommitZone: [],
-    galleryCards,
-    epicCards,
-    flavorDeck,
-    disfavorDeck,
-    turnPlayerId: players[0]?.id ?? '',
-    phase: 'MAIN',
-    turnNumber: 1,
+    galleryCards: market.galleryCards,
+    epicCards: market.epicCards,
+    flavorDeck: market.flavorDeck,
+    disfavorDeck: market.disfavorDeck,
+    turnPlayerId: '',
+    phase: 'PREGAME',
+    turnNumber: 0,
     actionLog: [],
+    readyPlayerIds: [],
+    turnCoins: 0,
+    turnValor: 0,
   };
+}
+
+export function createInitialGameState(
+  playerSetups: PlayerSetup[],
+  gameId = 'game_1'
+): GameState {
+  return activateGameFromPregame({
+    ...createPregameState(playerSetups, gameId),
+    readyPlayerIds: playerSetups.map((p) => p.id),
+  });
 }
 
 export function createLobbyGameState(
@@ -388,9 +489,12 @@ export function createLobbyGameState(
     flavorDeck: [],
     disfavorDeck: [],
     turnPlayerId: '',
-    phase: 'DRAW',
+    phase: 'PREGAME',
     turnNumber: 0,
     actionLog: [],
+    readyPlayerIds: [],
+    turnCoins: 0,
+    turnValor: 0,
   };
 }
 
@@ -417,6 +521,26 @@ export function processGameAction(
       : null;
 
   switch (action.type) {
+    case 'END_GAME': {
+      const leader = [...next.players].sort(
+        (a, b) => getPlayerTotalVp(b) - getPlayerTotalVp(a)
+      )[0];
+      return finishGameIfNeeded({
+        ...next,
+        status: 'finished',
+        winnerId: leader?.id ?? null,
+      });
+    }
+
+    case 'PLAYER_READY': {
+      const readyPlayerIds = [...next.readyPlayerIds, action.playerId];
+      next.readyPlayerIds = readyPlayerIds;
+      if (allPlayersReady(next)) {
+        return activateGameFromPregame(next);
+      }
+      return next;
+    }
+
     case 'DRAW_CARD': {
       if (!player) return next;
       const count = action.payload?.count ?? 1;
@@ -433,12 +557,20 @@ export function processGameAction(
       );
       if (cardIdx === -1) return next;
 
-      const card = { ...player.hand[cardIdx], location: 'PLAY_AREA' as const };
+      const card = { ...player.hand[cardIdx] };
       player.hand = player.hand.filter((_, i) => i !== cardIdx);
-      player.playArea = [...player.playArea, card];
+
+      if (card.definition.type === 'Item') {
+        card.location = 'ITEMS_IN_PLAY';
+        player.itemsInPlay = [...player.itemsInPlay, card];
+      } else {
+        card.location = 'PLAY_AREA';
+        player.playArea = [...player.playArea, card];
+      }
+
       next.players = [...next.players];
       next.players[playerIdx] = player;
-      return next;
+      return applyCardPlayEffects(next, card);
     }
 
     case 'DISCARD_CARD': {
@@ -497,18 +629,35 @@ export function processGameAction(
       const galleryIdx = next.galleryCards.findIndex(
         (c) => c.instanceId === action.payload!.cardInstanceId
       );
-      if (galleryIdx === -1) return next;
+      const epicIdx = next.epicCards.findIndex(
+        (c) => c.instanceId === action.payload!.cardInstanceId
+      );
 
-      const boughtCard = {
-        ...next.galleryCards[galleryIdx],
-        location: 'DISCARD' as const,
-        ownerId: player.id,
-      };
+      let boughtCard: CardInstance | null = null;
+      if (galleryIdx !== -1) {
+        boughtCard = {
+          ...next.galleryCards[galleryIdx],
+          location: 'DISCARD' as const,
+          ownerId: player.id,
+        };
+        const newGallery = [...next.galleryCards];
+        newGallery.splice(galleryIdx, 1);
+        next.galleryCards = newGallery;
+      } else if (epicIdx !== -1) {
+        boughtCard = {
+          ...next.epicCards[epicIdx],
+          location: 'DISCARD' as const,
+          ownerId: player.id,
+        };
+        const newEpic = [...next.epicCards];
+        newEpic.splice(epicIdx, 1);
+        next.epicCards = newEpic;
+      }
+
+      if (!boughtCard) return next;
+
       player.discard = [...player.discard, boughtCard];
-
-      const newGallery = [...next.galleryCards];
-      newGallery.splice(galleryIdx, 1);
-      next.galleryCards = newGallery;
+      next.turnCoins -= boughtCard.definition.cost;
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
@@ -557,7 +706,10 @@ export function processGameAction(
     }
 
     case 'END_PHASE': {
-      return advancePhase(next, playerIdx, player);
+      if (next.phase === 'MAIN') {
+        return endTurnAndPass(next, playerIdx, player);
+      }
+      return next;
     }
 
     default:
@@ -565,42 +717,32 @@ export function processGameAction(
   }
 }
 
-function advancePhase(
+function endTurnAndPass(
   state: GameState,
   playerIdx: number,
   player: PlayerState | null
 ): GameState {
-  const phases: GamePhase[] = ['DRAW', 'MAIN', 'ARENA', 'BUY', 'END'];
-  const currentIdx = phases.indexOf(state.phase);
-  const next = { ...state };
+  let next: GameState = { ...state, phase: 'CLEANUP' };
 
-  if (state.phase === 'END') {
-    if (player) {
-      const cleaned = cleanupTurnPlayer(player);
-      next.players = [...next.players];
-      next.players[playerIdx] = cleaned;
-    }
-
-    next.arenaCommitZone = [];
-
-    const nextPlayerIdx = (playerIdx + 1) % next.players.length;
-    next.turnPlayerId = next.players[nextPlayerIdx].id;
-    next.turnNumber += 1;
-
-    let nextPlayer = { ...next.players[nextPlayerIdx] };
-    nextPlayer = drawCards(nextPlayer, STARTING_HAND_SIZE);
+  if (player) {
+    const cleaned = cleanupTurnPlayer(player);
     next.players = [...next.players];
-    next.players[nextPlayerIdx] = nextPlayer;
-    next.phase = 'MAIN';
-    return next;
+    next.players[playerIdx] = cleaned;
   }
 
-  if (state.phase === 'ARENA') {
-    next.arenaCommitZone = [];
-  }
+  next.arenaCommitZone = [];
 
-  next.phase = phases[currentIdx + 1];
-  return next;
+  const nextPlayerIdx = (playerIdx + 1) % next.players.length;
+  next.turnPlayerId = next.players[nextPlayerIdx].id;
+  next.turnNumber += 1;
+
+  let nextPlayer = drawCards({ ...next.players[nextPlayerIdx], hand: [] }, STARTING_HAND_SIZE);
+  next.players = [...next.players];
+  next.players[nextPlayerIdx] = nextPlayer;
+  next.phase = 'MAIN';
+  next.turnCoins = 0;
+  next.turnValor = 0;
+  return finishGameIfNeeded(next);
 }
 
 export function buildPlayerSetupsFromDb(
@@ -628,6 +770,16 @@ export function buildPlayerSetupsFromDb(
 }
 
 export function getNextAIAction(state: GameState): GameAction | null {
+  if (state.phase === 'PREGAME') {
+    const ai = state.players.find((p) => p.isAI && !state.readyPlayerIds.includes(p.id));
+    if (!ai) return null;
+    return {
+      type: 'PLAYER_READY',
+      playerId: ai.id,
+      timestamp: Date.now(),
+    };
+  }
+
   const current = getCurrentPlayer(state);
   if (!current?.isAI) return null;
 
@@ -637,8 +789,6 @@ export function getNextAIAction(state: GameState): GameAction | null {
   };
 
   switch (state.phase) {
-    case 'DRAW':
-      return { ...base, type: 'END_PHASE' };
     case 'MAIN':
       if (current.hand.length > 0) {
         return {
@@ -648,42 +798,16 @@ export function getNextAIAction(state: GameState): GameAction | null {
         };
       }
       return { ...base, type: 'END_PHASE' };
-    case 'ARENA':
-      return { ...base, type: 'END_PHASE' };
-    case 'BUY':
-      return { ...base, type: 'END_PHASE' };
-    case 'END':
+    case 'CLEANUP':
       return { ...base, type: 'END_PHASE' };
     default:
       return null;
   }
 }
 
-export function shouldAutoDrawOnEndDraw(state: GameState, action: GameAction): GameAction[] {
-  if (action.type !== 'END_PHASE' || state.phase !== 'DRAW') return [];
-  return [
-    {
-      type: 'DRAW_CARD',
-      playerId: action.playerId,
-      payload: { count: STARTING_HAND_SIZE },
-      timestamp: Date.now(),
-    },
-  ];
-}
-
 export function applyActionWithPhaseRules(
   state: GameState,
   action: GameAction
 ): GameState {
-  if (action.type === 'END_PHASE' && state.phase === 'DRAW') {
-    let next = processGameAction(state, {
-      type: 'DRAW_CARD',
-      playerId: action.playerId,
-      payload: { count: STARTING_HAND_SIZE },
-      timestamp: Date.now(),
-    });
-    next = processGameAction(next, action);
-    return next;
-  }
-  return processGameAction(state, action);
+  return finishGameIfNeeded(processGameAction(state, action));
 }
