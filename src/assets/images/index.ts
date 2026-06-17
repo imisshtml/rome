@@ -3,4 +3,6 @@ export const valorIcon = require('./valor_icon.png');
 export const victoryIcon = require('./victory_icon.png');
 export const turnButtonBg = require('./button.png');
 export const cardBack = require('./card_back.png');
+export const gameBackground = require('./game_background.jpg');
+export const homeBackground = require('./home_background.jpg');
 export { CARD_IMAGES, getCardImage } from './cardImages';

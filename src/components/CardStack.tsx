@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
-import { cardBack as cardBackImage, getCardImage } from '../assets/images';
+import { cardBack as cardBackImage } from '../assets/images';
+import CardFace from './CardFace';
 
 interface CardStackProps {
   cards: CardInstance[];
@@ -40,10 +41,6 @@ export const CardStack: React.FC<CardStackProps> = ({
   showTopCardFace = false,
 }) => {
   const topCard = cards[cards.length - 1];
-  const topCardImage =
-    showTopCardFace && topCard?.faceUp
-      ? getCardImage(topCard.definition.image)
-      : undefined;
   const bgColor =
     color ?? (topCard ? FACTION_COLORS[topCard.definition.faction] : '#222238');
   const count = cards.length;
@@ -68,14 +65,14 @@ export const CardStack: React.FC<CardStackProps> = ({
           pressed && onPress && styles.pressed,
         ]}
       >
-        {topCardImage ? (
-          <View style={{ width, height }}>
-            <Image
-              source={topCardImage}
-              style={{ width, height, borderRadius: 8 }}
-              resizeMode="cover"
-            />
-          </View>
+        {showTopCardFace && topCard && !isEmpty ? (
+          <CardFace
+            definition={topCard.definition}
+            faceUp={topCard.faceUp}
+            width={width}
+            height={height}
+            anchorArtTop
+          />
         ) : useCardBack ? (
           <View style={{ width, height }}>
             <Image

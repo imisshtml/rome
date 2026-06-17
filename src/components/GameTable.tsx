@@ -6,6 +6,7 @@ import {
   Pressable,
   LayoutRectangle,
   Platform,
+  ImageBackground,
 } from 'react-native';
 import { createPortal } from 'react-dom';
 import {
@@ -14,6 +15,7 @@ import {
   useArenaValor,
   useDraggedCard,
   useHoveredZone,
+  useHoverPreviewCard,
   useLocalPlayer,
   useIsLocalTurn,
 } from '../store/useGameStore';
@@ -31,6 +33,7 @@ import BoardSidebarRight from './BoardSidebarRight';
 import GalleryCard from './GalleryCard';
 import CardPreviewModal from './CardPreviewModal';
 import DiscardModal from './DiscardModal';
+import { gameBackground } from '../assets/images';
 
 const ZONE_LAYOUTS = new Map<string, LayoutRectangle>();
 
@@ -46,6 +49,7 @@ export const GameTable: React.FC = () => {
   const arenaValor = useArenaValor();
   const [draggedCard, setDraggedCard] = useDraggedCard();
   const [, setHoveredZone] = useHoveredZone();
+  const [hoverPreviewCard] = useHoverPreviewCard();
   const layout = useBoardLayout();
 
   const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
@@ -282,7 +286,11 @@ export const GameTable: React.FC = () => {
       </View>
 
       {/* Main board: sidebars span gallery + play + hand */}
-      <View style={[styles.mainRow, { height: layout.mainContentH }]}>
+      <ImageBackground
+        source={gameBackground}
+        style={[styles.mainRow, { height: layout.mainContentH }]}
+        resizeMode="cover"
+      >
         <BoardSidebarLeft
           width={layout.sidebarW}
           stackW={layout.stackW}
@@ -507,6 +515,7 @@ export const GameTable: React.FC = () => {
 
         <BoardSidebarRight
           width={layout.sidebarW}
+          hoverPreviewCard={hoverPreviewCard}
           isPregame={isPregame}
           coinsInPlay={coinsInPlay}
           valorInPlay={valorInPlay}
@@ -519,7 +528,7 @@ export const GameTable: React.FC = () => {
           onEndPhase={handleEndPhase}
           onPlayerReady={handlePlayerReady}
         />
-      </View>
+      </ImageBackground>
 
       {draggedCard && dragPosition && (
         Platform.OS === 'web' && typeof document !== 'undefined'
@@ -566,10 +575,10 @@ export const GameTable: React.FC = () => {
 const styles = StyleSheet.create({
   table: {
     flex: 1,
-    backgroundColor: '#1a1a28',
+    backgroundColor: '#0f0f1a',
   },
   opponentsBar: {
-    backgroundColor: 'rgba(212,175,55,0.15)',
+    backgroundColor: 'rgba(12,12,20,0.92)',
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(212,175,55,0.3)',
@@ -583,9 +592,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   galleryZone: {
-    backgroundColor: 'rgba(135,206,235,0.12)',
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(135,206,235,0.25)',
+    borderBottomColor: 'rgba(212,175,55,0.2)',
     paddingHorizontal: 6,
     paddingVertical: 6,
   },
@@ -629,7 +638,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   playField: {
-    backgroundColor: 'rgba(255,105,180,0.1)',
+    backgroundColor: 'transparent',
     borderWidth: 0,
     borderRadius: 0,
     padding: 8,
@@ -670,8 +679,8 @@ const styles = StyleSheet.create({
   },
   commitZone: {
     borderStyle: 'dashed',
-    borderColor: 'rgba(139,105,20,0.45)',
-    backgroundColor: 'rgba(139,105,20,0.06)',
+    borderColor: 'rgba(212,175,55,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     minHeight: 72,
     marginTop: 'auto',
   },
@@ -687,9 +696,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   handZone: {
-    backgroundColor: 'rgba(76,175,80,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(76,175,80,0.25)',
+    borderTopColor: 'rgba(212,175,55,0.25)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 6,

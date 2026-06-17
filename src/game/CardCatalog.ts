@@ -35,7 +35,15 @@ function slugToId(slug: string): string {
   return slug.replace(/-/g, '_');
 }
 
+function factionDefinitionId(raw: RawFactionCard): string {
+  if (raw.id.startsWith('ALL-')) {
+    return slugToId(raw.id.toLowerCase());
+  }
+  return raw.slug ? slugToId(raw.slug) : slugToId(raw.id.toLowerCase());
+}
+
 function mapFactionFromFaction(raw: RawFactionCard): Faction {
+  if (raw.card_type === 'basic') return 'Ludus';
   if (raw.faction === 'Ludus') return 'Ludus';
   if (raw.faction === 'Legion') return 'Legion';
   if (raw.faction === 'Senate') return 'Senate';
@@ -43,6 +51,7 @@ function mapFactionFromFaction(raw: RawFactionCard): Faction {
 }
 
 function mapCardTypeFromFaction(raw: RawFactionCard): CardType {
+  if (raw.card_type === 'basic') return 'Basic';
   if (raw.card_type === 'epic') return 'Epic';
   if (raw.card_type === 'item') return 'Item';
   if (raw.faction === 'Senate') return 'Action';
@@ -57,7 +66,7 @@ function buildDefinition(
 }
 
 function fromFactionCard(raw: RawFactionCard): CardDefinition {
-  const id = raw.slug ? slugToId(raw.slug) : slugToId(raw.id.toLowerCase());
+  const id = factionDefinitionId(raw);
   return buildDefinition(id, {
     name: raw.name,
     cost: raw.cost ?? 0,
@@ -122,26 +131,15 @@ function fromFavorCard(raw: RawFavorCard): CardDefinition {
   });
 }
 
-const BASIC_GLADIATOR: CardDefinition = buildDefinition('basic_gladiator', {
-  name: 'Novice Gladiator',
-  cost: 0,
-  valor: 1,
-  victoryPoints: 0,
-  type: 'Basic',
-  faction: 'Ludus',
-  text: 'A fresh recruit to the arena.',
-  image: 'legion_fresh_recruit.jpg',
-});
-
-const BASIC_FAVOR: CardDefinition = buildDefinition('basic_favor', {
-  name: 'Minor Favor',
+const BASIC_CHARITY: CardDefinition = buildDefinition('all_001', {
+  name: 'Charity',
   cost: 0,
   valor: 0,
   victoryPoints: 0,
-  type: 'Favor',
-  faction: 'Favor',
-  text: 'Gain 1 Coin.',
-  image: 'favor_bread_circus.jpg',
+  type: 'Basic',
+  faction: 'Ludus',
+  text: '+1 Coin',
+  image: 'charity.jpg',
   effects: mergeCardEffects({ gain_coins: 1 }),
 });
 
@@ -162,8 +160,7 @@ const eventDefinitions = eventsPack.cards.map(fromEventCard);
 const favorDefinitions = favorPack.map(fromFavorCard);
 
 export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
-  [BASIC_GLADIATOR.id]: BASIC_GLADIATOR,
-  [BASIC_FAVOR.id]: BASIC_FAVOR,
+  [BASIC_CHARITY.id]: BASIC_CHARITY,
   [CROWD_DISFAVOR.id]: CROWD_DISFAVOR,
 };
 
@@ -177,14 +174,37 @@ for (const def of [
 }
 
 export function getCardDefinition(definitionId: string): CardDefinition {
-  return CARD_DEFINITIONS[definitionId] ?? CARD_DEFINITIONS.basic_gladiator;
+  return CARD_DEFINITIONS[definitionId] ?? CARD_DEFINITIONS.all_001;
+}
+
+export function getStartingDeckEntries(): PoolEntry[] {
+  const configured = factionsPack.mechanics?.starting_deck?.cards;
+  if (configured?.length) {
+    return configured.map(({ id, qty }) => {
+      const raw = factionsPack.cards.find((card) => card.id === id);
+      if (!raw) {
+        throw new Error(`Starting deck references unknown card id: ${id}`);
+      }
+      return {
+        definitionId: factionDefinitionId(raw),
+        qty,
+      };
+    });
+  }
+
+  return factionsPack.cards
+    .filter((raw) => raw.deck_source === 'starting')
+    .map((raw) => ({
+      definitionId: factionDefinitionId(raw),
+      qty: raw.starting_deck_qty ?? 1,
+    }));
 }
 
 export function getGalleryPoolEntries(): PoolEntry[] {
   const entries: PoolEntry[] = [];
   for (const raw of factionsPack.cards) {
     if (raw.deck_source !== 'gallery') continue;
-    const id = raw.slug ? slugToId(raw.slug) : slugToId(raw.id.toLowerCase());
+    const id = factionDefinitionId(raw);
     entries.push({ definitionId: id, qty: raw.deck_qty ?? 1 });
   }
   for (const raw of eventsPack.cards) {
@@ -200,7 +220,7 @@ export function getEpicPoolEntries(): PoolEntry[] {
   return factionsPack.cards
     .filter((raw) => raw.deck_source === 'epic')
     .map((raw) => ({
-      definitionId: raw.slug ? slugToId(raw.slug) : slugToId(raw.id.toLowerCase()),
+      definitionId: factionDefinitionId(raw),
       qty: raw.deck_qty ?? 1,
     }));
 }

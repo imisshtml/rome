@@ -6,8 +6,10 @@ import {
   Pressable,
   ImageBackground,
 } from 'react-native';
+import { CardInstance } from '../types/cardTypes';
 import { GamePhase, PHASE_LABELS } from '../types/gameTypes';
 import { costIcon, valorIcon, victoryIcon, turnButtonBg } from '../assets/images';
+import CardHoverPreview from './CardHoverPreview';
 
 const STAT_ICON_GAP = 2;
 const SIDEBAR_H_PAD = 4;
@@ -28,6 +30,7 @@ function phaseButtonSize(sidebarWidth: number): { width: number; height: number 
 
 interface BoardSidebarRightProps {
   width: number;
+  hoverPreviewCard: CardInstance | null;
   isPregame: boolean;
   coinsInPlay: number;
   valorInPlay: number;
@@ -49,6 +52,7 @@ const PHASE_BUTTON_LABELS: Record<GamePhase, string> = {
 
 export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   width,
+  hoverPreviewCard,
   isPregame,
   coinsInPlay,
   valorInPlay,
@@ -73,6 +77,8 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
 
   return (
     <View style={[styles.sidebar, { width }]}>
+      <CardHoverPreview card={hoverPreviewCard} width={width} />
+      <View style={styles.spacer} />
       <View style={styles.bottomBlock}>
         <Text style={styles.phaseNote}>
           {isPregame
@@ -140,8 +146,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 2,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 50,
+  },
+  spacer: {
+    flex: 1,
   },
   bottomBlock: {
     width: '100%',

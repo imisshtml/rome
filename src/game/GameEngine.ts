@@ -10,6 +10,7 @@ import {
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
+  getStartingDeckEntries,
 } from './CardDefinitions';
 
 export const MAX_PLAYERS = 6;
@@ -76,13 +77,11 @@ function shuffle<T>(array: T[]): T[] {
 }
 
 function createStartingDeck(playerId: string): CardInstance[] {
-  const cards: CardInstance[] = [];
-  for (let i = 0; i < 7; i++) {
-    cards.push(createCardInstance('basic_gladiator', 'DECK', playerId));
-  }
-  for (let i = 0; i < 3; i++) {
-    cards.push(createCardInstance('basic_favor', 'DECK', playerId));
-  }
+  const cards = getStartingDeckEntries().flatMap(({ definitionId, qty }) =>
+    Array.from({ length: qty }, () =>
+      createCardInstance(definitionId, 'DECK', playerId)
+    )
+  );
   return shuffle(cards);
 }
 

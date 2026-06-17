@@ -9,10 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { isSupabaseConfigured } from '../lib/env';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
+import { homeBackground } from '../assets/images';
 
 export const LandingScreen: React.FC = () => {
   const {
@@ -32,18 +34,23 @@ export const LandingScreen: React.FC = () => {
   const onlineReady = isSupabaseConfigured();
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={homeBackground}
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      resizeMode="cover"
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.title}>Builders of Rome</Text>
-        <Text style={styles.subtitle}>Gladiator Deckbuilder</Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Builders of Rome</Text>
+          <Text style={styles.subtitle}>Gladiator Deckbuilder</Text>
 
-        <View style={styles.card}>
+          <View style={styles.card}>
           <Text style={styles.label}>Nickname</Text>
           <TextInput
             style={styles.input}
@@ -123,6 +130,7 @@ export const LandingScreen: React.FC = () => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 };
 
@@ -130,6 +138,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0f0f1a',
+  },
+  flex: {
+    flex: 1,
   },
   scroll: {
     flexGrow: 1,
@@ -143,18 +154,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 28,
     textTransform: 'uppercase',
     letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10,10,18,0.82)',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,

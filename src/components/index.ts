@@ -7,6 +7,8 @@ export { GameTable } from './GameTable';
 export { PhaseBar } from './PhaseBar';
 export { DebugPanel } from './DebugPanel';
 export { CardPreviewModal } from './CardPreviewModal';
+export { CardHoverPreview } from './CardHoverPreview';
+export { CardFace } from './CardFace';
 export { DiscardModal } from './DiscardModal';
 export { OpponentStrip } from './OpponentStrip';
 export { BoardSidebarLeft } from './BoardSidebarLeft';

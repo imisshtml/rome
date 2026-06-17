@@ -45,6 +45,7 @@ const multiplayerMetaAtom = atom<{
 const debugVisibleAtom = atom(false);
 const draggedCardAtom = atom<CardInstance | null>(null);
 const hoveredZoneAtom = atom<string | null>(null);
+const hoverPreviewCardAtom = atom<CardInstance | null>(null);
 
 let remoteDispatch: ((action: GameAction) => Promise<GameState>) | null = null;
 
@@ -157,11 +158,16 @@ export function useHoveredZone() {
   return useAtom(hoveredZoneAtom);
 }
 
+export function useHoverPreviewCard() {
+  return useAtom(hoverPreviewCardAtom);
+}
+
 export {
   gameStateAtom,
   debugVisibleAtom,
   draggedCardAtom,
   hoveredZoneAtom,
+  hoverPreviewCardAtom,
   localPlayerKeyAtom,
   multiplayerMetaAtom,
 };

@@ -16,6 +16,13 @@
       "valor": 0,
       "victory_points": -1,
       "trigger": "Gain when you fail an Arena Challenge."
+    },
+    "starting_deck": {
+      "opening_hand_size": 5,
+      "cards": [
+        { "id": "ALL-001", "qty": 7 },
+        { "id": "ALL-002", "qty": 3 }
+      ]
     }
   },
   "recommended_sql_columns": [
@@ -98,6 +105,58 @@
   ],
   "cards": [
     {
+      "id": "ALL-001",
+      "slug": "charity",
+      "name": "Charity",
+      "image": "charity.jpg",
+      "card_type": "basic",
+      "deck_source": "starting",
+      "starting_deck_qty": 7,
+      "faction": null,
+      "banding_bonus": null,
+      "cost": 0,
+      "valor": 0,
+      "victory_points": 0,
+      "victory_formula": null,
+      "deck_qty": 0,
+      "timing": "main",
+      "effect_text": "+1 Coin",
+      "effect_keywords": [
+        "coins"
+      ],
+      "effects": {
+        "gain_coins": 1
+      },
+      "rules_notes": "Each player starts with 7 Charity cards in their deck.",
+      "status": "prototype"
+    },
+    {
+      "id": "ALL-002",
+      "slug": "spy",
+      "name": "Spy",
+      "image": "spy.jpg",
+      "card_type": "basic",
+      "deck_source": "starting",
+      "starting_deck_qty": 3,
+      "faction": null,
+      "banding_bonus": null,
+      "cost": 0,
+      "valor": 0,
+      "victory_points": 0,
+      "victory_formula": null,
+      "deck_qty": 0,
+      "timing": "main",
+      "effect_text": "When played, choose a faction [Legion, Ludus, Senate], this becomes that faction until discarded.",
+      "effect_keywords": [
+        "faction"
+      ],
+      "effects": {
+        "counts_as_faction": "choose"
+      },
+      "rules_notes": "Each player starts with 3 Spy cards in their deck.",
+      "status": "prototype"
+    },
+    {
       "id": "LEG-001",
       "slug": "fresh-recruit",
       "name": "Fresh Recruit",
@@ -112,14 +171,17 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+1 Coins. You may destroy a card from your hand or discard. OR destroy this to gain an Imperial Favor.",
+      "effect_text": "+1 Coins",
       "effect_keywords": [
         "coins",
         "destroy",
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1
+      }
     },
     {
       "id": "LEG-002",
@@ -141,7 +203,10 @@
         "augury"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "consult_augur": true
+      }
     },
     {
       "id": "LEG-003",
@@ -165,7 +230,15 @@
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LEG-004",
@@ -188,7 +261,11 @@
         "augury"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1,
+        "consult_augur": true
+      }
     },
     {
       "id": "LEG-005",
@@ -211,7 +288,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LEG-006",
@@ -234,7 +319,11 @@
         "wild_faction"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "counts_as_faction": "Ludus|Senate"
+      }
     },
     {
       "id": "LEG-007",
@@ -256,7 +345,10 @@
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_imperial_favor": 1
+      }
     },
     {
       "id": "LEG-008",
@@ -279,7 +371,12 @@
         "deck_filter"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "look_at_top_cards": 2,
+        "reorder_top_cards": true
+      }
     },
     {
       "id": "LEG-009",
@@ -302,7 +399,14 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "destroy_gallery_cards": 1,
+        "gain_card": {
+          "max_cost": 4,
+          "source": "gallery"
+        }
+      }
     },
     {
       "id": "LEG-010",
@@ -324,7 +428,10 @@
         "copy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "copy_card": true
+      }
     },
     {
       "id": "LEG-011",
@@ -346,7 +453,10 @@
         "faction_bonus"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_banding_bonus": "choose_faction"
+      }
     },
     {
       "id": "LEG-012",
@@ -369,7 +479,10 @@
         "scaling_vp"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "LEG-013",
@@ -393,7 +506,16 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "consult_augur": true,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LEG-014",
@@ -416,7 +538,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "LEG-015",
@@ -439,7 +565,11 @@
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "gain_imperial_favor": 1
+      }
     },
     {
       "id": "LEG-016",
@@ -462,7 +592,11 @@
         "augury"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "consult_augur": true
+      }
     },
     {
       "id": "LEG-017",
@@ -485,7 +619,14 @@
         "recursion"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_imperial_favor": 1,
+        "gain_card": {
+          "type": "imperial_favor",
+          "source": "favor_discard"
+        }
+      }
     },
     {
       "id": "LEG-018",
@@ -508,7 +649,10 @@
         "gallery"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "copy_card": true
+      }
     },
     {
       "id": "LEG-019",
@@ -532,7 +676,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_cards": 2,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LEG-020",
@@ -556,7 +708,15 @@
         "topdeck"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "legion",
+          "position": "top"
+        }
+      }
     },
     {
       "id": "LEG-021",
@@ -580,7 +740,16 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "consult_augur": true,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LEG-022",
@@ -603,7 +772,11 @@
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "gain_imperial_favor": 1
+      }
     },
     {
       "id": "LEG-023",
@@ -625,7 +798,10 @@
         "copy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "copy_card": true
+      }
     },
     {
       "id": "LEG-024",
@@ -649,7 +825,14 @@
         "discard_control"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "any_discard"
+        ]
+      }
     },
     {
       "id": "LEG-025",
@@ -673,7 +856,15 @@
         "temporary_play"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "gain_card": {
+          "source": "main_deck",
+          "position": "top",
+          "play": true
+        }
+      }
     },
     {
       "id": "SEN-001",
@@ -695,7 +886,10 @@
         "coins"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "SEN-002",
@@ -718,7 +912,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "SEN-003",
@@ -742,7 +944,11 @@
         "opponent"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "look_at_top_cards": 2
+      }
     },
     {
       "id": "SEN-004",
@@ -766,7 +972,15 @@
         "faction_bonus"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "SEN-005",
@@ -790,7 +1004,10 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "SEN-006",
@@ -812,7 +1029,13 @@
         "gain"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_card": {
+          "max_cost": 4,
+          "source": "gallery"
+        }
+      }
     },
     {
       "id": "SEN-007",
@@ -837,7 +1060,11 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "arena_bonus_valor": -1
+      }
     },
     {
       "id": "SEN-008",
@@ -860,7 +1087,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "SEN-009",
@@ -883,7 +1114,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "SEN-010",
@@ -907,7 +1146,10 @@
         "main_deck"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "SEN-011",
@@ -932,7 +1174,19 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "gain_card": {
+          "max_cost": 4,
+          "source": "gallery"
+        },
+        "gain_item": {
+          "max_cost": 4,
+          "source": "gallery",
+          "type": "item"
+        }
+      }
     },
     {
       "id": "SEN-012",
@@ -955,7 +1209,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "SEN-013",
@@ -978,7 +1236,10 @@
         "scaling_vp"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "SEN-014",
@@ -1002,7 +1263,10 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1
+      }
     },
     {
       "id": "SEN-015",
@@ -1025,7 +1289,11 @@
         "gain_to_hand"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "next_card_to_hand": true
+      }
     },
     {
       "id": "SEN-016",
@@ -1049,7 +1317,10 @@
         "shuffle"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "SEN-017",
@@ -1073,7 +1344,14 @@
         "recursion"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "return_card_to_hand": {
+          "type": "item",
+          "source": "discard"
+        }
+      }
     },
     {
       "id": "SEN-018",
@@ -1098,7 +1376,11 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "arena_bonus_valor": -2
+      }
     },
     {
       "id": "SEN-019",
@@ -1122,7 +1404,15 @@
         "topdeck"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "senate",
+          "position": "top"
+        }
+      }
     },
     {
       "id": "SEN-020",
@@ -1144,7 +1434,10 @@
         "coins"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3
+      }
     },
     {
       "id": "SEN-021",
@@ -1166,7 +1459,10 @@
         "coins"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4
+      }
     },
     {
       "id": "SEN-022",
@@ -1189,7 +1485,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "SEN-023",
@@ -1212,7 +1516,12 @@
         "opponent_discard"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "discard_cards": 1,
+        "force_opponent_discard": 1
+      }
     },
     {
       "id": "SEN-024",
@@ -1235,7 +1544,11 @@
         "gallery_control"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "destroy_gallery_cards": 3
+      }
     },
     {
       "id": "SEN-025",
@@ -1259,7 +1572,10 @@
         "opponent"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4
+      }
     },
     {
       "id": "LUD-001",
@@ -1282,7 +1598,15 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LUD-002",
@@ -1305,7 +1629,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 1,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "LUD-003",
@@ -1328,7 +1656,10 @@
         "deck_filter"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "LUD-004",
@@ -1351,7 +1682,12 @@
         "deck_filter"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "look_at_top_cards": 2,
+        "reorder_top_cards": true
+      }
     },
     {
       "id": "LUD-005",
@@ -1374,7 +1710,11 @@
         "discard"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 2,
+        "discard_cards": 1
+      }
     },
     {
       "id": "LUD-006",
@@ -1398,7 +1738,10 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "LUD-007",
@@ -1421,7 +1764,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "LUD-008",
@@ -1446,7 +1793,10 @@
         "choice"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "LUD-009",
@@ -1469,7 +1819,11 @@
         "draw"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 1,
+        "draw_cards": 1
+      }
     },
     {
       "id": "LUD-010",
@@ -1492,7 +1846,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "LUD-011",
@@ -1514,7 +1872,10 @@
         "draw"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 2
+      }
     },
     {
       "id": "LUD-012",
@@ -1538,7 +1899,10 @@
         "topdeck"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "LUD-013",
@@ -1561,7 +1925,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "destroy_gallery_cards": 3
+      }
     },
     {
       "id": "LUD-014",
@@ -1585,7 +1953,19 @@
         "item"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 1,
+        "gain_card": {
+          "max_cost": 5,
+          "source": "gallery"
+        },
+        "gain_item": {
+          "max_cost": 5,
+          "source": "gallery",
+          "type": "item"
+        }
+      }
     },
     {
       "id": "LUD-015",
@@ -1608,7 +1988,11 @@
         "discard"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 3,
+        "discard_cards": 1
+      }
     },
     {
       "id": "LUD-016",
@@ -1631,7 +2015,11 @@
         "epic_discount"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "discount_epics": 1
+      }
     },
     {
       "id": "LUD-017",
@@ -1654,7 +2042,11 @@
         "gallery_control"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "protect_gallery_cards": 2
+      }
     },
     {
       "id": "LUD-018",
@@ -1678,7 +2070,10 @@
         "shuffle"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3
+      }
     },
     {
       "id": "LUD-019",
@@ -1702,7 +2097,11 @@
         "deck_filter"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "draw_cards": 1
+      }
     },
     {
       "id": "LUD-020",
@@ -1725,7 +2124,14 @@
         "recursion"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "return_card_to_hand": {
+          "source": "discard",
+          "faction": "ludus"
+        }
+      }
     },
     {
       "id": "LUD-021",
@@ -1747,7 +2153,13 @@
         "gain"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_card": {
+          "max_cost": 5,
+          "source": "gallery"
+        }
+      }
     },
     {
       "id": "LUD-022",
@@ -1795,7 +2207,19 @@
         "gain"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "gain_card": {
+          "source": "gallery",
+          "dynamic": "destroyed_cost_plus_1"
+        },
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "LUD-024",
@@ -1818,7 +2242,10 @@
         "destroyed_pile"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3
+      }
     },
     {
       "id": "LUD-025",
@@ -1841,7 +2268,10 @@
         "scaling_vp"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
     },
     {
       "id": "EPI-001",
@@ -1865,7 +2295,10 @@
         "global"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 5
+      }
     },
     {
       "id": "EPI-002",
@@ -1888,7 +2321,11 @@
         "gain_to_hand"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "next_card_to_hand": true
+      }
     },
     {
       "id": "EPI-003",
@@ -1911,7 +2348,11 @@
         "faction_bonus"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4,
+        "gain_banding_bonus": "choose_faction"
+      }
     },
     {
       "id": "EPI-004",
@@ -1935,7 +2376,11 @@
         "bonus_vp"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "gain_vp": 2
+      }
     },
     {
       "id": "EPI-005",
@@ -1959,7 +2404,11 @@
         "valor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "arena_bonus_valor": 2
+      }
     },
     {
       "id": "EPI-006",
@@ -1982,7 +2431,10 @@
         "extra_buy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4
+      }
     },
     {
       "id": "EPI-007",
@@ -2005,7 +2457,10 @@
         "disfavor_removal"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 2
+      }
     },
     {
       "id": "EPI-008",
@@ -2028,7 +2483,11 @@
         "favor"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "gain_imperial_favor": 1
+      }
     },
     {
       "id": "EPI-009",
@@ -2052,7 +2511,15 @@
         "item"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 5,
+        "gain_item": {
+          "max_cost": 5,
+          "source": "gallery",
+          "type": "item"
+        }
+      }
     },
     {
       "id": "EPI-010",
@@ -2075,7 +2542,12 @@
         "draw"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 1,
+        "look_at_top_cards": 4,
+        "reorder_top_cards": true
+      }
     },
     {
       "id": "EPI-011",
@@ -2098,7 +2570,15 @@
         "disfavor_removal"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "draw_cards": 2,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "EPI-012",
@@ -2121,7 +2601,13 @@
         "recursion"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "return_card_to_hand": {
+          "source": "discard"
+        }
+      }
     },
     {
       "id": "EPI-013",
@@ -2145,7 +2631,10 @@
         "cancel_sabotage"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3
+      }
     },
     {
       "id": "EPI-014",
@@ -2168,7 +2657,11 @@
         "gallery_destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "destroy_gallery_cards": 1
+      }
     },
     {
       "id": "EPI-015",
@@ -2191,7 +2684,11 @@
         "epic_discount"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "discount_epics": 1
+      }
     },
     {
       "id": "EPI-016",
@@ -2214,7 +2711,18 @@
         "destroy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_card": {
+          "type": "favor",
+          "source": "flavor_deck"
+        },
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
+      }
     },
     {
       "id": "EPI-017",
@@ -2238,7 +2746,15 @@
         "topdeck"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "any_faction",
+          "position": "top"
+        }
+      }
     },
     {
       "id": "EPI-018",
@@ -2261,7 +2777,11 @@
         "copy"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4,
+        "copy_card": true
+      }
     }
   ]
 }

@@ -9,5 +9,6 @@ export {
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
+  getStartingDeckEntries,
 } from './CardCatalog';
 export type { PoolEntry } from './CardCatalog';
