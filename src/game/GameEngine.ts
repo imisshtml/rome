@@ -2,11 +2,14 @@ import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, GameActionType, GamePhase, GameState, PlayerState } from '../types/gameTypes';
 import { canPerformAction } from './TurnManager';
 import { finishGameIfNeeded, getPlayerTotalVp } from './postGame';
+import { applyStructuredPlayEffects, getLegacyCoinGain } from './EffectResolver';
 import {
-  CARD_DEFINITIONS,
-  GALLERY_CARD_IDS,
-  ARENA_CARD_IDS,
-  EPIC_CARD_IDS,
+  CROWD_DISFAVOR,
+  getCardDefinition,
+  getGalleryPoolEntries,
+  getEpicPoolEntries,
+  getArenaPoolEntries,
+  getFlavorPoolEntries,
 } from './CardDefinitions';
 
 export const MAX_PLAYERS = 6;
@@ -17,11 +20,10 @@ export const STARTING_HAND_SIZE = 5;
 export const ARENA_CHALLENGE_STATS: Record<
   string,
   { requiredValor: number; rewardVp: number }
-> = {
-  arena_beast: { requiredValor: 6, rewardVp: 3 },
-  arena_gauntlet: { requiredValor: 8, rewardVp: 4 },
-  arena_emperor: { requiredValor: 10, rewardVp: 5 },
-};
+> = {};
+
+const GALLERY_ROW_SIZE = 6;
+const EPIC_ROW_SIZE = 3;
 
 let instanceCounter = 0;
 const nextInstanceId = () => `card_${++instanceCounter}`;
@@ -38,16 +40,30 @@ function createCardInstance(
   ownerId: string,
   faceUp = false
 ): CardInstance {
-  const definition = CARD_DEFINITIONS[definitionId];
-  if (!definition) throw new Error(`Unknown card definition: ${definitionId}`);
+  const definition = getCardDefinition(definitionId);
   return {
     instanceId: nextInstanceId(),
-    definitionId,
+    definitionId: definition.id,
     definition,
     location,
     ownerId,
     faceUp,
   };
+}
+
+function buildPoolInstances(
+  entries: { definitionId: string; qty: number }[],
+  location: CardLocation,
+  ownerId: string,
+  faceUp = false
+): CardInstance[] {
+  return shuffle(
+    entries.flatMap(({ definitionId, qty }) =>
+      Array.from({ length: qty }, () =>
+        createCardInstance(definitionId, location, ownerId, faceUp)
+      )
+    )
+  );
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -84,7 +100,6 @@ function createPlayer(setup: PlayerSetup, dealOpeningHand = false): PlayerState 
     name: setup.name,
     isAI: setup.isAI ?? false,
     victoryPoints: 0,
-    karma: 0,
     hand,
     deck,
     discard: [],
@@ -94,64 +109,76 @@ function createPlayer(setup: PlayerSetup, dealOpeningHand = false): PlayerState 
 }
 
 function createMarketCards() {
-  const galleryPool = shuffle(
-    GALLERY_CARD_IDS.flatMap((id) =>
-      Array.from({ length: 4 }, () =>
-        createCardInstance(id, 'GALLERY', 'market', true)
-      )
-    )
+  const gallerySupply = buildPoolInstances(
+    getGalleryPoolEntries(),
+    'GALLERY',
+    'market',
+    false
   );
-  const galleryCards = galleryPool.splice(0, 6);
+  const galleryCards = gallerySupply.splice(0, GALLERY_ROW_SIZE).map((c) => ({
+    ...c,
+    faceUp: true,
+  }));
 
-  const arenaDeck = shuffle(
-    ARENA_CARD_IDS.flatMap((id) =>
-      Array.from({ length: 3 }, () =>
-        createCardInstance(id, 'ARENA_DECK', 'arena')
-      )
-    )
+  const arenaDeck = buildPoolInstances(
+    getArenaPoolEntries(),
+    'ARENA_DECK',
+    'arena',
+    false
   );
   const arenaCard =
     arenaDeck.length > 0
       ? { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true }
       : null;
 
-  const epicCards = EPIC_CARD_IDS.map((id) =>
-    createCardInstance(id, 'EPIC_ROW', 'market', true)
+  const epicSupply = buildPoolInstances(
+    getEpicPoolEntries(),
+    'EPIC_ROW',
+    'market',
+    false
+  );
+  const epicCards = epicSupply.splice(0, EPIC_ROW_SIZE).map((c) => ({
+    ...c,
+    faceUp: true,
+  }));
+
+  const flavorDeck = buildPoolInstances(
+    getFlavorPoolEntries(),
+    'FLAVOR_DECK',
+    'market',
+    false
   );
 
-  const flavorDeck = Array.from({ length: 20 }, () =>
-    createCardInstance('basic_favor', 'FLAVOR_DECK', 'market')
-  );
-
-  const disfavorDeck = Array.from({ length: 15 }, () =>
-    createCardInstance('crowd_disfavor', 'DISFAVOR_DECK', 'market')
-  );
+  const disfavorDeck = [
+    createCardInstance(CROWD_DISFAVOR.id, 'DISFAVOR_DECK', 'market', true),
+  ];
 
   return {
     galleryCards,
+    gallerySupply,
     arenaCard,
     arenaDeck,
     epicCards,
+    epicSupply,
     flavorDeck,
     disfavorDeck,
   };
 }
 
-function getCardCoinValue(card: CardInstance): number {
-  if (card.definition.type === 'Favor' || card.definition.faction === 'Favor') {
-    return 1;
+function applyCardPlayEffects(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  const effects = card.definition.effects;
+  if (effects) {
+    return applyStructuredPlayEffects(state, playerIdx, card, effects, drawCards);
   }
-  return 0;
-}
 
-function getCardValorValue(card: CardInstance): number {
-  return card.definition.valor ?? 0;
-}
-
-function applyCardPlayEffects(state: GameState, card: CardInstance): GameState {
-  const coins = getCardCoinValue(card);
-  const valor = getCardValorValue(card);
+  const coins = getLegacyCoinGain(card);
+  const valor = card.definition.valor ?? 0;
   if (coins === 0 && valor === 0) return state;
+
   return {
     ...state,
     turnCoins: state.turnCoins + coins,
@@ -187,12 +214,11 @@ function activateGameFromPregame(state: GameState): GameState {
 
 export function getArenaChallengeStats(arenaCard: CardInstance | null) {
   if (!arenaCard) return { requiredValor: 6, rewardVp: 3 };
-  return (
-    ARENA_CHALLENGE_STATS[arenaCard.definitionId] ?? {
-      requiredValor: 6,
-      rewardVp: 3,
-    }
-  );
+  const def = arenaCard.definition;
+  return {
+    requiredValor: def.valorRequired ?? 6,
+    rewardVp: def.rewardVp ?? 3,
+  };
 }
 
 export function getCurrentPlayer(state: GameState): PlayerState | undefined {
@@ -207,11 +233,10 @@ export function getArenaCommitValor(state: GameState): number {
 }
 
 function rehydrateCard(card: CardInstance): CardInstance {
-  const definition =
-    CARD_DEFINITIONS[card.definitionId] ?? card.definition ?? CARD_DEFINITIONS.basic_gladiator;
+  const definition = getCardDefinition(card.definitionId);
   return {
     ...card,
-    definitionId: card.definitionId ?? definition.id,
+    definitionId: definition.id,
     definition,
   };
 }
@@ -276,9 +301,14 @@ export function rehydrateGameState(state: GameState): GameState {
       location: 'ARENA_COMMIT' as const,
     })),
     galleryCards: rehydrateCards(state.galleryCards ?? []),
+    gallerySupply: rehydrateCards(state.gallerySupply ?? []),
     epicCards: rehydrateCards(state.epicCards ?? []),
+    epicSupply: rehydrateCards(state.epicSupply ?? []),
     flavorDeck: rehydrateCards(state.flavorDeck ?? []),
-    disfavorDeck: rehydrateCards(state.disfavorDeck ?? []),
+    disfavorDeck:
+      (state.disfavorDeck ?? []).length > 0
+        ? rehydrateCards(state.disfavorDeck).map((c) => ({ ...c, faceUp: true }))
+        : [createCardInstance(CROWD_DISFAVOR.id, 'DISFAVOR_DECK', 'market', true)],
     winnerId: state.winnerId ?? null,
   };
 }
@@ -383,8 +413,31 @@ export function validateGameAction(
 }
 
 function refillGallery(state: GameState): GameState {
-  if (state.galleryCards.length >= 6) return state;
-  return state;
+  if (state.galleryCards.length >= GALLERY_ROW_SIZE) return state;
+  const supply = [...(state.gallerySupply ?? [])];
+  const galleryCards = [...state.galleryCards];
+  while (galleryCards.length < GALLERY_ROW_SIZE && supply.length > 0) {
+    galleryCards.push({
+      ...supply.shift()!,
+      location: 'GALLERY',
+      faceUp: true,
+    });
+  }
+  return { ...state, galleryCards, gallerySupply: supply };
+}
+
+function refillEpicRow(state: GameState): GameState {
+  if (state.epicCards.length >= EPIC_ROW_SIZE) return state;
+  const supply = [...(state.epicSupply ?? [])];
+  const epicCards = [...state.epicCards];
+  while (epicCards.length < EPIC_ROW_SIZE && supply.length > 0) {
+    epicCards.push({
+      ...supply.shift()!,
+      location: 'EPIC_ROW',
+      faceUp: true,
+    });
+  }
+  return { ...state, epicCards, epicSupply: supply };
 }
 
 function drawCards(player: PlayerState, count: number): PlayerState {
@@ -438,7 +491,9 @@ export function createPregameState(
     arenaDeck: market.arenaDeck,
     arenaCommitZone: [],
     galleryCards: market.galleryCards,
+    gallerySupply: market.gallerySupply,
     epicCards: market.epicCards,
+    epicSupply: market.epicSupply,
     flavorDeck: market.flavorDeck,
     disfavorDeck: market.disfavorDeck,
     turnPlayerId: '',
@@ -474,7 +529,6 @@ export function createLobbyGameState(
       name: s.name,
       isAI: s.isAI ?? false,
       victoryPoints: 0,
-      karma: 0,
       hand: [],
       deck: [],
       discard: [],
@@ -570,7 +624,7 @@ export function processGameAction(
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
-      return applyCardPlayEffects(next, card);
+      return applyCardPlayEffects(next, playerIdx, card);
     }
 
     case 'DISCARD_CARD': {
@@ -661,7 +715,7 @@ export function processGameAction(
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
-      return refillGallery(next);
+      return refillEpicRow(refillGallery(next));
     }
 
     case 'ATTEMPT_ARENA': {
@@ -672,14 +726,8 @@ export function processGameAction(
 
       if (success) {
         player.victoryPoints += rewardVp;
-      } else if (next.disfavorDeck.length > 0) {
-        const disfavor = {
-          ...next.disfavorDeck[0],
-          location: 'DISCARD' as const,
-          ownerId: player.id,
-          faceUp: true,
-        };
-        next.disfavorDeck = next.disfavorDeck.slice(1);
+      } else {
+        const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DISCARD', player.id, true);
         player.discard = [...player.discard, disfavor];
       }
 

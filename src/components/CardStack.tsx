@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
-import { cardBack as cardBackImage } from '../assets/images';
+import { cardBack as cardBackImage, getCardImage } from '../assets/images';
 
 interface CardStackProps {
   cards: CardInstance[];
@@ -20,6 +20,8 @@ interface CardStackProps {
   useCardBack?: boolean;
   /** Dark overlay on card back (e.g. discard pile) */
   cardBackOverlay?: boolean;
+  /** Show the top card's face art instead of a solid tile */
+  showTopCardFace?: boolean;
 }
 
 export const CardStack: React.FC<CardStackProps> = ({
@@ -35,8 +37,13 @@ export const CardStack: React.FC<CardStackProps> = ({
   sidebarStack = false,
   useCardBack = false,
   cardBackOverlay = false,
+  showTopCardFace = false,
 }) => {
   const topCard = cards[cards.length - 1];
+  const topCardImage =
+    showTopCardFace && topCard?.faceUp
+      ? getCardImage(topCard.definition.image)
+      : undefined;
   const bgColor =
     color ?? (topCard ? FACTION_COLORS[topCard.definition.faction] : '#222238');
   const count = cards.length;
@@ -61,7 +68,15 @@ export const CardStack: React.FC<CardStackProps> = ({
           pressed && onPress && styles.pressed,
         ]}
       >
-        {useCardBack ? (
+        {topCardImage ? (
+          <View style={{ width, height }}>
+            <Image
+              source={topCardImage}
+              style={{ width, height, borderRadius: 8 }}
+              resizeMode="cover"
+            />
+          </View>
+        ) : useCardBack ? (
           <View style={{ width, height }}>
             <Image
               source={cardBackImage}

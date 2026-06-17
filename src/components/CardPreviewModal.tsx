@@ -6,8 +6,10 @@ import {
   Modal,
   Pressable,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
+import { getCardImage } from '../assets/images';
 
 interface CardPreviewModalProps {
   card: CardInstance | null;
@@ -25,6 +27,7 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
 
   const { definition } = card;
   const bgColor = FACTION_COLORS[definition.faction] ?? '#555';
+  const cardImage = getCardImage(definition.image);
   const cardW = Math.min(280, screenW * 0.7);
   const cardH = cardW * 1.45;
 
@@ -37,6 +40,11 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.centered} onPress={(e) => e.stopPropagation()}>
+          {cardImage ? (
+            <View style={[styles.imageCard, { width: cardW, height: cardH }]}>
+              <Image source={cardImage} style={styles.imageFill} resizeMode="contain" />
+            </View>
+          ) : (
           <View
             style={[
               styles.card,
@@ -85,6 +93,7 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
               )}
             </View>
           </View>
+          )}
 
           <Pressable style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>✕ Close</Text>
@@ -104,6 +113,17 @@ const styles = StyleSheet.create({
   },
   centered: {
     alignItems: 'center',
+  },
+  imageCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: '#12122a',
+  },
+  imageFill: {
+    width: '100%',
+    height: '100%',
   },
   card: {
     borderRadius: 14,

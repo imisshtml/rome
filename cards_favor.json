@@ -1,0 +1,228 @@
+[
+  {
+    "id": "favor_bread_circuses",
+    "name": "Bread & Circuses",
+    "image": "favor_bread_circus.jpg",
+    "deck_qty": 3,
+    "effect_text": "Gain 2 Coins.",
+    "effects": {
+      "gain_coins": 2
+    }
+  },
+  {
+    "id": "favor_mars",
+    "name": "Favor of Mars",
+    "image": "favor_mars.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 1 Imperial Favor.",
+    "effects": {
+      "gain_imperial_favor": 1
+    }
+  },
+  {
+    "id": "favor_boast",
+    "name": "Gladiator's Boast",
+    "image": "favor_boast.jpg",
+    "deck_qty": 3,
+    "effect_text": "Draw 1 card.",
+    "effects": {
+      "draw_cards": 1
+    }
+  },
+  {
+    "id": "favor_patrons_donation",
+    "name": "Patron's Donation",
+    "image": "favor_spoils.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 3 Coins.",
+    "effects": {
+      "gain_coins": 3
+    }
+  },
+  {
+    "id": "favor_slave_revolt",
+    "name": "Slave Revolt",
+    "image": "favor_revolt.jpg",
+    "deck_qty": 2,
+    "effect_text": "Destroy a card from your hand or discard pile.",
+    "effects": {
+      "destroy_cards": 1,
+      "destroy_from": ["hand", "discard"]
+    }
+  },
+  {
+    "id": "favor_military_tribute",
+    "name": "Military Tribute",
+    "image": "favor_legion_tribute.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain a Legion card costing 4 or less.",
+    "effects": {
+      "gain_card": {
+        "faction": "legion",
+        "max_cost": 4
+      }
+    }
+  },
+  {
+    "id": "favor_senate_decree",
+    "name": "Senate Decree",
+    "image": "favor_senate_control.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain a Senate card costing 4 or less.",
+    "effects": {
+      "gain_card": {
+        "faction": "senate",
+        "max_cost": 4
+      }
+    }
+  },
+  {
+    "id": "favor_ludus_recruitment",
+    "name": "Ludus Recruitment",
+    "image": "favor_ludus_recruits.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain a Ludus card costing 4 or less.",
+    "effects": {
+      "gain_card": {
+        "faction": "ludus",
+        "max_cost": 4
+      }
+    }
+  },
+  {
+    "id": "favor_hidden_stash",
+    "name": "Hidden Stash",
+    "image": "favor_hidden_stash.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 2 Coins and draw 1 card.",
+    "effects": {
+      "gain_coins": 2,
+      "draw_cards": 1
+    }
+  },
+  {
+    "id": "favor_oracles_warning",
+    "name": "Oracle's Warning",
+    "image": "favor_oracle.jpg",
+    "deck_qty": 2,
+    "effect_text": "Look at the top 3 cards of your deck and reorder them.",
+    "effects": {
+      "look_at_top_cards": 3,
+      "reorder_top_cards": true
+    }
+  },
+  {
+    "id": "favor_veterans_advice",
+    "name": "Veteran's Advice",
+    "image": "favor_advice.jpg",
+    "deck_qty": 2,
+    "effect_text": "Draw 2 cards, then discard 1 card.",
+    "effects": {
+      "draw_cards": 2,
+      "discard_cards": 1
+    }
+  },
+  {
+    "id": "favor_spoils_of_victory",
+    "name": "Spoils of Victory",
+    "image": "favor_spoils_of_war.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 1 Imperial Favor and 1 Coin.",
+    "effects": {
+      "gain_imperial_favor": 1,
+      "gain_coins": 1
+    }
+  },
+  {
+    "id": "favor_imperial_tax",
+    "name": "Imperial Tax",
+    "image": "favor_imperial_tax.jpg",
+    "deck_qty": 1,
+    "effect_text": "All opponents discard a card.",
+    "effects": {
+      "force_opponent_discard": 1,
+      "target": "all_opponents"
+    }
+  },
+  {
+    "id": "favor_arena_wager",
+    "name": "Arena Wager",
+    "image": "favor_wager.jpg",
+    "deck_qty": 2,
+    "effect_text": "Consult the Augur.",
+    "effects": {
+      "consult_augur": true
+    }
+  },
+  {
+    "id": "favor_merchant_caravan",
+    "name": "Merchant Caravan",
+    "image": "favor_merchants.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 4 Coins.",
+    "effects": {
+      "gain_coins": 4
+    }
+  },
+  {
+    "id": "favor_triumphal_parade",
+    "name": "Triumphal Parade",
+    "image": "favor_parade.jpg",
+    "deck_qty": 1,
+    "effect_text": "Gain 1 Victory Point.",
+    "effects": {
+      "gain_vp": 1
+    }
+  },
+  {
+    "id": "favor_temple_blessing",
+    "name": "Temple Blessing",
+    "image": "favor_temple_blessing.jpg",
+    "deck_qty": 2,
+    "effect_text": "Gain 1 Imperial Favor or draw 1 card.",
+    "effects": {
+      "choose_one": [
+        {
+          "gain_imperial_favor": 1
+        },
+        {
+          "draw_cards": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "favor_black_market_deal",
+    "name": "Black Market Deal",
+    "image": "favor_black_market.jpg",
+    "deck_qty": 1,
+    "effect_text": "Gain a card costing 5 or less, then discard a card.",
+    "effects": {
+      "gain_card": {
+        "max_cost": 5
+      },
+      "discard_cards": 1
+    }
+  },
+  {
+    "id": "favor_gladiators_funeral",
+    "name": "Gladiator's Funeral",
+    "image": "favor_pyre.jpg",
+    "deck_qty": 1,
+    "effect_text": "Destroy a card from your hand or discard.",
+    "effects": {
+      "destroy_cards": 1,
+      "destroy_from": ["hand", "discard"]
+    }
+  },
+  {
+    "id": "favor_crowd_frenzy",
+    "name": "Crowd Frenzy",
+    "image": "favor_crowd.jpg",
+    "deck_qty": 1,
+    "effect_text": "Your next Arena challenge gains +2 Valor.",
+    "effects": {
+      "arena_bonus_valor": 2
+    }
+  }
+]

@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "cards": [
+    {
+      "id": "event_bread_and_circuses",
+      "name": "Bread and Circuses",
+      "image": "event_celebrations.jpg",
+      "effect_text": "All players gain 1 Coins.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_gain_coins": 1
+      }
+    },
+    {
+      "id": "event_senate_decree",
+      "name": "Senate Decree",
+      "image": "event_proclamation.jpg",
+      "effect_text": "All players reveal the top card of their deck. Cards costing 5 or more are drawn into hand.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "reveal_top_card": true,
+        "draw_if_cost_gte": 5
+      }
+    },
+    {
+      "id": "event_barbarian_incursion",
+      "name": "Barbarian Incursion",
+      "image": "event_incursion.jpg",
+      "effect_text": "Each player may discard a card. Players that do gain 2 Coins.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "optional_discard_for_coins": 2
+      }
+    },
+    {
+      "id": "event_plague_spreads",
+      "name": "Plague Spreads",
+      "image": "event_plague.jpg",
+      "effect_text": "Each player discards a card from their hand.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_discard": 1
+      }
+    },
+    {
+      "id": "event_triumph_of_rome",
+      "name": "Triumph of Rome",
+      "image": "event_triumph.jpg",
+      "effect_text": "Each player gains 1 VP.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_gain_vp": 1
+      }
+    },
+    {
+      "id": "event_grain_shortage",
+      "name": "Grain Shortage",
+      "image": "event_famine.jpg",
+      "effect_text": "Players may not gain cards costing 6 or more until the start of the next turn.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "temporary_max_purchase_cost": 5
+      }
+    },
+    {
+      "id": "event_temple_omen",
+      "name": "Temple Omen",
+      "image": "event_omens.jpg",
+      "effect_text": "Each player draws a card.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_draw": 1
+      }
+    },
+    {
+      "id": "event_slave_revolt",
+      "name": "Slave Revolt",
+      "image": "event_incursion.jpg",
+      "effect_text": "Destroy the lowest-cost card in the Gallery and replace it.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "destroy_lowest_gallery_card": true
+      }
+    },
+    {
+      "id": "event_imperial_tax",
+      "name": "Imperial Tax",
+      "image": "event_famine.jpg",
+      "effect_text": "Each player loses 1 Coins. Players with 0 Coins are unaffected.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_lose_coins": 1
+      }
+    },
+    {
+      "id": "event_military_tribute",
+      "name": "Military Tribute",
+      "image": "event_triumph.jpg",
+      "effect_text": "Each player gains 1 Imperial Favor.",
+      "effect_keywords": [],
+      "effect_legacy": {
+        "all_players_gain_favor": 1
+      }
+    }
+  ]
+}

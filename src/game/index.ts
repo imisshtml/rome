@@ -28,5 +28,13 @@ export {
 } from './postGame';
 export type { PostGameSummary, PostGamePlayerSummary, PostGameCardRow } from './postGame';
 export { GameStateManager } from './GameState';
-export { CARD_DEFINITIONS, GALLERY_CARD_IDS, ARENA_CARD_IDS, EPIC_CARD_IDS } from './CardDefinitions';
+export {
+  CARD_DEFINITIONS,
+  CROWD_DISFAVOR,
+  getCardDefinition,
+  getGalleryPoolEntries,
+  getEpicPoolEntries,
+  getArenaPoolEntries,
+  getFlavorPoolEntries,
+} from './CardDefinitions';
 export { TURN_PHASE_CONFIG, canPerformAction, getNextPhase } from './TurnManager';

@@ -37,7 +37,6 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
 
       <View style={styles.statsRow}>
         <StatBadge value={player.victoryPoints} label="VP" color="#FFD700" />
-        <StatBadge value={player.karma} label="Karma" color="#9B59B6" />
         <StatBadge value={player.hand.length} label="Hand" />
         <StatBadge value={player.deck.length} label="Deck" />
         <StatBadge value={player.discard.length} label="Disc" />

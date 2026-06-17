@@ -33,7 +33,6 @@ export interface PlayerState {
   name: string;
   isAI?: boolean;
   victoryPoints: number;
-  karma: number;
   hand: CardInstance[];
   deck: CardInstance[];
   discard: CardInstance[];
@@ -51,6 +50,10 @@ export interface GameState {
   arenaCommitZone: CardInstance[];
   galleryCards: CardInstance[];
   epicCards: CardInstance[];
+  /** Face-down supply for gallery refills */
+  gallerySupply?: CardInstance[];
+  /** Face-down supply for epic row refills */
+  epicSupply?: CardInstance[];
   flavorDeck: CardInstance[];
   disfavorDeck: CardInstance[];
   turnPlayerId: string;

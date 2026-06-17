@@ -19,6 +19,8 @@ export type CardType =
   | 'CrowdDisfavor'
   | 'Basic';
 
+import type { CardEffects } from './effectsTypes';
+
 export interface CardDefinition {
   id: string;
   name: string;
@@ -28,6 +30,14 @@ export interface CardDefinition {
   type: CardType;
   faction: Faction;
   text: string;
+  image?: string;
+  /** Arena challenge requirement (arena cards only) */
+  valorRequired?: number;
+  /** VP awarded on successful arena attempt */
+  rewardVp?: number;
+  tier?: string;
+  /** Structured effect payload from card JSON (`effects` field). */
+  effects?: CardEffects;
 }
 
 export interface CardInstance {

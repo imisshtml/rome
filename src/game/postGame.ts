@@ -111,7 +111,7 @@ export function isArenaSupplyFinished(state: GameState): boolean {
 }
 
 export function isEpicSupplyFinished(state: GameState): boolean {
-  return state.epicCards.length === 0;
+  return state.epicCards.length === 0 && (state.epicSupply?.length ?? 0) === 0;
 }
 
 export function isGameEndConditionMet(state: GameState): boolean {

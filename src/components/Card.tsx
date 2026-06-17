@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ViewStyle,
+  Image,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -16,7 +17,8 @@ import {
   GestureDetector,
 } from 'react-native-gesture-handler';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
-import { CARD_DEFINITIONS } from '../game/CardDefinitions';
+import { getCardDefinition } from '../game/CardDefinitions';
+import { getCardImage, cardBack as cardBackImage } from '../assets/images';
 import { useDraggedCard } from '../store/useGameStore';
 
 export type CardSizeMode = 'full' | 'short' | 'square' | 'landscape';
@@ -57,10 +59,10 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const definition =
     card.definition ??
-    CARD_DEFINITIONS[card.definitionId] ??
-    CARD_DEFINITIONS.basic_gladiator;
+    getCardDefinition(card.definitionId);
   const { faceUp } = card;
   const bgColor = FACTION_COLORS[definition.faction] ?? '#555';
+  const cardImage = getCardImage(definition.image);
   const mode: CardSizeMode =
     sizeMode ?? (compact ? 'short' : 'full');
   const isShort = mode === 'short';
@@ -162,16 +164,41 @@ export const Card: React.FC<CardProps> = ({
         <Animated.View
           style={[
             styles.card,
-            { width, height, backgroundColor: '#12122a' },
-            styles.cardBack,
+            styles.cardImageShell,
+            { width, height },
             animatedStyle,
             disabled && styles.disabled,
             style,
           ]}
         >
-          <View style={styles.cardBackPattern}>
-            <Text style={styles.cardBackText}>⚔</Text>
-          </View>
+          <Image
+            source={cardBackImage}
+            style={styles.cardImageFill}
+            resizeMode="cover"
+          />
+        </Animated.View>
+      </GestureDetector>
+    );
+  }
+
+  if (cardImage) {
+    return (
+      <GestureDetector gesture={composed}>
+        <Animated.View
+          style={[
+            styles.card,
+            styles.cardImageShell,
+            { width, height },
+            animatedStyle,
+            disabled && styles.disabled,
+            style,
+          ]}
+        >
+          <Image
+            source={cardImage}
+            style={styles.cardImageFill}
+            resizeMode="cover"
+          />
         </Animated.View>
       </GestureDetector>
     );
@@ -277,14 +304,22 @@ export const Card: React.FC<CardProps> = ({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 10,
-    padding: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 5,
+    overflow: 'hidden',
+  },
+  cardImageShell: {
+    padding: 0,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#12122a',
+  },
+  cardImageFill: {
+    width: '100%',
+    height: '100%',
   },
   disabled: {
     opacity: 0.45,

@@ -1,0 +1,101 @@
+{
+  "version": "1.0",
+  "cards": [
+    {
+      "id": "arena_leopard",
+      "name": "Leopard Hunt",
+      "image": "arena_leopard.jpg",
+      "arena_type": "beast",
+      "tier": "easy",
+      "valor_required": 5
+    },
+    {
+      "id": "arena_hyenas",
+      "name": "Hyena Pack",
+      "image": "arena_hyenas.jpg",
+      "arena_type": "beast",
+      "tier": "easy",
+      "valor_required": 6
+    },
+    {
+      "id": "arena_hounds",
+      "name": "Arena Hounds",
+      "image": "arena_hounds.jpg",
+      "arena_type": "beast",
+      "tier": "easy",
+      "valor_required": 5
+    },
+    {
+      "id": "arena_lion",
+      "name": "Lion of Numidia",
+      "image": "arena_lion.jpg",
+      "arena_type": "beast",
+      "tier": "medium",
+      "valor_required": 7
+    },
+    {
+      "id": "arena_bull",
+      "name": "The Black Bull",
+      "image": "arena_bull.jpg",
+      "arena_type": "beast",
+      "tier": "hard",
+      "valor_required": 8
+    },
+    {
+      "id": "arena_gaul",
+      "name": "Champion of Gaul",
+      "image": "arena_gaul.jpg",
+      "arena_type": "gladiator",
+      "tier": "medium",
+      "valor_required": 8
+    },
+    {
+      "id": "arena_eques",
+      "name": "Mounted Duel",
+      "image": "arena_eques.jpg",
+      "arena_type": "gladiator",
+      "tier": "medium",
+      "valor_required": 7
+    },
+    {
+      "id": "arena_primus",
+      "name": "Primus Champion",
+      "image": "arena_primus.jpg",
+      "arena_type": "gladiator",
+      "tier": "epic",
+      "valor_required": 11
+    },
+    {
+      "id": "arena_revolt",
+      "name": "Gladiator Revolt",
+      "image": "arena_revolt.jpg",
+      "arena_type": "gladiator",
+      "tier": "epic",
+      "valor_required": 12
+    },
+    {
+      "id": "arena_fire",
+      "name": "Arena Fire",
+      "image": "arena_fire.jpg",
+      "arena_type": "hazard",
+      "tier": "medium",
+      "valor_required": 6
+    },
+    {
+      "id": "arena_chariot",
+      "name": "Chariot Race",
+      "image": "arena_chariot.jpg",
+      "arena_type": "spectacle",
+      "tier": "hard",
+      "valor_required": 8
+    },
+    {
+      "id": "arena_naval_battle",
+      "name": "Naumachia",
+      "image": "arena_naval_battle.jpg",
+      "arena_type": "spectacle",
+      "tier": "epic",
+      "valor_required": 10
+    }
+  ]
+}
