@@ -13,11 +13,10 @@ export interface DropResult {
 /**
  * Strategic drag flow:
  *   Hand → Play Area (MAIN phase)
- *   Play Area → Arena Commit (ARENA phase)
- *   Hand/Play Area → Discard (any time)
+ *   Hand/Play Area → Discard
  *   Hand → Items in Play
  *
- * NOT allowed: Hand → Arena Commit directly
+ * Arena fighters are committed via the Arena challenge modal, not drag-and-drop.
  */
 export function canDropCard(
   card: CardInstance,
@@ -26,7 +25,6 @@ export function canDropCard(
 ): boolean {
   const rules: Partial<Record<CardLocation, CardLocation[]>> = {
     PLAY_AREA: ['HAND'],
-    ARENA_COMMIT: ['PLAY_AREA'],
     DISCARD: ['HAND', 'PLAY_AREA'],
     ITEMS_IN_PLAY: ['HAND'],
   };

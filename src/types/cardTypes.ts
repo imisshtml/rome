@@ -47,6 +47,8 @@ export interface CardInstance {
   location: CardLocation;
   ownerId: string;
   faceUp: boolean;
+  /** Spy / morph — faction chosen when played; used for banding until discarded. */
+  chosenFaction?: Faction | null;
 }
 
 export type CardLocation =

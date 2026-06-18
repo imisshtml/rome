@@ -1,4 +1,4 @@
-import { CardInstance, CardLocation } from './cardTypes';
+import { CardInstance, CardLocation, Faction } from './cardTypes';
 
 export type GamePhase = 'PREGAME' | 'MAIN' | 'CLEANUP';
 
@@ -8,6 +8,8 @@ export type GameActionType =
   | 'PLAY_CARD'
   | 'DRAW_CARD'
   | 'ATTEMPT_ARENA'
+  | 'CONFIRM_ARENA_FIGHTERS'
+  | 'ARENA_RESPOND'
   | 'BUY_CARD'
   | 'DISCARD_CARD'
   | 'END_PHASE'
@@ -16,14 +18,35 @@ export type GameActionType =
   | 'PLAYER_READY'
   | 'END_GAME';
 
+export type ArenaResponseType = 'support' | 'hinder' | 'pass';
+
+export interface ArenaChallengeState {
+  challengerId: string;
+  phase: 'responses';
+  pendingResponsePlayerIds: string[];
+  supportByPlayerId: Record<string, CardInstance | null>;
+  hinderByPlayerId: Record<string, CardInstance | null>;
+}
+
+export interface ArenaChallengeResult {
+  success: boolean;
+  totalValor: number;
+  requiredValor: number;
+  rewardVp: number;
+  challengerId: string;
+}
+
 export interface GameAction {
   type: GameActionType;
   playerId: string;
   payload?: {
     cardInstanceId?: string;
+    cardInstanceIds?: string[];
     targetZone?: CardLocation;
     sourceZone?: CardLocation;
     count?: number;
+    responseType?: ArenaResponseType;
+    chosenFaction?: Faction;
   };
   timestamp: number;
 }
@@ -48,6 +71,10 @@ export interface GameState {
   arenaCard: CardInstance | null;
   arenaDeck: CardInstance[];
   arenaCommitZone: CardInstance[];
+  /** Active arena challenge — fighters in arenaCommitZone, responses tracked here */
+  arenaChallenge?: ArenaChallengeState | null;
+  /** Shown briefly after a challenge resolves */
+  lastArenaResult?: ArenaChallengeResult | null;
   galleryCards: CardInstance[];
   epicCards: CardInstance[];
   /** Face-down supply for gallery refills */

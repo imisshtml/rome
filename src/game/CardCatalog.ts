@@ -65,6 +65,16 @@ function buildDefinition(
   return { id, ...partial };
 }
 
+function normalizeFactionEffects(raw: Record<string, unknown>): Partial<CardEffects> {
+  const partial = { ...raw } as Partial<CardEffects> & Record<string, unknown>;
+  const countsAs = partial.counts_as_faction as string | null | undefined;
+  if (countsAs === 'choose' || countsAs === 'choose_faction') {
+    partial.choose_faction_on_play = true;
+    partial.counts_as_faction = null;
+  }
+  return partial;
+}
+
 function fromFactionCard(raw: RawFactionCard): CardDefinition {
   const id = factionDefinitionId(raw);
   return buildDefinition(id, {
@@ -77,7 +87,11 @@ function fromFactionCard(raw: RawFactionCard): CardDefinition {
     text: raw.effect_text ?? '',
     image: raw.image,
     ...('effects' in raw && raw.effects
-      ? { effects: mergeCardEffects(raw.effects as Partial<CardEffects>) }
+      ? {
+          effects: mergeCardEffects(
+            normalizeFactionEffects(raw.effects as Record<string, unknown>)
+          ),
+        }
       : {}),
   });
 }

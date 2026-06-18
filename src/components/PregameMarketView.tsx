@@ -12,14 +12,13 @@ import { PlayerState } from '../types/gameTypes';
 import { turnButtonBg } from '../assets/images';
 import {
   CARD_PORTRAIT_RATIO,
+  CARD_LANDSCAPE_RATIO,
   landscapeCardWidth,
 } from '../utils/cardDisplayUtils';
 import Card from './Card';
 import GalleryCard from './GalleryCard';
 
 const TURN_BUTTON_ASPECT = 448 / 132;
-/** Epics can be up to this factor taller than the arena card. */
-const EPIC_VS_ARENA = 1.1;
 /** Slightly shrink gallery/epics from max fit (arena unchanged). */
 const MARKET_CARD_SCALE = 0.9;
 
@@ -77,16 +76,16 @@ function computePregameSizes(width: number, height: number) {
     Math.min(galleryMaxByWidth, galleryRowH) * MARKET_CARD_SCALE
   );
 
-  const arenaH = Math.floor(bottomRowH * 0.88);
-  const arenaW = landscapeCardWidth(arenaH);
-
   const epicCount = 3;
   const epicGap = galleryGap;
-  const epicUsableW = width - ROOT_W_PAD * 2 - arenaW - epicGap * (epicCount + 1);
-  const epicMaxByWidth = Math.floor(
-    Math.max(0, epicUsableW / epicCount) * CARD_PORTRAIT_RATIO
+  const bottomUsableW = width - ROOT_W_PAD * 2 - epicGap * 4;
+  const maxRowHByWidth = Math.floor(bottomUsableW / (CARD_LANDSCAPE_RATIO + epicCount / CARD_PORTRAIT_RATIO));
+  const epicSize = Math.min(
+    maxRowHByWidth,
+    Math.floor(bottomRowH * 0.95)
   );
-  const epicSize = Math.min(epicMaxByWidth, Math.floor(bottomRowH * 0.95));
+  const arenaH = epicSize;
+  const arenaW = landscapeCardWidth(arenaH);
 
   const buttonW = Math.min(width - ROOT_W_PAD * 2, 220);
   const buttonH = Math.round(buttonW / TURN_BUTTON_ASPECT);

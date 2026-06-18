@@ -10,7 +10,7 @@ import {
   Gesture,
   GestureDetector,
 } from 'react-native-gesture-handler';
-import { CardInstance } from '../types/cardTypes';
+import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
 import { getCardDefinition } from '../game/CardDefinitions';
 import { useDraggedCard, useHoverPreviewCard } from '../store/useGameStore';
 import CardFace from './CardFace';
@@ -189,6 +189,14 @@ export const Card: React.FC<CardProps> = ({
           faceUp={card.faceUp}
           width={width}
           height={height}
+          style={
+            card.chosenFaction
+              ? {
+                  borderColor: FACTION_COLORS[card.chosenFaction],
+                  borderWidth: 2.5,
+                }
+              : undefined
+          }
         />
       </Animated.View>
     </GestureDetector>

@@ -12,7 +12,6 @@ import {
   applyActionWithPhaseRules,
   createPregameState,
   rehydrateGameState,
-  MAX_PLAYERS,
 } from '../game/GameEngine';
 import { readGameStateSnapshot } from '../store/useGameStore';
 
@@ -103,11 +102,7 @@ export class MultiplayerGameClient {
 
     const setups = [
       { id: 'player_1', name: displayName, isAI: false },
-      ...Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => ({
-        id: `player_${i + 2}`,
-        name: `AI ${i + 2}`,
-        isAI: true,
-      })),
+      { id: 'player_2', name: 'AI', isAI: true },
     ];
     const state = createPregameState(setups, 'local');
     this.pushState(state);

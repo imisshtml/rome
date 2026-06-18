@@ -11,14 +11,13 @@ import { createPortal } from 'react-dom';
 import {
   useGameState,
   useDispatchAction,
-  useArenaValor,
   useDraggedCard,
   useHoveredZone,
   useHoverPreviewCard,
   useLocalPlayer,
   useIsLocalTurn,
 } from '../store/useGameStore';
-import { getArenaChallengeStats } from '../game/GameEngine';
+import { getArenaChallengeStats, getArenaChallengeTotalValor } from '../game/GameEngine';
 import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
 import { canDropCard } from '../utils/dragHelpers';
@@ -32,7 +31,11 @@ import BoardSidebarRight from './BoardSidebarRight';
 import GalleryCard from './GalleryCard';
 import CardPreviewModal from './CardPreviewModal';
 import DiscardModal from './DiscardModal';
+import ArenaChallengeModal, { ArenaModalStep } from './ArenaChallengeModal';
+import FactionChoiceModal from './FactionChoiceModal';
 import PregameMarketView from './PregameMarketView';
+import { requiresFactionChoiceOnPlay } from '../utils/cardFactionUtils';
+import { Faction } from '../types/cardTypes';
 import { FullBleedBackground } from './FullBleedBackground';
 import { gameBackground } from '../assets/images';
 
@@ -40,14 +43,12 @@ const ZONE_LAYOUTS = new Map<string, LayoutRectangle>();
 
 const ZONE_TYPE_BY_ID: Record<string, CardLocation> = {
   play_area: 'PLAY_AREA',
-  arena_commit: 'ARENA_COMMIT',
   discard: 'DISCARD',
 };
 
 export const GameTable: React.FC = () => {
   const state = useGameState();
   const dispatch = useDispatchAction();
-  const arenaValor = useArenaValor();
   const [draggedCard, setDraggedCard] = useDraggedCard();
   const [, setHoveredZone] = useHoveredZone();
   const [hoverPreviewCard] = useHoverPreviewCard();
@@ -55,6 +56,9 @@ export const GameTable: React.FC = () => {
   const layout = useBoardLayout(!isPregame);
   const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
   const [discardPlayer, setDiscardPlayer] = useState<PlayerState | null>(null);
+  const [arenaModalOpen, setArenaModalOpen] = useState(false);
+  const [arenaModalStep, setArenaModalStep] = useState<ArenaModalStep>('prompt');
+  const [factionChoiceCard, setFactionChoiceCard] = useState<CardInstance | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [tableScreenRect, setTableScreenRect] = useState({ x: 0, y: 0 });
   const tableRef = useRef<View>(null);
@@ -83,9 +87,36 @@ export const GameTable: React.FC = () => {
 
   const playValor =
     localPlayer?.playArea.reduce((s, c) => s + (c.definition?.valor ?? 0), 0) ?? 0;
-  const valorInPlay = isMainActive && isLocalTurn
-    ? state.turnValor + playValor + arenaValor
-    : playValor + arenaValor;
+  const valorInPlay = isMainActive && isLocalTurn ? state.turnValor + playValor : playValor;
+  const canChallengeArena =
+    canInteract && !!state.arenaCard && !state.arenaChallenge;
+  const pendingArenaResponse =
+    state.arenaChallenge?.pendingResponsePlayerIds.includes(localPlayer?.id ?? '') ?? false;
+  const arenaChallengeTotal = getArenaChallengeTotalValor(state);
+
+  useEffect(() => {
+    if (pendingArenaResponse) {
+      setArenaModalOpen(true);
+      setArenaModalStep('respond');
+    }
+  }, [pendingArenaResponse]);
+
+  useEffect(() => {
+    if (state.lastArenaResult && !state.arenaChallenge) {
+      setArenaModalOpen(true);
+      setArenaModalStep('result');
+    }
+  }, [state.lastArenaResult, state.arenaChallenge]);
+
+  useEffect(() => {
+    if (state.arenaChallenge && !pendingArenaResponse && arenaModalStep !== 'result') {
+      setArenaModalStep('waiting');
+      if (localPlayer?.id === state.arenaChallenge.challengerId) {
+        setArenaModalOpen(true);
+      }
+    }
+  }, [state.arenaChallenge, pendingArenaResponse, arenaModalStep, localPlayer?.id]);
+
   const coinsInPlay = isMainActive && isLocalTurn ? state.turnCoins : 0;
   const victoryPoints = localPlayer?.victoryPoints ?? 0;
 
@@ -101,6 +132,34 @@ export const GameTable: React.FC = () => {
     },
     [dispatch, localPlayer]
   );
+
+  const playCard = useCallback(
+    (card: CardInstance, chosenFaction?: Faction) => {
+      if (!canInteract) return;
+      if (requiresFactionChoiceOnPlay(card.definition) && !chosenFaction) {
+        setFactionChoiceCard(card);
+        return;
+      }
+      dispatchAction('PLAY_CARD', {
+        cardInstanceId: card.instanceId,
+        chosenFaction,
+      });
+    },
+    [canInteract, dispatchAction]
+  );
+
+  const handleFactionChoice = useCallback(
+    (faction: Faction) => {
+      if (!factionChoiceCard) return;
+      playCard(factionChoiceCard, faction);
+      setFactionChoiceCard(null);
+    },
+    [factionChoiceCard, playCard]
+  );
+
+  const handleCancelFactionChoice = useCallback(() => {
+    setFactionChoiceCard(null);
+  }, []);
 
   const handleEndPhase = useCallback(() => {
     if (!canInteract) return;
@@ -122,14 +181,57 @@ export const GameTable: React.FC = () => {
 
   const handlePlayAreaCardPress = useCallback(
     (card: CardInstance) => {
-      if (!canInteract) return;
-      dispatchAction('MOVE_CARD', {
-        cardInstanceId: card.instanceId,
-        targetZone: 'ARENA_COMMIT',
-      });
+      setPreviewCard(card);
     },
-    [canInteract, dispatchAction]
+    []
   );
+
+  const handleArenaPress = useCallback(() => {
+    if (!canChallengeArena) {
+      if (state.arenaCard) setPreviewCard(state.arenaCard);
+      return;
+    }
+    setArenaModalStep('prompt');
+    setArenaModalOpen(true);
+  }, [canChallengeArena, state.arenaCard]);
+
+  const handleArenaDecline = useCallback(() => {
+    setArenaModalOpen(false);
+    setArenaModalStep('prompt');
+  }, []);
+
+  const handleArenaEnter = useCallback(() => {
+    setArenaModalStep('select');
+  }, []);
+
+  const handleConfirmArenaFighters = useCallback(
+    (cardInstanceIds: string[]) => {
+      dispatchAction('CONFIRM_ARENA_FIGHTERS', { cardInstanceIds });
+      setArenaModalStep('waiting');
+    },
+    [dispatchAction]
+  );
+
+  const handleArenaRespond = useCallback(
+    (responseType: 'support' | 'hinder' | 'pass', cardInstanceId?: string) => {
+      if (!localPlayer) return;
+      dispatch({
+        type: 'ARENA_RESPOND',
+        playerId: localPlayer.id,
+        payload: { responseType, cardInstanceId },
+        timestamp: Date.now(),
+      });
+      if (responseType === 'pass' || cardInstanceId) {
+        setArenaModalStep('waiting');
+      }
+    },
+    [dispatch, localPlayer]
+  );
+
+  const handleCloseArenaModal = useCallback(() => {
+    setArenaModalOpen(false);
+    setArenaModalStep('prompt');
+  }, []);
 
   const handleBuyCard = useCallback(
     (card: CardInstance) => {
@@ -138,11 +240,6 @@ export const GameTable: React.FC = () => {
     },
     [canInteract, dispatchAction]
   );
-
-  const handleAttemptArena = useCallback(() => {
-    if (!canInteract) return;
-    dispatchAction('ATTEMPT_ARENA');
-  }, [canInteract, dispatchAction]);
 
   const handleZoneLayout = useCallback(
     (zoneId: string) => (rect: LayoutRectangle) => {
@@ -211,17 +308,12 @@ export const GameTable: React.FC = () => {
       if (!canDropCard(card, card.location, targetZone)) return;
 
       if (targetZone === 'PLAY_AREA') {
-        dispatchAction('PLAY_CARD', { cardInstanceId: card.instanceId });
-      } else if (targetZone === 'ARENA_COMMIT') {
-        dispatchAction('MOVE_CARD', {
-          cardInstanceId: card.instanceId,
-          targetZone: 'ARENA_COMMIT',
-        });
+        playCard(card);
       } else if (targetZone === 'DISCARD') {
         dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
       }
     },
-    [canInteract, dispatchAction, findZoneAtPosition, setHoveredZone]
+    [canInteract, dispatchAction, findZoneAtPosition, playCard, setHoveredZone]
   );
 
   const handleOpponentPress = useCallback((player: PlayerState) => {
@@ -367,14 +459,16 @@ export const GameTable: React.FC = () => {
                     contentCenter
                   >
                     {state.arenaCard ? (
-                      <Card
-                        card={state.arenaCard}
-                        width={layout.arenaCardW}
-                        height={layout.arenaCardH}
-                        sizeMode="landscape"
-                        onPress={handleCardPreview}
-                        onLongPress={handleCardPreview}
-                      />
+                      <Pressable onPress={handleArenaPress} disabled={!state.arenaCard}>
+                        <Card
+                          card={state.arenaCard}
+                          width={layout.arenaCardW}
+                          height={layout.arenaCardH}
+                          sizeMode="landscape"
+                          onPress={handleArenaPress}
+                          onLongPress={handleCardPreview}
+                        />
+                      </Pressable>
                     ) : (
                       <Text style={styles.emptyText}>No Arena</Text>
                     )}
@@ -432,38 +526,6 @@ export const GameTable: React.FC = () => {
                   </View>
                 )}
               </View>
-
-              <DropZone
-                id="arena_commit"
-                zoneType="ARENA_COMMIT"
-                label=""
-                onLayout={handleZoneLayout('arena_commit')}
-                activePhase={isMainActive}
-                highlight={isMainActive && !!draggedCard}
-                emptyText={
-                  isMainActive ? 'Commit from Play Area' : undefined
-                }
-                style={styles.commitZone}
-              >
-                {state.arenaCommitZone.map((card) => (
-                  <Card
-                    key={card.instanceId}
-                    card={card}
-                    width={layout.playCardW}
-                    height={layout.playCardH}
-                    sizeMode="short"
-                    onPress={handleCardPreview}
-                    onLongPress={handleCardPreview}
-                  />
-                ))}
-                {isMainActive && state.arenaCommitZone.length > 0 && (
-                  <Pressable style={styles.attemptBtn} onPress={handleAttemptArena}>
-                    <Text style={styles.attemptBtnText}>
-                      ⚔ Attempt ({arenaValor}/{arenaStats.requiredValor})
-                    </Text>
-                  </Pressable>
-                )}
-              </DropZone>
             </DropZone>
 
             <View style={[styles.handZone, { height: layout.handZoneH }]}>
@@ -541,6 +603,33 @@ export const GameTable: React.FC = () => {
           setDiscardPlayer(null);
           setPreviewCard(card);
         }}
+      />
+      <FactionChoiceModal
+        card={factionChoiceCard}
+        visible={factionChoiceCard !== null}
+        onChoose={handleFactionChoice}
+        onCancel={handleCancelFactionChoice}
+      />
+      <ArenaChallengeModal
+        visible={arenaModalOpen}
+        step={arenaModalStep}
+        onClose={handleCloseArenaModal}
+        onDecline={handleArenaDecline}
+        onEnterArena={handleArenaEnter}
+        onConfirmFighters={handleConfirmArenaFighters}
+        onRespond={handleArenaRespond}
+        arenaCard={state.arenaCard}
+        requiredValor={arenaStats.requiredValor}
+        rewardVp={arenaStats.rewardVp}
+        playArea={localPlayer?.playArea ?? []}
+        hand={localPlayer?.hand ?? []}
+        committedCards={state.arenaCommitZone}
+        pendingResponders={state.arenaChallenge?.pendingResponsePlayerIds ?? []}
+        players={state.players}
+        localPlayerId={localPlayer?.id ?? ''}
+        challengerId={state.arenaChallenge?.challengerId ?? localPlayer?.id ?? ''}
+        totalValor={arenaChallengeTotal}
+        lastResult={state.lastArenaResult ?? null}
       />
       </View>
     </FullBleedBackground>
@@ -651,24 +740,6 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  commitZone: {
-    borderStyle: 'dashed',
-    borderColor: 'rgba(212,175,55,0.45)',
-    backgroundColor: 'transparent',
-    minHeight: 72,
-    marginTop: 'auto',
-  },
-  attemptBtn: {
-    backgroundColor: '#C0392B',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  attemptBtnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 12,
   },
   handZone: {
     backgroundColor: 'transparent',

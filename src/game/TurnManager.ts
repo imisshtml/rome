@@ -20,7 +20,7 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
       'DISCARD_CARD',
       'MOVE_CARD',
       'BUY_CARD',
-      'ATTEMPT_ARENA',
+      'CONFIRM_ARENA_FIGHTERS',
       'END_PHASE',
     ],
   },

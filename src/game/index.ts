@@ -10,6 +10,7 @@ export {
   getCurrentPlayer,
   getArenaCommitValor,
   getArenaChallengeStats,
+  getArenaChallengeTotalValor,
   getNextAIAction,
   buildPlayerSetupsFromDb,
   MAX_PLAYERS,

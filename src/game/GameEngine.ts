@@ -4,6 +4,11 @@ import { canPerformAction } from './TurnManager';
 import { finishGameIfNeeded, getPlayerTotalVp } from './postGame';
 import { applyStructuredPlayEffects, getLegacyCoinGain } from './EffectResolver';
 import {
+  isSpyFactionChoice,
+  requiresFactionChoiceOnPlay,
+  SPY_FACTION_CHOICES,
+} from '../utils/cardFactionUtils';
+import {
   CROWD_DISFAVOR,
   getCardDefinition,
   getGalleryPoolEntries,
@@ -266,6 +271,112 @@ export function getArenaCommitValor(state: GameState): number {
   );
 }
 
+export function getArenaChallengeTotalValor(state: GameState): number {
+  const challenge = state.arenaChallenge;
+  if (!challenge) return getArenaCommitValor(state);
+
+  const supportValor = Object.values(challenge.supportByPlayerId)
+    .filter((c): c is CardInstance => c != null)
+    .reduce((sum, c) => sum + (c.definition?.valor ?? 0), 0);
+
+  const hinderValor = Object.values(challenge.hinderByPlayerId)
+    .filter((c): c is CardInstance => c != null)
+    .reduce((sum, c) => sum + (c.definition?.valor ?? 0), 0);
+
+  return getArenaCommitValor(state) + supportValor - hinderValor;
+}
+
+function discardCardToPlayer(
+  player: PlayerState,
+  card: CardInstance
+): PlayerState {
+  return {
+    ...player,
+    discard: [
+      ...player.discard,
+      { ...card, location: 'DISCARD' as const, faceUp: true },
+    ],
+  };
+}
+
+function resolveArenaChallenge(state: GameState): GameState {
+  const challenge = state.arenaChallenge;
+  if (!challenge || !state.arenaCard) return state;
+
+  const challengerIdx = state.players.findIndex((p) => p.id === challenge.challengerId);
+  if (challengerIdx === -1) return state;
+
+  const { requiredValor, rewardVp } = getArenaChallengeStats(state.arenaCard);
+  const totalValor = getArenaChallengeTotalValor(state);
+  const success = totalValor >= requiredValor;
+
+  let players = state.players.map((p) => ({
+    ...p,
+    hand: [...p.hand],
+    discard: [...p.discard],
+    playArea: [...p.playArea],
+    deck: [...p.deck],
+  }));
+
+  let challenger = { ...players[challengerIdx] };
+
+  for (const card of state.arenaCommitZone) {
+    challenger = discardCardToPlayer(challenger, {
+      ...card,
+      ownerId: challenger.id,
+    });
+  }
+
+  for (const [playerId, card] of Object.entries(challenge.supportByPlayerId)) {
+    if (!card) continue;
+    const idx = players.findIndex((p) => p.id === playerId);
+    if (idx === -1) continue;
+    players[idx] = discardCardToPlayer(players[idx], card);
+  }
+
+  for (const [playerId, card] of Object.entries(challenge.hinderByPlayerId)) {
+    if (!card) continue;
+    const idx = players.findIndex((p) => p.id === playerId);
+    if (idx === -1) continue;
+    players[idx] = discardCardToPlayer(players[idx], card);
+  }
+
+  if (success) {
+    challenger.victoryPoints += rewardVp;
+  } else {
+    const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DISCARD', challenger.id, true);
+    challenger = discardCardToPlayer(challenger, disfavor);
+  }
+
+  players[challengerIdx] = challenger;
+
+  let arenaCard: CardInstance | null = state.arenaCard;
+  let arenaDeck = [...state.arenaDeck];
+  if (success) {
+    if (arenaDeck.length > 0) {
+      arenaCard = { ...arenaDeck.shift()!, location: 'ARENA', faceUp: true };
+    } else {
+      arenaCard = null;
+    }
+  }
+
+  return {
+    ...state,
+    players,
+    arenaCard,
+    arenaDeck,
+    arenaCommitZone: [],
+    arenaChallenge: null,
+    lastArenaResult: {
+      success,
+      totalValor,
+      requiredValor,
+      rewardVp,
+      challengerId: challenge.challengerId,
+    },
+  };
+}
+
 function rehydrateCard(card: CardInstance): CardInstance {
   const definition = getCardDefinition(card.definitionId);
   return {
@@ -333,6 +444,8 @@ export function rehydrateGameState(state: GameState): GameState {
       ...c,
       location: 'ARENA_COMMIT' as const,
     })),
+    arenaChallenge: state.arenaChallenge ?? null,
+    lastArenaResult: state.lastArenaResult ?? null,
     galleryCards: rehydrateCards(state.galleryCards ?? []),
     gallerySupply: rehydrateCards(state.gallerySupply ?? []),
     epicCards: rehydrateCards(state.epicCards ?? []),
@@ -390,6 +503,43 @@ export function validateGameAction(
     return 'Waiting for all players to ready up';
   }
 
+  if (action.type === 'ARENA_RESPOND') {
+    if (!state.arenaChallenge) return 'No arena challenge in progress';
+    if (!state.arenaChallenge.pendingResponsePlayerIds.includes(action.playerId)) {
+      return 'Not waiting for your arena response';
+    }
+    const responseType = action.payload?.responseType;
+    if (!responseType) return 'Missing response type';
+    if (responseType === 'pass') return null;
+    if (!action.payload?.cardInstanceId) return 'Select a card from hand';
+    if (!player.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
+      return 'Card not in hand';
+    }
+    return null;
+  }
+
+  if (action.type === 'CONFIRM_ARENA_FIGHTERS') {
+    if (state.turnPlayerId !== action.playerId) return 'Not your turn';
+    if (state.phase !== 'MAIN') return 'Not in main phase';
+    if (state.arenaChallenge) return 'Arena challenge already in progress';
+    if (!state.arenaCard) return 'No arena challenge';
+    const ids = action.payload?.cardInstanceIds ?? [];
+    if (ids.length !== ARENA_MAX_COMMIT) {
+      return `Select exactly ${ARENA_MAX_COMMIT} fighters`;
+    }
+    if (new Set(ids).size !== ids.length) return 'Duplicate fighter selected';
+    for (const id of ids) {
+      if (!player.playArea.some((c) => c.instanceId === id)) {
+        return 'Fighter must be in your play area';
+      }
+    }
+    return null;
+  }
+
+  if (state.arenaChallenge) {
+    return 'Arena challenge in progress';
+  }
+
   if (state.turnPlayerId !== action.playerId) {
     return 'Not your turn';
   }
@@ -404,6 +554,13 @@ export function validateGameAction(
       if (!player.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
         return 'Card not in hand';
       }
+      const card = player.hand.find((c) => c.instanceId === action.payload!.cardInstanceId)!;
+      if (requiresFactionChoiceOnPlay(card.definition)) {
+        const chosen = action.payload?.chosenFaction;
+        if (!chosen || !isSpyFactionChoice(chosen)) {
+          return 'Choose Ludus, Legion, or Senate for Spy';
+        }
+      }
       return null;
     }
     case 'MOVE_CARD': {
@@ -411,16 +568,7 @@ export function validateGameAction(
         return 'Missing move payload';
       }
       if (action.payload.targetZone === 'ARENA_COMMIT') {
-        if (state.arenaCommitZone.length >= ARENA_MAX_COMMIT) {
-          return `Max ${ARENA_MAX_COMMIT} cards in arena commit`;
-        }
-        const inHand = player.hand.some(
-          (c) => c.instanceId === action.payload!.cardInstanceId
-        );
-        const inPlay = player.playArea.some(
-          (c) => c.instanceId === action.payload!.cardInstanceId
-        );
-        if (!inHand && !inPlay) return 'Card not available to commit';
+        return 'Use the Arena challenge flow to commit fighters';
       }
       return null;
     }
@@ -429,11 +577,6 @@ export function validateGameAction(
       const card = findMarketCard(state, action.payload.cardInstanceId);
       if (!card) return 'Card not available to buy';
       if (state.turnCoins < card.definition.cost) return 'Not enough coins';
-      return null;
-    }
-    case 'ATTEMPT_ARENA': {
-      if (!state.arenaCard) return 'No arena challenge';
-      if (state.arenaCommitZone.length === 0) return 'No cards committed';
       return null;
     }
     case 'DRAW_CARD':
@@ -528,6 +671,8 @@ export function createPregameState(
     arenaCard: market.arenaCard,
     arenaDeck: market.arenaDeck,
     arenaCommitZone: [],
+    arenaChallenge: null,
+    lastArenaResult: null,
     galleryCards: market.galleryCards,
     gallerySupply: market.gallerySupply,
     epicCards: market.epicCards,
@@ -652,6 +797,14 @@ export function processGameAction(
       const card = { ...player.hand[cardIdx] };
       player.hand = player.hand.filter((_, i) => i !== cardIdx);
 
+      if (
+        requiresFactionChoiceOnPlay(card.definition) &&
+        action.payload?.chosenFaction &&
+        isSpyFactionChoice(action.payload.chosenFaction)
+      ) {
+        card.chosenFaction = action.payload.chosenFaction;
+      }
+
       if (card.definition.type === 'Item') {
         card.location = 'ITEMS_IN_PLAY';
         player.itemsInPlay = [...player.itemsInPlay, card];
@@ -689,30 +842,88 @@ export function processGameAction(
       if (!player || !action.payload?.cardInstanceId || !action.payload?.targetZone) {
         return next;
       }
-      const { cardInstanceId, targetZone } = action.payload;
+      // Arena fighters are committed via CONFIRM_ARENA_FIGHTERS only.
+      next.players = [...next.players];
+      next.players[playerIdx] = player;
+      return next;
+    }
 
-      if (targetZone === 'ARENA_COMMIT') {
-        const handIdx = player.hand.findIndex((c) => c.instanceId === cardInstanceId);
-        const playIdx = player.playArea.findIndex((c) => c.instanceId === cardInstanceId);
+    case 'CONFIRM_ARENA_FIGHTERS': {
+      if (!player || !next.arenaCard) return next;
+      const challenger = player;
+      const challengerId = challenger.id;
+      const ids = action.payload?.cardInstanceIds ?? [];
+      if (ids.length !== ARENA_MAX_COMMIT) return next;
 
-        let card: CardInstance | null = null;
-        if (handIdx !== -1) {
-          card = { ...player.hand[handIdx] };
-          player.hand = player.hand.filter((_, i) => i !== handIdx);
-        } else if (playIdx !== -1) {
-          card = { ...player.playArea[playIdx] };
-          player.playArea = player.playArea.filter((_, i) => i !== playIdx);
+      const fighters: CardInstance[] = [];
+      let playArea = [...challenger.playArea];
+      for (const id of ids) {
+        const idx = playArea.findIndex((c) => c.instanceId === id);
+        if (idx === -1) return next;
+        const card = { ...playArea[idx], location: 'ARENA_COMMIT' as const, ownerId: challengerId };
+        fighters.push(card);
+        playArea = playArea.filter((_, i) => i !== idx);
+      }
+
+      challenger.playArea = playArea;
+      next.players = [...next.players];
+      next.players[playerIdx] = challenger;
+      next.arenaCommitZone = fighters;
+      next.lastArenaResult = null;
+      next.arenaChallenge = {
+        challengerId,
+        phase: 'responses',
+        pendingResponsePlayerIds: next.players
+          .filter((p) => p.id !== challengerId)
+          .map((p) => p.id),
+        supportByPlayerId: {},
+        hinderByPlayerId: {},
+      };
+      return next;
+    }
+
+    case 'ARENA_RESPOND': {
+      const challenge = next.arenaChallenge;
+      if (!challenge) return next;
+      const responderIdx = next.players.findIndex((p) => p.id === action.playerId);
+      if (responderIdx === -1) return next;
+      if (!challenge.pendingResponsePlayerIds.includes(action.playerId)) return next;
+
+      let responder = { ...next.players[responderIdx] };
+      const responseType = action.payload?.responseType ?? 'pass';
+      const updatedChallenge = {
+        ...challenge,
+        supportByPlayerId: { ...challenge.supportByPlayerId },
+        hinderByPlayerId: { ...challenge.hinderByPlayerId },
+        pendingResponsePlayerIds: challenge.pendingResponsePlayerIds.filter(
+          (id) => id !== action.playerId
+        ),
+      };
+
+      if (responseType === 'support' || responseType === 'hinder') {
+        const cardId = action.payload?.cardInstanceId;
+        if (!cardId) return next;
+        const handIdx = responder.hand.findIndex((c) => c.instanceId === cardId);
+        if (handIdx === -1) return next;
+        const card = { ...responder.hand[handIdx] };
+        responder.hand = responder.hand.filter((_, i) => i !== handIdx);
+        if (responseType === 'support') {
+          updatedChallenge.supportByPlayerId[action.playerId] = card;
+        } else {
+          updatedChallenge.hinderByPlayerId[action.playerId] = card;
         }
-
-        if (card) {
-          card.location = 'ARENA_COMMIT';
-          card.ownerId = player.id;
-          next.arenaCommitZone = [...next.arenaCommitZone, card];
-        }
+      } else {
+        updatedChallenge.supportByPlayerId[action.playerId] = null;
+        updatedChallenge.hinderByPlayerId[action.playerId] = null;
       }
 
       next.players = [...next.players];
-      next.players[playerIdx] = player;
+      next.players[responderIdx] = responder;
+      next.arenaChallenge = updatedChallenge;
+
+      if (updatedChallenge.pendingResponsePlayerIds.length === 0) {
+        return resolveArenaChallenge(next);
+      }
       return next;
     }
 
@@ -757,37 +968,7 @@ export function processGameAction(
     }
 
     case 'ATTEMPT_ARENA': {
-      if (!next.arenaCard || !player) return next;
-      const { requiredValor, rewardVp } = getArenaChallengeStats(next.arenaCard);
-      const totalValor = getArenaCommitValor(next);
-      const success = totalValor >= requiredValor;
-
-      if (success) {
-        player.victoryPoints += rewardVp;
-      } else {
-        const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DECK', player.id, true);
-        player.deck = [...player.deck, disfavor];
-      }
-
-      for (const c of next.arenaCommitZone) {
-        player.discard.push({ ...c, location: 'DISCARD', ownerId: player.id });
-      }
-      next.arenaCommitZone = [];
-
-      if (success) {
-        if (next.arenaDeck.length > 0) {
-          next.arenaCard = {
-            ...next.arenaDeck.shift()!,
-            location: 'ARENA',
-            faceUp: true,
-          };
-        } else {
-          next.arenaCard = null;
-        }
-      }
-
-      next.players = [...next.players];
-      next.players[playerIdx] = player;
+      // Legacy action — arena resolves via CONFIRM_ARENA_FIGHTERS + ARENA_RESPOND.
       return next;
     }
 
@@ -873,6 +1054,37 @@ export function getNextAIAction(state: GameState): GameAction | null {
     };
   }
 
+  if (state.arenaChallenge?.phase === 'responses') {
+    const pending = state.arenaChallenge.pendingResponsePlayerIds;
+    const ai = state.players.find((p) => p.isAI && pending.includes(p.id));
+    if (ai) {
+      if (ai.hand.length === 0) {
+        return {
+          type: 'ARENA_RESPOND',
+          playerId: ai.id,
+          payload: { responseType: 'pass' },
+          timestamp: Date.now(),
+        };
+      }
+      const card = ai.hand.reduce((best, c) =>
+        (c.definition?.valor ?? 0) > (best.definition?.valor ?? 0) ? c : best
+      );
+      const challenger = state.players.find(
+        (p) => p.id === state.arenaChallenge!.challengerId
+      );
+      const hinder = challenger && !challenger.isAI;
+      return {
+        type: 'ARENA_RESPOND',
+        playerId: ai.id,
+        payload: {
+          responseType: hinder ? 'hinder' : 'support',
+          cardInstanceId: card.instanceId,
+        },
+        timestamp: Date.now(),
+      };
+    }
+  }
+
   const current = getCurrentPlayer(state);
   if (!current?.isAI) return null;
 
@@ -884,10 +1096,20 @@ export function getNextAIAction(state: GameState): GameAction | null {
   switch (state.phase) {
     case 'MAIN':
       if (current.hand.length > 0) {
+        const card = current.hand[0];
+        const payload: GameAction['payload'] = {
+          cardInstanceId: card.instanceId,
+        };
+        if (requiresFactionChoiceOnPlay(card.definition)) {
+          payload.chosenFaction =
+            SPY_FACTION_CHOICES[
+              Math.floor(Math.random() * SPY_FACTION_CHOICES.length)
+            ];
+        }
         return {
           ...base,
           type: 'PLAY_CARD',
-          payload: { cardInstanceId: current.hand[0].instanceId },
+          payload,
         };
       }
       return { ...base, type: 'END_PHASE' };

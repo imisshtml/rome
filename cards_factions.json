@@ -151,7 +151,7 @@
         "faction"
       ],
       "effects": {
-        "counts_as_faction": "choose"
+        "choose_faction_on_play": true
       },
       "rules_notes": "Each player starts with 3 Spy cards in their deck.",
       "status": "prototype"

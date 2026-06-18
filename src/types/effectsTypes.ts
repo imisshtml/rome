@@ -23,6 +23,8 @@ export interface CardEffects {
   return_card_to_hand: string | null;
   place_card_on_deck: string | null;
   counts_as_faction: Faction | null;
+  /** Player must pick Ludus/Legion/Senate when this card is played (Spy). */
+  choose_faction_on_play: boolean;
   next_card_to_hand: boolean;
   discount_epics: number;
   force_opponent_discard: number;
@@ -53,6 +55,7 @@ export const DEFAULT_CARD_EFFECTS: CardEffects = {
   return_card_to_hand: null,
   place_card_on_deck: null,
   counts_as_faction: null,
+  choose_faction_on_play: false,
   next_card_to_hand: false,
   discount_epics: 0,
   force_opponent_discard: 0,

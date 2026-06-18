@@ -12,6 +12,14 @@ function formatLogLine(action: GameAction, playerName: string): string {
       return `${playerName} drew ${action.payload?.count ?? 1} card(s)`;
     case 'ATTEMPT_ARENA':
       return `${playerName} attempted the arena`;
+    case 'CONFIRM_ARENA_FIGHTERS':
+      return `${playerName} entered the arena`;
+    case 'ARENA_RESPOND': {
+      const kind = action.payload?.responseType ?? 'pass';
+      if (kind === 'support') return `${playerName} supported the arena challenge`;
+      if (kind === 'hinder') return `${playerName} hindered the arena challenge`;
+      return `${playerName} passed on the arena challenge`;
+    }
     case 'BUY_CARD':
       return `${playerName} bought a card`;
     case 'DISCARD_CARD':

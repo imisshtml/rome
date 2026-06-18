@@ -80,9 +80,11 @@ export function computeBoardLayout(
     : pregameGalleryCardSize;
   const galleryCardGap = Math.max(4, Math.floor(galleryCardSize * 0.08));
 
-  const arenaCardH = inPlay
-    ? Math.min(Math.floor(galleryRowH * 0.98), Math.floor(galleryCardSize * 0.72))
-    : Math.floor(galleryRowH * 0.88);
+  /** Landscape arena — height matches portrait epic/gallery card height. */
+  const arenaCardH = Math.min(
+    Math.floor(galleryRowH * 0.98),
+    galleryCardSize
+  );
   const arenaCardW = landscapeCardWidth(arenaCardH);
 
   const handCardH = Math.floor(handZoneH * 0.82);
