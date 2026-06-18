@@ -118,13 +118,12 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     padding: 8,
     minHeight: 60,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'transparent',
   },
   activePhaseZone: {
-    backgroundColor: 'rgba(241,196,15,0.04)',
+    borderStyle: 'dashed',
   },
   canAcceptZone: {
-    backgroundColor: 'rgba(46,204,113,0.06)',
     borderStyle: 'solid',
   },
   glowZone: {

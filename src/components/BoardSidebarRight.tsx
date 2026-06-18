@@ -7,9 +7,10 @@ import {
   ImageBackground,
 } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
-import { GamePhase, PHASE_LABELS } from '../types/gameTypes';
+import { GameAction, GamePhase, PHASE_LABELS, PlayerState } from '../types/gameTypes';
 import { costIcon, valorIcon, victoryIcon, turnButtonBg } from '../assets/images';
 import CardHoverPreview from './CardHoverPreview';
+import GameLogPanel from './GameLogPanel';
 
 const STAT_ICON_GAP = 2;
 const SIDEBAR_H_PAD = 4;
@@ -30,6 +31,8 @@ function phaseButtonSize(sidebarWidth: number): { width: number; height: number 
 
 interface BoardSidebarRightProps {
   width: number;
+  actionLog: GameAction[];
+  players: PlayerState[];
   hoverPreviewCard: CardInstance | null;
   isPregame: boolean;
   coinsInPlay: number;
@@ -41,17 +44,19 @@ interface BoardSidebarRightProps {
   readyCount: number;
   totalPlayers: number;
   onEndPhase: () => void;
-  onPlayerReady: () => void;
+  onPlayerReady?: () => void;
 }
 
 const PHASE_BUTTON_LABELS: Record<GamePhase, string> = {
-  PREGAME: 'Ready',
+  PREGAME: 'Start Game',
   MAIN: 'End Turn',
   CLEANUP: 'Clean Up',
 };
 
 export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   width,
+  actionLog,
+  players,
   hoverPreviewCard,
   isPregame,
   coinsInPlay,
@@ -63,26 +68,25 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   readyCount,
   totalPlayers,
   onEndPhase,
-  onPlayerReady,
 }) => {
-  const buttonLabel = isPregame
-    ? isLocalReady
-      ? 'Waiting…'
-      : 'Ready'
-    : PHASE_BUTTON_LABELS[phase];
+  const buttonLabel = PHASE_BUTTON_LABELS[phase];
   const iconSize = iconSizeForSidebar(width);
   const buttonSize = phaseButtonSize(width);
-  const canPressReady = isPregame && !isLocalReady;
   const canPressEndTurn = !isPregame && isLocalTurn && phase === 'MAIN';
 
   return (
     <View style={[styles.sidebar, { width }]}>
-      <CardHoverPreview card={hoverPreviewCard} width={width} />
-      <View style={styles.spacer} />
-      <View style={styles.bottomBlock}>
+      <GameLogPanel actions={actionLog} players={players} />
+
+      <View style={styles.lowerSection}>
+        <CardHoverPreview card={hoverPreviewCard} width={width} />
+        <View style={styles.spacer} />
+        <View style={styles.bottomBlock}>
         <Text style={styles.phaseNote}>
           {isPregame
-            ? `Ready ${readyCount}/${totalPlayers}`
+            ? isLocalReady
+              ? `Waiting ${readyCount}/${totalPlayers} ready`
+              : ''
             : PHASE_LABELS[phase]}
         </Text>
 
@@ -94,13 +98,14 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
           </View>
         ) : null}
 
+        {!isPregame ? (
         <Pressable
-          onPress={isPregame ? onPlayerReady : onEndPhase}
-          disabled={isPregame ? !canPressReady : !canPressEndTurn}
+          onPress={onEndPhase}
+          disabled={!canPressEndTurn}
           style={({ pressed }) => [
             styles.buttonWrap,
-            (isPregame ? !canPressReady : !canPressEndTurn) && styles.buttonDisabled,
-            pressed && (canPressReady || canPressEndTurn) && styles.buttonPressed,
+            !canPressEndTurn && styles.buttonDisabled,
+            pressed && canPressEndTurn && styles.buttonPressed,
           ]}
         >
           <ImageBackground
@@ -112,6 +117,8 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
             <Text style={styles.buttonText}>{buttonLabel}</Text>
           </ImageBackground>
         </Pressable>
+        ) : null}
+        </View>
       </View>
     </View>
   );
@@ -142,13 +149,23 @@ const StatBadge: React.FC<{
 const styles = StyleSheet.create({
   sidebar: {
     flex: 1,
-    backgroundColor: 'rgba(60,60,70,0.55)',
+    backgroundColor: 'transparent',
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(212,175,55,0.3)',
     paddingVertical: 10,
     paddingHorizontal: 2,
+    alignItems: 'center',
+    minHeight: 0,
+  },
+  lowerSection: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
     alignItems: 'center',
   },
   spacer: {
     flex: 1,
+    minHeight: 0,
   },
   bottomBlock: {
     width: '100%',
@@ -185,7 +202,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
-    paddingBottom: 7,
+    paddingBottom: 5,
   },
   buttonWrap: {
     alignItems: 'center',

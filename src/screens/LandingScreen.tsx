@@ -9,12 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ImageBackground,
 } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { isSupabaseConfigured } from '../lib/env';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
 import { homeBackground } from '../assets/images';
+import { FullBleedBackground } from '../components/FullBleedBackground';
 
 export const LandingScreen: React.FC = () => {
   const {
@@ -34,20 +34,17 @@ export const LandingScreen: React.FC = () => {
   const onlineReady = isSupabaseConfigured();
 
   return (
-    <ImageBackground
-      source={homeBackground}
-      style={styles.root}
-      resizeMode="cover"
-    >
+    <FullBleedBackground source={homeBackground} style={styles.root}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          style={styles.flex}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Builders of Rome</Text>
+          <Text style={styles.title}>Rome</Text>
           <Text style={styles.subtitle}>Gladiator Deckbuilder</Text>
 
           <View style={styles.card}>
@@ -130,23 +127,23 @@ export const LandingScreen: React.FC = () => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-    </ImageBackground>
+    </FullBleedBackground>
   );
 };
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
     backgroundColor: '#0f0f1a',
   },
   flex: {
     flex: 1,
+    width: '100%',
   },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
-    paddingTop: Platform.OS === 'web' ? 48 : 64,
+    paddingTop: 24,
   },
   title: {
     color: '#F1C40F',

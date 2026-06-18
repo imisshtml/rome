@@ -5,8 +5,8 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGameState } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { buildPostGameSummary } from '../game/postGame';
@@ -40,11 +40,22 @@ export const PostGameScreen: React.FC = () => {
   const state = useGameState();
   const { leaveToLanding } = useMultiplayer();
   const summary = useMemo(() => buildPostGameSummary(state), [state]);
+  const insets = useSafeAreaInsets();
 
   const winner = summary.players.find((p) => p.id === summary.winnerId);
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Game Over</Text>
         {winner ? (
@@ -144,7 +155,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 20,
-    paddingTop: Platform.OS === 'web' ? 24 : 56,
+    paddingTop: 24,
     paddingBottom: 40,
     maxWidth: 560,
     width: '100%',

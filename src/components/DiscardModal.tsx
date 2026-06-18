@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { PlayerState } from '../types/gameTypes';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
+import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
 
 interface DiscardModalProps {
   player: PlayerState | null;
@@ -28,7 +29,7 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
   if (!player) return null;
 
   const cardW = Math.min(90, (screenW - 80) / 4);
-  const cardH = cardW * 1.4;
+  const cardH = cardW * CARD_PORTRAIT_RATIO;
 
   return (
     <Modal

@@ -47,20 +47,24 @@ export const CardStack: React.FC<CardStackProps> = ({
   const isEmpty = count === 0;
 
   if (sidebarStack) {
+    const faceOnly = showTopCardFace && !isEmpty;
     return (
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
           styles.sidebarStack,
           useCardBack && styles.sidebarStackCardBack,
+          faceOnly && styles.sidebarStackFaceCard,
           {
             width,
             height,
-            backgroundColor: useCardBack
-              ? 'rgba(0,0,0,0.25)'
-              : isEmpty
-                ? '#1a1a2e'
-                : bgColor,
+            backgroundColor: faceOnly
+              ? 'transparent'
+              : useCardBack
+                ? 'rgba(0,0,0,0.25)'
+                : isEmpty
+                  ? '#1a1a2e'
+                  : bgColor,
           },
           pressed && onPress && styles.pressed,
         ]}
@@ -71,7 +75,6 @@ export const CardStack: React.FC<CardStackProps> = ({
             faceUp={topCard.faceUp}
             width={width}
             height={height}
-            anchorArtTop
           />
         ) : useCardBack ? (
           <View style={{ width, height }}>
@@ -341,6 +344,11 @@ const styles = StyleSheet.create({
   },
   sidebarStackCardBack: {
     borderColor: 'rgba(255,255,255,0.12)',
+  },
+  sidebarStackFaceCard: {
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   cardBackOverlay: {
     ...StyleSheet.absoluteFillObject,

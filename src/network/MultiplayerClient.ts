@@ -54,9 +54,17 @@ export class MultiplayerGameClient {
 
   private pushState(state: GameState) {
     this.onStateChange?.(state);
-    if (state.status === 'active') {
-      this.scheduleAI(state);
+    if (state.status !== 'active') return;
+
+    if (state.phase === 'PREGAME') {
+      const humanReady = state.players.some(
+        (p) => !p.isAI && state.readyPlayerIds.includes(p.id)
+      );
+      if (humanReady) this.scheduleAI(state);
+      return;
     }
+
+    this.scheduleAI(state);
   }
 
   async createGame(displayName: string, maxPlayers: number): Promise<GameSession> {

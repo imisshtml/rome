@@ -8,6 +8,7 @@ interface BoardSidebarLeftProps {
   stackW: number;
   stackH: number;
   stackGap: number;
+  galleryDeck: CardInstance[];
   flavorDeck: CardInstance[];
   disfavorDeck: CardInstance[];
   playerDeck: CardInstance[];
@@ -16,9 +17,9 @@ interface BoardSidebarLeftProps {
 }
 
 const STACKS = [
-  { key: 'events', label: 'Events', color: '#6B3FA0', icon: '🛡', useCardBack: true, cardBackOverlay: false },
+  { key: 'gallery', label: 'Gallery', color: '#6B3FA0', icon: '🛡', useCardBack: true, cardBackOverlay: false },
   { key: 'favor', label: 'Favors', color: '#3D8B5A', icon: '🌿', useCardBack: true, cardBackOverlay: false },
-  { key: 'disfavor', label: 'Disfavor', color: '#C45C7A', icon: '👎', useCardBack: false, showTopCardFace: true, showCount: false, cardBackOverlay: false },
+  { key: 'disfavor', label: 'Disfavor', color: '#2C3E50', icon: '👎', useCardBack: false, showTopCardFace: true, showCount: false, cardBackOverlay: false },
   { key: 'deck', label: 'Deck', color: '#8B6914', icon: '📚', useCardBack: true, cardBackOverlay: false },
   { key: 'discard', label: 'Discard', color: '#3A3A48', icon: '🗑', useCardBack: true, cardBackOverlay: true },
 ] as const;
@@ -28,6 +29,7 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
   stackW,
   stackH,
   stackGap,
+  galleryDeck,
   flavorDeck,
   disfavorDeck,
   playerDeck,
@@ -35,7 +37,7 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
   onDiscardPress,
 }) => {
   const cardsByKey: Record<string, CardInstance[]> = {
-    events: [],
+    gallery: galleryDeck,
     favor: flavorDeck,
     disfavor: disfavorDeck,
     deck: playerDeck,
@@ -68,7 +70,9 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
 const styles = StyleSheet.create({
   sidebar: {
     flex: 1,
-    backgroundColor: 'rgba(60,60,70,0.55)',
+    backgroundColor: 'transparent',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(212,175,55,0.3)',
     paddingVertical: 8,
     paddingHorizontal: 4,
     alignItems: 'center',

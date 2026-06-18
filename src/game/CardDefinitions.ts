@@ -10,5 +10,6 @@ export {
   getArenaPoolEntries,
   getFlavorPoolEntries,
   getStartingDeckEntries,
+  isGalleryEventCard,
 } from './CardCatalog';
 export type { PoolEntry } from './CardCatalog';

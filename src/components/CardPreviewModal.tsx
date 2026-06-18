@@ -8,6 +8,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
+import { getCardDefinition } from '../game/CardDefinitions';
+import { getEnlargedPreviewSize } from '../utils/cardDisplayUtils';
 import CardFace from './CardFace';
 
 interface CardPreviewModalProps {
@@ -24,8 +26,13 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
   const { width: screenW } = useWindowDimensions();
   if (!card) return null;
 
-  const cardW = Math.min(280, screenW * 0.7);
-  const cardH = cardW * 1.45;
+  const definition = card.definition ?? getCardDefinition(card.definitionId);
+  const modalMaxW = Math.min(336, screenW * 0.84);
+  const { width: cardW, height: cardH } = getEnlargedPreviewSize(
+    screenW,
+    definition,
+    modalMaxW
+  );
 
   return (
     <Modal
@@ -37,11 +44,10 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.centered} onPress={(e) => e.stopPropagation()}>
           <CardFace
-            definition={card.definition}
+            definition={definition}
             faceUp={card.faceUp}
             width={cardW}
             height={cardH}
-            anchorArtTop={false}
           />
 
           <Pressable style={styles.closeBtn} onPress={onClose}>

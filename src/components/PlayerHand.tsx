@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { calculateHandFanAngle } from '../utils/dragHelpers';
+import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
 import Card from './Card';
 
 interface PlayerHandProps {
@@ -29,7 +30,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   compact = false,
 }) => {
   const cardWidth = cardWidthProp ?? (compact ? 72 : 95);
-  const cardHeight = cardHeightProp ?? cardWidth * 1.4;
+  const cardHeight = cardHeightProp ?? cardWidth * CARD_PORTRAIT_RATIO;
   const overlap = cards.length > 6 ? 0.32 : 0.22;
 
   return (

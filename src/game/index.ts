@@ -36,5 +36,6 @@ export {
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
+  isGalleryEventCard,
 } from './CardDefinitions';
 export { TURN_PHASE_CONFIG, canPerformAction, getNextPhase } from './TurnManager';

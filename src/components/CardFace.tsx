@@ -23,8 +23,6 @@ interface CardFaceProps {
   faceUp: boolean;
   width: number;
   height: number;
-  /** Anchor art to top (gallery squares, short cards) */
-  anchorArtTop?: boolean;
   style?: ViewStyle;
 }
 
@@ -52,12 +50,16 @@ const StatBadge: React.FC<{
   </ImageBackground>
 );
 
+const webContainStyle =
+  Platform.OS === 'web'
+    ? ({ objectFit: 'contain', objectPosition: 'center' } as const)
+    : undefined;
+
 export const CardFace: React.FC<CardFaceProps> = ({
   definition,
   faceUp,
   width,
   height,
-  anchorArtTop = false,
   style,
 }) => {
   const badgeSize = badgeSizeFor(width);
@@ -65,33 +67,14 @@ export const CardFace: React.FC<CardFaceProps> = ({
   const cardImage = faceUp ? getCardImage(definition.image) : null;
   const imageSource = faceUp ? cardImage : cardBackImage;
 
-  const webTopAnchor =
-    Platform.OS === 'web' && anchorArtTop
-      ? ({ objectFit: 'cover', objectPosition: 'top center' } as const)
-      : undefined;
-
   return (
     <View style={[styles.shell, { width, height }, style]}>
       {imageSource ? (
-        anchorArtTop && Platform.OS !== 'web' ? (
-          <View style={styles.artClip}>
-            <Image
-              source={imageSource}
-              style={{ width, height: height * 1.45 }}
-              resizeMode="cover"
-            />
-          </View>
-        ) : (
-          <Image
-            source={imageSource}
-            style={[
-              styles.artFill,
-              webTopAnchor,
-              anchorArtTop && Platform.OS === 'web' ? styles.artTopWeb : null,
-            ]}
-            resizeMode={anchorArtTop ? 'cover' : 'cover'}
-          />
-        )
+        <Image
+          source={imageSource}
+          style={[styles.artFill, webContainStyle]}
+          resizeMode="contain"
+        />
       ) : (
         <View style={[styles.fallbackArt, { backgroundColor: '#333' }]} />
       )}
@@ -136,15 +119,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
     backgroundColor: '#12122a',
   },
-  artClip: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
   artFill: {
-    width: '100%',
-    height: '100%',
-  },
-  artTopWeb: {
     width: '100%',
     height: '100%',
   },
@@ -168,6 +143,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    paddingBottom: 5,
   },
   costPos: {
     top: 2,

@@ -6,7 +6,6 @@ import {
   Pressable,
   LayoutRectangle,
   Platform,
-  ImageBackground,
 } from 'react-native';
 import { createPortal } from 'react-dom';
 import {
@@ -33,6 +32,8 @@ import BoardSidebarRight from './BoardSidebarRight';
 import GalleryCard from './GalleryCard';
 import CardPreviewModal from './CardPreviewModal';
 import DiscardModal from './DiscardModal';
+import PregameMarketView from './PregameMarketView';
+import { FullBleedBackground } from './FullBleedBackground';
 import { gameBackground } from '../assets/images';
 
 const ZONE_LAYOUTS = new Map<string, LayoutRectangle>();
@@ -271,7 +272,12 @@ export const GameTable: React.FC = () => {
     );
 
   return (
-    <View ref={tableRef} style={styles.table} onLayout={measureTable}>
+    <FullBleedBackground
+      source={gameBackground}
+      style={styles.table}
+      overlayColor="rgba(8, 8, 18, 0.62)"
+    >
+      <View ref={tableRef} style={styles.tableForeground} onLayout={measureTable}>
       {/* Opponents bar */}
       <View style={[styles.opponentsBar, { height: layout.opponentsBarH }]}>
         {opponents.length > 0 ? (
@@ -286,16 +292,13 @@ export const GameTable: React.FC = () => {
       </View>
 
       {/* Main board: sidebars span gallery + play + hand */}
-      <ImageBackground
-        source={gameBackground}
-        style={[styles.mainRow, { height: layout.mainContentH }]}
-        resizeMode="cover"
-      >
+      <View style={[styles.mainRow, { height: layout.mainContentH }]}>
         <BoardSidebarLeft
           width={layout.sidebarW}
           stackW={layout.stackW}
           stackH={layout.stackH}
           stackGap={layout.stackGap}
+          galleryDeck={state.gallerySupply ?? []}
           flavorDeck={state.flavorDeck}
           disfavorDeck={state.disfavorDeck}
           playerDeck={localPlayer?.deck ?? []}
@@ -305,21 +308,22 @@ export const GameTable: React.FC = () => {
 
         <View style={[styles.centerColumn, { width: layout.centerW }]}>
           {isPregame ? (
-            <View style={styles.pregameBanner}>
-              <Text style={styles.pregameTitle}>Review the board</Text>
-              <Text style={styles.pregameSub}>
-                Gallery, epics, and the arena challenge are set. Click Ready when
-                you're set — game starts when everyone is ready ({readyCount}/
-                {state.players.length}).
-              </Text>
-              {state.players.map((p) => (
-                <Text key={p.id} style={styles.pregamePlayer}>
-                  {state.readyPlayerIds.includes(p.id) ? '✓' : '○'} {p.name}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
+            <PregameMarketView
+              width={layout.centerW}
+              height={layout.mainContentH}
+              galleryCards={state.galleryCards}
+              epicCards={state.epicCards}
+              arenaCard={state.arenaCard}
+              players={state.players}
+              readyPlayerIds={state.readyPlayerIds}
+              readyCount={readyCount}
+              totalPlayers={state.players.length}
+              isLocalReady={isLocalReady}
+              onCardPress={handleCardPreview}
+              onStartGame={handlePlayerReady}
+            />
+          ) : (
+            <>
           {/* Gallery zone — fixed height ratio */}
           <View style={[styles.galleryZone, { height: layout.galleryH }]}>
             <DropZone
@@ -359,6 +363,8 @@ export const GameTable: React.FC = () => {
                     onLayout={handleZoneLayout('arena_challenge')}
                     showGlow={isMainActive}
                     style={styles.arenaGallerySlot}
+                    contentColumn
+                    contentCenter
                   >
                     {state.arenaCard ? (
                       <Card
@@ -401,22 +407,6 @@ export const GameTable: React.FC = () => {
               contentColumn
               style={StyleSheet.flatten([styles.playField, { flex: 1 }])}
             >
-              {isMainActive && state.arenaCard && (
-                <View style={styles.playFieldArena}>
-                  <Card
-                    card={state.arenaCard}
-                    width={Math.min(layout.arenaCardW * 1.1, layout.centerW * 0.45)}
-                    height={layout.arenaCardH}
-                    sizeMode="landscape"
-                    onPress={handleCardPreview}
-                    onLongPress={handleCardPreview}
-                  />
-                  <Text style={styles.arenaReqLabel}>
-                    Required: {arenaStats.requiredValor} ⚔
-                  </Text>
-                </View>
-              )}
-
               <View style={styles.playFieldCards}>
                 {(localPlayer?.playArea.length ?? 0) === 0 ? (
                   isMainActive ? (
@@ -511,10 +501,14 @@ export const GameTable: React.FC = () => {
               </View>
             </View>
           </View>
+            </>
+          )}
         </View>
 
         <BoardSidebarRight
           width={layout.sidebarW}
+          actionLog={state.actionLog}
+          players={state.players}
           hoverPreviewCard={hoverPreviewCard}
           isPregame={isPregame}
           coinsInPlay={coinsInPlay}
@@ -528,7 +522,7 @@ export const GameTable: React.FC = () => {
           onEndPhase={handleEndPhase}
           onPlayerReady={handlePlayerReady}
         />
-      </ImageBackground>
+      </View>
 
       {draggedCard && dragPosition && (
         Platform.OS === 'web' && typeof document !== 'undefined'
@@ -568,7 +562,8 @@ export const GameTable: React.FC = () => {
           setPreviewCard(card);
         }}
       />
-    </View>
+      </View>
+    </FullBleedBackground>
   );
 };
 
@@ -577,8 +572,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0f1a',
   },
+  tableForeground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   opponentsBar: {
-    backgroundColor: 'rgba(12,12,20,0.92)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(212,175,55,0.3)',
@@ -593,8 +593,8 @@ const styles = StyleSheet.create({
   },
   galleryZone: {
     backgroundColor: 'transparent',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(212,175,55,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.3)',
     paddingHorizontal: 6,
     paddingVertical: 6,
   },
@@ -636,20 +636,16 @@ const styles = StyleSheet.create({
   bodyColumn: {
     flexDirection: 'column',
     minHeight: 0,
+    marginTop: 6,
+    gap: 6,
   },
   playField: {
     backgroundColor: 'transparent',
-    borderWidth: 0,
-    borderRadius: 0,
+    borderRadius: 10,
     padding: 8,
     minHeight: 0,
     alignItems: 'stretch',
     justifyContent: 'flex-start',
-  },
-  playFieldArena: {
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 4,
   },
   playFieldCards: {
     flex: 1,
@@ -665,11 +661,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 12,
   },
-  arenaReqLabel: {
-    color: '#F1C40F',
-    fontWeight: '700',
-    fontSize: 11,
-  },
   playedCardsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -680,7 +671,7 @@ const styles = StyleSheet.create({
   commitZone: {
     borderStyle: 'dashed',
     borderColor: 'rgba(212,175,55,0.45)',
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'transparent',
     minHeight: 72,
     marginTop: 'auto',
   },
@@ -696,9 +687,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   handZone: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(212,175,55,0.25)',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.3)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 6,
@@ -707,7 +698,9 @@ const styles = StyleSheet.create({
   handDiscardSlot: {
     width: 56,
     minHeight: 0,
-    borderWidth: 0,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(212,175,55,0.25)',
     backgroundColor: 'transparent',
     padding: 0,
   },
@@ -749,33 +742,6 @@ const styles = StyleSheet.create({
   dragOverlayPortal: {
     position: 'absolute',
     zIndex: 2147483647,
-  },
-  pregameBanner: {
-    backgroundColor: 'rgba(241,196,15,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(241,196,15,0.25)',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-  },
-  pregameTitle: {
-    color: '#F1C40F',
-    fontWeight: '800',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  pregameSub: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 14,
-  },
-  pregamePlayer: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 10,
-    marginTop: 3,
-    textAlign: 'center',
   },
 });
 

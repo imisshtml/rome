@@ -13,4 +13,6 @@ export { DiscardModal } from './DiscardModal';
 export { OpponentStrip } from './OpponentStrip';
 export { BoardSidebarLeft } from './BoardSidebarLeft';
 export { BoardSidebarRight } from './BoardSidebarRight';
+export { GameLogPanel } from './GameLogPanel';
+export { PregameMarketView } from './PregameMarketView';
 export { GalleryCard } from './GalleryCard';

@@ -1,21 +1,27 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import { Provider as JotaiProvider } from 'jotai';
 import { MultiplayerProvider } from '../network/MultiplayerProvider';
 import AppShell from './AppShell';
 
 export const GameScreen: React.FC = () => {
   return (
-    <JotaiProvider>
-      <GestureHandlerRootView style={styles.root}>
-        <MultiplayerProvider>
-          <View style={styles.container}>
-            <AppShell />
-          </View>
-        </MultiplayerProvider>
-      </GestureHandlerRootView>
-    </JotaiProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics ?? undefined}>
+      <JotaiProvider>
+        <GestureHandlerRootView style={styles.root}>
+          <MultiplayerProvider>
+            <View style={styles.container}>
+              <AppShell />
+            </View>
+          </MultiplayerProvider>
+        </GestureHandlerRootView>
+      </JotaiProvider>
+    </SafeAreaProvider>
   );
 };
 

@@ -2,7 +2,7 @@ import factionsPack from '../../cards_factions.json';
 import arenaPack from '../../cards_arena.json';
 import eventsPack from '../../cards_events.json';
 import favorPack from '../../cards_favor.json';
-import { CardDefinition, CardType, Faction } from '../types/cardTypes';
+import { CardDefinition, CardInstance, CardType, Faction } from '../types/cardTypes';
 import { CardEffects, mergeCardEffects } from '../types/effectsTypes';
 
 type RawFactionCard = (typeof factionsPack.cards)[number];
@@ -237,6 +237,23 @@ export function getFlavorPoolEntries(): PoolEntry[] {
     definitionId: slugToId(raw.id),
     qty: raw.deck_qty ?? 1,
   }));
+}
+
+const GALLERY_EVENT_IDS = new Set(
+  eventsPack.cards.map((raw) => slugToId(raw.id))
+);
+
+/** Gallery event cards (from cards_events.json), not arena challenges. */
+export function isGalleryEventCard(
+  cardOrId: CardInstance | CardDefinition | string
+): boolean {
+  const id =
+    typeof cardOrId === 'string'
+      ? cardOrId
+      : 'definitionId' in cardOrId
+        ? cardOrId.definitionId
+        : cardOrId.id;
+  return GALLERY_EVENT_IDS.has(id);
 }
 
 /** @deprecated use getGalleryPoolEntries */

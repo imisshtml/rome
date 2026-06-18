@@ -11,6 +11,7 @@ import {
   getArenaPoolEntries,
   getFlavorPoolEntries,
   getStartingDeckEntries,
+  isGalleryEventCard,
 } from './CardDefinitions';
 
 export const MAX_PLAYERS = 6;
@@ -107,17 +108,48 @@ function createPlayer(setup: PlayerSetup, dealOpeningHand = false): PlayerState 
   };
 }
 
+function setupInitialGalleryRow(shuffledSupply: CardInstance[]): {
+  galleryCards: CardInstance[];
+  gallerySupply: CardInstance[];
+} {
+  const supply = [...shuffledSupply];
+  const galleryCards: CardInstance[] = [];
+  let rejectedInRow = 0;
+
+  while (galleryCards.length < GALLERY_ROW_SIZE && supply.length > 0) {
+    const drawn = supply.shift()!;
+    if (isGalleryEventCard(drawn)) {
+      supply.push(drawn);
+      rejectedInRow++;
+      if (rejectedInRow >= supply.length) {
+        break;
+      }
+      continue;
+    }
+    rejectedInRow = 0;
+    galleryCards.push({
+      ...drawn,
+      location: 'GALLERY',
+      faceUp: true,
+    });
+  }
+
+  return {
+    galleryCards,
+    gallerySupply: shuffle(supply),
+  };
+}
+
 function createMarketCards() {
-  const gallerySupply = buildPoolInstances(
+  const shuffledGalleryPool = buildPoolInstances(
     getGalleryPoolEntries(),
     'GALLERY',
     'market',
     false
   );
-  const galleryCards = gallerySupply.splice(0, GALLERY_ROW_SIZE).map((c) => ({
-    ...c,
-    faceUp: true,
-  }));
+  const { galleryCards, gallerySupply } = setupInitialGalleryRow(
+    shuffledGalleryPool
+  );
 
   const arenaDeck = buildPoolInstances(
     getArenaPoolEntries(),
@@ -278,10 +310,8 @@ export function rehydrateGameState(state: GameState): GameState {
   let phase = normalizePhase(state.phase);
   let status = state.status ?? (state.turnPlayerId ? 'active' : 'lobby');
 
-  if (
-    status === 'active' &&
-    (phase === 'PREGAME' || (state as { phase?: string }).phase === 'DRAW')
-  ) {
+  // Legacy persisted states used DRAW; PREGAME must stay PREGAME until all players ready.
+  if (status === 'active' && (state as { phase?: string }).phase === 'DRAW') {
     phase = 'MAIN';
   }
 
@@ -726,8 +756,8 @@ export function processGameAction(
       if (success) {
         player.victoryPoints += rewardVp;
       } else {
-        const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DISCARD', player.id, true);
-        player.discard = [...player.discard, disfavor];
+        const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DECK', player.id, true);
+        player.deck = [...player.deck, disfavor];
       }
 
       for (const c of next.arenaCommitZone) {
@@ -818,7 +848,14 @@ export function buildPlayerSetupsFromDb(
 
 export function getNextAIAction(state: GameState): GameAction | null {
   if (state.phase === 'PREGAME') {
-    const ai = state.players.find((p) => p.isAI && !state.readyPlayerIds.includes(p.id));
+    const humanReady = state.players.some(
+      (p) => !p.isAI && state.readyPlayerIds.includes(p.id)
+    );
+    if (!humanReady) return null;
+
+    const ai = state.players.find(
+      (p) => p.isAI && !state.readyPlayerIds.includes(p.id)
+    );
     if (!ai) return null;
     return {
       type: 'PLAYER_READY',

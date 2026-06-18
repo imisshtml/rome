@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import LandingScreen from './LandingScreen';
 import LobbyScreen from './LobbyScreen';
@@ -33,7 +33,6 @@ export const AppShell: React.FC = () => {
 const styles = StyleSheet.create({
   game: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 0 : 44,
   },
 });
 

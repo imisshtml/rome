@@ -1,4 +1,9 @@
-import { useWindowDimensions } from 'react-native';
+import { useSafeViewportSize } from './safeViewport';
+import {
+  CARD_PORTRAIT_RATIO,
+  landscapeCardWidth,
+  portraitCardHeight,
+} from './cardDisplayUtils';
 
 /** Fixed height ratios from zones.png — only playField flexes vertically. */
 export const BOARD_RATIOS = {
@@ -56,24 +61,24 @@ export function computeBoardLayout(width: number, height: number): BoardLayoutMe
   const galleryCardGap = Math.max(4, Math.floor(galleryCardSize * 0.08));
 
   const arenaCardH = Math.floor(galleryRowH * 0.88);
-  const arenaCardW = Math.floor(arenaCardH * 1.45);
+  const arenaCardW = landscapeCardWidth(arenaCardH);
 
   const handCardH = Math.floor(handZoneH * 0.82);
-  const handCardW = Math.floor(handCardH / 1.4);
+  const handCardW = Math.floor(handCardH / CARD_PORTRAIT_RATIO);
 
   const playCardW = Math.floor(handCardW * 0.52);
-  const playCardH = Math.floor(playCardW * 1.15);
+  const playCardH = portraitCardHeight(playCardW);
 
   const stackCount = 5;
   const stackGap = Math.max(4, Math.round(mainContentH * 0.012));
   const sidebarInnerH = mainContentH - 16;
   let stackW = Math.floor(sidebarW * 0.88);
-  let stackH = Math.floor(stackW * 1.4);
+  let stackH = Math.floor(stackW * CARD_PORTRAIT_RATIO);
   const stacksTotalH = stackCount * stackH + (stackCount - 1) * stackGap;
   if (stacksTotalH > sidebarInnerH) {
     stackH = Math.floor((sidebarInnerH - (stackCount - 1) * stackGap) / stackCount);
-    stackW = Math.floor(stackH / 1.4);
-    stackH = Math.floor(stackW * 1.4);
+    stackW = Math.floor(stackH / CARD_PORTRAIT_RATIO);
+    stackH = portraitCardHeight(stackW);
   }
 
   return {
@@ -102,6 +107,6 @@ export function computeBoardLayout(width: number, height: number): BoardLayoutMe
 }
 
 export function useBoardLayout(): BoardLayoutMetrics {
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useSafeViewportSize();
   return computeBoardLayout(width, height);
 }

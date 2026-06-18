@@ -106,7 +106,8 @@ export const DebugPanel: React.FC = () => {
 
           <View style={styles.divider} />
           <Text style={styles.subHeader}>Zones</Text>
-          <Row label="Gallery" value={`${state.galleryCards.length}`} />
+          <Row label="Gallery row" value={`${state.galleryCards.length}`} />
+          <Row label="Gallery deck" value={`${state.gallerySupply?.length ?? 0}`} />
           <Row
             label="Arena"
             value={state.arenaCard?.definition.name ?? 'None'}

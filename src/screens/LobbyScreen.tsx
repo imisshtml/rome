@@ -6,10 +6,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
+import { homeBackground } from '../assets/images';
+import { FullBleedBackground } from '../components/FullBleedBackground';
 
 export const LobbyScreen: React.FC = () => {
   const {
@@ -48,7 +49,7 @@ export const LobbyScreen: React.FC = () => {
   const canStart = session?.isHost && humans.length >= 1;
 
   return (
-    <View style={styles.root}>
+    <FullBleedBackground source={homeBackground} style={styles.root}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scroll}
@@ -130,13 +131,12 @@ export const LobbyScreen: React.FC = () => {
           </Pressable>
         ) : null}
       </ScrollView>
-    </View>
+    </FullBleedBackground>
   );
 };
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
     backgroundColor: '#0f0f1a',
   },
   scrollView: {
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 14,
-    paddingTop: Platform.OS === 'web' ? 12 : 44,
+    paddingTop: 12,
     paddingBottom: 16,
     maxWidth: 400,
     width: '100%',
@@ -164,16 +164,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 11,
     textAlign: 'center',
     marginTop: 2,
     marginBottom: 10,
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   codeBox: {
-    backgroundColor: 'rgba(212,175,55,0.1)',
+    backgroundColor: 'rgba(10,10,18,0.82)',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
   seatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(10,10,18,0.72)',
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 8,

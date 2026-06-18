@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
+import { getCardDefinition } from '../game/CardDefinitions';
+import { getEnlargedPreviewSize } from '../utils/cardDisplayUtils';
 import CardFace from './CardFace';
 
 interface CardHoverPreviewProps {
@@ -14,17 +16,16 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ card, width 
     return <View style={[styles.placeholder, { width }]} />;
   }
 
-  const previewW = Math.min(width - 8, 160);
-  const previewH = Math.round(previewW * 1.45);
+  const definition = card.definition ?? getCardDefinition(card.definitionId);
+  const { width: previewW, height: previewH } = getEnlargedPreviewSize(width, definition);
 
   return (
     <View style={[styles.panel, { width }]}>
       <CardFace
-        definition={card.definition}
+        definition={definition}
         faceUp={card.faceUp}
         width={previewW}
         height={previewH}
-        anchorArtTop={false}
       />
     </View>
   );

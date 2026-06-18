@@ -56,8 +56,6 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const definition =
     card.definition ?? getCardDefinition(card.definitionId);
-  const mode: CardSizeMode = sizeMode ?? (compact ? 'short' : 'full');
-  const anchorArtTop = mode === 'short' || mode === 'square';
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -191,7 +189,6 @@ export const Card: React.FC<CardProps> = ({
           faceUp={card.faceUp}
           width={width}
           height={height}
-          anchorArtTop={anchorArtTop}
         />
       </Animated.View>
     </GestureDetector>
