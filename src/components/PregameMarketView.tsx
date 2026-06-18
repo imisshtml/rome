@@ -10,11 +10,23 @@ import {
 import { CardInstance } from '../types/cardTypes';
 import { PlayerState } from '../types/gameTypes';
 import { turnButtonBg } from '../assets/images';
-import { landscapeCardWidth } from '../utils/cardDisplayUtils';
+import {
+  CARD_PORTRAIT_RATIO,
+  landscapeCardWidth,
+} from '../utils/cardDisplayUtils';
 import Card from './Card';
 import GalleryCard from './GalleryCard';
 
 const TURN_BUTTON_ASPECT = 448 / 132;
+/** Epics can be up to this factor taller than the arena card. */
+const EPIC_VS_ARENA = 1.1;
+/** Slightly shrink gallery/epics from max fit (arena unchanged). */
+const MARKET_CARD_SCALE = 0.9;
+
+const TITLE_BLOCK_H = 52;
+const FOOTER_H = 110;
+const ROOT_H_PAD = 18;
+const ROOT_W_PAD = 10;
 
 interface PregameMarketViewProps {
   width: number;
@@ -31,38 +43,59 @@ interface PregameMarketViewProps {
   onStartGame: () => void;
 }
 
-function computePregameSizes(width: number, height: number) {
-  const padX = 12;
-  const headerH = 36;
-  const footerH = 96;
-  const gap = 10;
-  const contentH = height - headerH - footerH - gap * 2;
-  const rowH = Math.floor((contentH - gap) / 2);
+/** Max portrait card height if `count` cards share a row width (2.5×3.5 aspect). */
+function maxPortraitHeightInRow(
+  rowWidth: number,
+  count: number,
+  gap: number,
+  horizontalPad: number
+): number {
+  if (count <= 0) return 0;
+  const usableW = rowWidth - horizontalPad * 2 - gap * Math.max(0, count - 1);
+  if (usableW <= 0) return 0;
+  return Math.floor((usableW / count) * CARD_PORTRAIT_RATIO);
+}
 
-  const galleryGap = Math.max(6, Math.floor(width * 0.012));
+function computePregameSizes(width: number, height: number) {
+  const scrollH = Math.max(
+    140,
+    height - TITLE_BLOCK_H - FOOTER_H - ROOT_H_PAD
+  );
+  const rowGap = 8;
+  const galleryRowH = Math.floor((scrollH - rowGap) * 0.48);
+  const bottomRowH = scrollH - galleryRowH - rowGap;
+
+  const galleryGap = 6;
   const galleryCount = 6;
-  const galleryCardSize = Math.min(
-    Math.floor((width - padX * 2 - galleryGap * (galleryCount - 1)) / galleryCount),
-    Math.floor(rowH * 0.96)
+  const galleryMaxByWidth = maxPortraitHeightInRow(
+    width,
+    galleryCount,
+    galleryGap,
+    ROOT_W_PAD
+  );
+  const galleryCardSize = Math.floor(
+    Math.min(galleryMaxByWidth, galleryRowH) * MARKET_CARD_SCALE
   );
 
-  const arenaH = Math.floor(rowH * 0.92);
+  const arenaH = Math.floor(bottomRowH * 0.88);
   const arenaW = landscapeCardWidth(arenaH);
+
   const epicCount = 3;
   const epicGap = galleryGap;
-  const epicSize = Math.min(
-    Math.floor(
-      (width - padX * 2 - arenaW - epicGap * (epicCount + 1)) / epicCount
-    ),
-    arenaH
+  const epicUsableW = width - ROOT_W_PAD * 2 - arenaW - epicGap * (epicCount + 1);
+  const epicMaxByWidth = Math.floor(
+    Math.max(0, epicUsableW / epicCount) * CARD_PORTRAIT_RATIO
   );
+  const epicSize = Math.min(epicMaxByWidth, Math.floor(bottomRowH * 0.95));
 
-  const buttonW = Math.min(width - padX * 2, 220);
+  const buttonW = Math.min(width - ROOT_W_PAD * 2, 220);
   const buttonH = Math.round(buttonW / TURN_BUTTON_ASPECT);
 
   return {
     galleryCardSize,
     galleryGap,
+    galleryRowH,
+    bottomRowH,
     arenaW,
     arenaH,
     epicSize,
@@ -105,19 +138,33 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.galleryRow, { gap: sizes.galleryGap }]}>
+        <View
+          style={[
+            styles.galleryRow,
+            { gap: sizes.galleryGap, minHeight: sizes.galleryRowH },
+          ]}
+        >
           {galleryCards.map((card) => (
             <GalleryCard
               key={card.instanceId}
               card={card}
-              size={sizes.galleryCardSize}
+              height={sizes.galleryCardSize}
               onPress={onCardPress}
               onLongPress={onCardPress}
             />
           ))}
         </View>
 
-        <View style={[styles.bottomRow, { gap: sizes.epicGap, marginTop: sizes.epicGap }]}>
+        <View
+          style={[
+            styles.bottomRow,
+            {
+              gap: sizes.epicGap,
+              marginTop: sizes.epicGap,
+              minHeight: sizes.bottomRowH,
+            },
+          ]}
+        >
           {arenaCard ? (
             <Card
               card={arenaCard}
@@ -136,7 +183,7 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
             <GalleryCard
               key={card.instanceId}
               card={card}
-              size={sizes.epicSize}
+              height={sizes.epicSize}
               onPress={onCardPress}
               onLongPress={onCardPress}
             />
@@ -185,7 +232,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.3)',
-    paddingHorizontal: 10,
+    paddingHorizontal: ROOT_W_PAD,
     paddingTop: 8,
     paddingBottom: 10,
   },

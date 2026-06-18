@@ -49,7 +49,7 @@ export const DebugPanel: React.FC = () => {
             {mpMeta.error ? (
               <Text style={styles.errorText}>{mpMeta.error}</Text>
             ) : null}
-            {session?.isHost && state.status === 'lobby' ? (
+            {session?.isHost && session.gameId !== 'local' && state.status === 'lobby' ? (
               <Pressable style={styles.startBtn} onPress={() => startGame()}>
                 <Text style={styles.startBtnText}>Start Game</Text>
               </Pressable>

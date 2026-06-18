@@ -11,10 +11,10 @@ import {
   getNextAIAction,
   applyActionWithPhaseRules,
   createPregameState,
+  rehydrateGameState,
   MAX_PLAYERS,
 } from '../game/GameEngine';
-import { getDefaultStore } from 'jotai';
-import { gameStateAtom } from '../store/useGameStore';
+import { readGameStateSnapshot } from '../store/useGameStore';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -23,6 +23,18 @@ export { createOnlineGame, joinOnlineGame, isOnlineModeAvailable };
 
 function randomSessionId() {
   return `sess_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function resolvePregameAI(state: GameState): GameState {
+  let next = state;
+  while (next.phase === 'PREGAME') {
+    const aiAction = getNextAIAction(next);
+    if (!aiAction) break;
+    const after = applyActionWithPhaseRules(next, aiAction);
+    if (after === next) break;
+    next = after;
+  }
+  return next;
 }
 
 export class MultiplayerGameClient {
@@ -145,13 +157,28 @@ export class MultiplayerGameClient {
   ): Promise<GameState> {
     if (this.applyingRemote) return currentState;
 
+    const state = rehydrateGameState(currentState);
+    let next = applyActionWithPhaseRules(state, action);
+
+    if (next.phase === 'PREGAME' && action.type === 'PLAYER_READY') {
+      const canAutoReadyAi =
+        !this.session ||
+        this.session.gameId === 'local' ||
+        this.session.isHost;
+      if (canAutoReadyAi) {
+        next = resolvePregameAI(next);
+      }
+    }
+
+    if (next === state) return state;
+
     if (!this.session || this.session.gameId === 'local') {
-      const next = applyActionWithPhaseRules(currentState, action);
       this.pushState(next);
       return next;
     }
 
-    return this.sync.dispatchAction(currentState, action);
+    next.version = state.version ?? 1;
+    return this.sync.persistGameState(next, action);
   }
 
   private scheduleAI(state: GameState) {
@@ -168,7 +195,7 @@ export class MultiplayerGameClient {
 
     this.aiTimer = setTimeout(async () => {
       try {
-        const latest = getDefaultStore().get(gameStateAtom);
+        const latest = readGameStateSnapshot();
         const action = getNextAIAction(latest);
         if (!action) return;
         await this.dispatchAction(latest, action);

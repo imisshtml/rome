@@ -9,10 +9,16 @@ import {
 export const BOARD_RATIOS = {
   opponentsBar: 0.07,
   gallery: 0.26,
+  /** Taller gallery row during MAIN so cards can render at 2× pregame size. */
+  galleryInPlay: 0.44,
   handZone: 0.22,
   sidebarWidth: 0.15,
   zoneGap: 0.008,
 } as const;
+
+const GALLERY_IN_PLAY_SCALE = 2;
+/** Slightly smaller deck stacks in the left sidebar. */
+const SIDEBAR_STACK_SCALE = 0.88;
 
 export interface BoardLayoutMetrics {
   boardW: number;
@@ -38,12 +44,19 @@ export interface BoardLayoutMetrics {
   mainContentH: number;
 }
 
-export function computeBoardLayout(width: number, height: number): BoardLayoutMetrics {
+export function computeBoardLayout(
+  width: number,
+  height: number,
+  inPlay = false
+): BoardLayoutMetrics {
   const boardW = width;
   const boardH = height;
 
   const opponentsBarH = Math.round(boardH * BOARD_RATIOS.opponentsBar);
-  const galleryH = Math.round(boardH * BOARD_RATIOS.gallery);
+  const galleryH = Math.round(
+    boardH *
+      (inPlay ? BOARD_RATIOS.galleryInPlay : BOARD_RATIOS.gallery)
+  );
   const handZoneH = Math.round(boardH * BOARD_RATIOS.handZone);
   const mainContentH = boardH - opponentsBarH;
   const bodyH = mainContentH - galleryH;
@@ -54,13 +67,22 @@ export function computeBoardLayout(width: number, height: number): BoardLayoutMe
 
   const galleryInnerH = galleryH - 16;
   const galleryRowH = galleryInnerH * 0.46;
-  const galleryCardSize = Math.min(
+  const pregameGalleryCardSize = Math.min(
     Math.floor((centerW - 48) / 7.2),
     Math.floor(galleryRowH * 0.92)
   );
+  const galleryCardSize = inPlay
+    ? Math.min(
+        pregameGalleryCardSize * GALLERY_IN_PLAY_SCALE,
+        Math.floor((centerW - 48) / 3.5),
+        Math.floor(galleryRowH * 0.98)
+      )
+    : pregameGalleryCardSize;
   const galleryCardGap = Math.max(4, Math.floor(galleryCardSize * 0.08));
 
-  const arenaCardH = Math.floor(galleryRowH * 0.88);
+  const arenaCardH = inPlay
+    ? Math.min(Math.floor(galleryRowH * 0.98), Math.floor(galleryCardSize * 0.72))
+    : Math.floor(galleryRowH * 0.88);
   const arenaCardW = landscapeCardWidth(arenaCardH);
 
   const handCardH = Math.floor(handZoneH * 0.82);
@@ -70,13 +92,15 @@ export function computeBoardLayout(width: number, height: number): BoardLayoutMe
   const playCardH = portraitCardHeight(playCardW);
 
   const stackCount = 5;
-  const stackGap = Math.max(4, Math.round(mainContentH * 0.012));
+  const stackGap = Math.max(2, Math.round(mainContentH * 0.004));
   const sidebarInnerH = mainContentH - 16;
-  let stackW = Math.floor(sidebarW * 0.88);
+  let stackW = Math.floor(sidebarW * 0.88 * SIDEBAR_STACK_SCALE);
   let stackH = Math.floor(stackW * CARD_PORTRAIT_RATIO);
   const stacksTotalH = stackCount * stackH + (stackCount - 1) * stackGap;
   if (stacksTotalH > sidebarInnerH) {
-    stackH = Math.floor((sidebarInnerH - (stackCount - 1) * stackGap) / stackCount);
+    stackH = Math.floor(
+      (sidebarInnerH - (stackCount - 1) * stackGap) / stackCount
+    );
     stackW = Math.floor(stackH / CARD_PORTRAIT_RATIO);
     stackH = portraitCardHeight(stackW);
   }
@@ -106,7 +130,7 @@ export function computeBoardLayout(width: number, height: number): BoardLayoutMe
   };
 }
 
-export function useBoardLayout(): BoardLayoutMetrics {
+export function useBoardLayout(inPlay = false): BoardLayoutMetrics {
   const { width, height } = useSafeViewportSize();
-  return computeBoardLayout(width, height);
+  return computeBoardLayout(width, height, inPlay);
 }

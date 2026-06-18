@@ -286,13 +286,18 @@ export class GameSyncService {
     currentState: GameState,
     action: GameAction
   ): Promise<GameState> {
-    if (!this.session) throw new Error('Not connected');
-
     const nextState = applyActionWithPhaseRules(currentState, action);
     if (nextState === currentState) return currentState;
 
     nextState.version = currentState.version ?? 1;
-    return this.persistState(nextState, action);
+    return this.persistGameState(nextState, action);
+  }
+
+  async persistGameState(
+    state: GameState,
+    action: GameAction | null
+  ): Promise<GameState> {
+    return this.persistState(state, action);
   }
 
   private async persistState(

@@ -76,11 +76,12 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
 
   return (
     <View style={[styles.sidebar, { width }]}>
-      <GameLogPanel actions={actionLog} players={players} />
+      <View style={styles.logSection}>
+        <GameLogPanel actions={actionLog} players={players} />
+      </View>
 
       <View style={styles.lowerSection}>
         <CardHoverPreview card={hoverPreviewCard} width={width} />
-        <View style={styles.spacer} />
         <View style={styles.bottomBlock}>
         <Text style={styles.phaseNote}>
           {isPregame
@@ -156,20 +157,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
     alignItems: 'center',
     minHeight: 0,
+    overflow: 'hidden',
   },
-  lowerSection: {
+  logSection: {
     flex: 1,
     width: '100%',
     minHeight: 0,
-    alignItems: 'center',
+    overflow: 'hidden',
   },
-  spacer: {
-    flex: 1,
-    minHeight: 0,
+  lowerSection: {
+    flexShrink: 0,
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingBottom: 6,
   },
   bottomBlock: {
     width: '100%',
     alignItems: 'center',
+    //marginTop: 10,
   },
   phaseNote: {
     color: 'rgba(241,196,15,0.85)',

@@ -5,6 +5,9 @@ import { getCardDefinition } from '../game/CardDefinitions';
 import { getEnlargedPreviewSize } from '../utils/cardDisplayUtils';
 import CardFace from './CardFace';
 
+/** Stat badges on hover preview — smaller than board cards at the same ratio. */
+const ZOOM_BADGE_SCALE = 0.78;
+
 interface CardHoverPreviewProps {
   card: CardInstance | null;
   width: number;
@@ -26,6 +29,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ card, width 
         faceUp={card.faceUp}
         width={previewW}
         height={previewH}
+        badgeScale={ZOOM_BADGE_SCALE}
       />
     </View>
   );

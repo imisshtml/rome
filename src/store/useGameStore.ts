@@ -1,4 +1,4 @@
-import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { atom, useAtom, useAtomValue, useSetAtom, getDefaultStore } from 'jotai';
 import { GameState, GameAction } from '../types/gameTypes';
 import { CardInstance } from '../types/cardTypes';
 import {
@@ -48,11 +48,22 @@ const hoveredZoneAtom = atom<string | null>(null);
 const hoverPreviewCardAtom = atom<CardInstance | null>(null);
 
 let remoteDispatch: ((action: GameAction) => Promise<GameState>) | null = null;
+let readGameState: (() => GameState) | null = null;
 
 export function registerRemoteDispatch(
   handler: ((action: GameAction) => Promise<GameState>) | null
 ) {
   remoteDispatch = handler;
+}
+
+/** Read from the same Jotai store as React hooks (not getDefaultStore when Provider is used). */
+export function registerGameStateReader(reader: (() => GameState) | null) {
+  readGameState = reader;
+}
+
+export function readGameStateSnapshot(): GameState {
+  const raw = readGameState?.() ?? getDefaultStore().get(gameStateAtom);
+  return rehydrateGameState(raw);
 }
 
 export const setGameStateAtom = atom(null, (_get, set, state: GameState) => {
@@ -70,34 +81,51 @@ const dispatchActionAtom = atom(
   null,
   async (get, set, action: GameAction) => {
     const currentState = rehydrateGameState(get(gameStateAtom));
-    const localNext = applyActionWithPhaseRules(currentState, action);
-
-    if (localNext === currentState) {
-      return currentState;
-    }
-
-    set(gameStateAtom, localNext);
 
     if (remoteDispatch) {
       try {
-        const synced = rehydrateGameState(await remoteDispatch(action));
-        set(gameStateAtom, synced);
+        const next = rehydrateGameState(await remoteDispatch(action));
+        set(gameStateAtom, next);
         set(multiplayerMetaAtom, (prev) => ({ ...prev, error: null }));
-        return synced;
+        return next;
       } catch (err) {
-        set(gameStateAtom, currentState);
         const message = err instanceof Error ? err.message : 'Sync failed';
         set(multiplayerMetaAtom, (prev) => ({ ...prev, error: message }));
         return currentState;
       }
     }
 
+    const localNext = applyActionWithPhaseRules(currentState, action);
+    if (localNext === currentState) {
+      return currentState;
+    }
+    set(gameStateAtom, localNext);
     return localNext;
   }
 );
 
-const resetGameAtom = atom(null, (_get, set) => {
-  set(gameStateAtom, createInitialGameState(defaultSetups));
+const resetGameAtom = atom(null, (get, set) => {
+  const current = rehydrateGameState(get(gameStateAtom));
+
+  if (
+    current.phase === 'PREGAME' &&
+    current.status === 'active' &&
+    current.players.length > 0
+  ) {
+    let next = current;
+    for (const player of current.players) {
+      if (next.readyPlayerIds.includes(player.id)) continue;
+      next = applyActionWithPhaseRules(next, {
+        type: 'PLAYER_READY',
+        playerId: player.id,
+        timestamp: Date.now(),
+      });
+    }
+    set(gameStateAtom, rehydrateGameState(next));
+    return;
+  }
+
+  set(gameStateAtom, rehydrateGameState(createInitialGameState(defaultSetups)));
 });
 
 export function useGameState(): GameState {

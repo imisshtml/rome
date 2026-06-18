@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,30 +23,57 @@ interface CardFaceProps {
   faceUp: boolean;
   width: number;
   height: number;
+  /** Multiplier on stat badge size (e.g. zoom previews). */
+  badgeScale?: number;
   style?: ViewStyle;
 }
 
-function badgeSizeFor(width: number): number {
-  return Math.max(16, Math.round(width * 0.24));
-}
+/** Corner offsets tuned at sidebar zoom width (~192px); scale with card width. */
+const BADGE_REF_WIDTH = 192;
+const BADGE_SIZE_RATIO = 0.16;
 
 function fontSizeFor(badgeSize: number): number {
   return Math.max(9, Math.round(badgeSize * 0.42));
+}
+
+function badgeLayout(width: number, badgeScale = 1) {
+  const scale = width / BADGE_REF_WIDTH;
+  const size = Math.round(width * BADGE_SIZE_RATIO * badgeScale);
+  return {
+    size,
+    cost: { top: -1 * scale, left: -1 * scale },
+    victory: { top: -1 * scale, right: -1 * scale },
+    valor: { bottom: -1 * scale, right: -3 * scale },
+    statPaddingBottom: Math.round(size * 0.13),
+    costStatPaddingBottom: Math.round(size * 0.065),
+  };
 }
 
 const StatBadge: React.FC<{
   icon: number;
   value: number;
   size: number;
-  style?: ViewStyle;
-}> = ({ icon, value, size, style }) => (
+  position: ViewStyle;
+  statPaddingBottom: number;
+  costStatPaddingBottom?: number;
+}> = ({ icon, value, size, position, statPaddingBottom, costStatPaddingBottom }) => (
   <ImageBackground
     source={icon}
-    style={[styles.statBadge, { width: size, height: size }, style]}
+    style={[styles.statBadge, { width: size, height: size }, position]}
     imageStyle={styles.statBadgeImage}
     resizeMode="contain"
   >
-    <Text style={[styles.statValue, { fontSize: fontSizeFor(size) }]}>{value}</Text>
+    <Text
+      style={[
+        styles.statValue,
+        {
+          fontSize: fontSizeFor(size),
+          paddingBottom: costStatPaddingBottom ?? statPaddingBottom,
+        },
+      ]}
+    >
+      {value}
+    </Text>
   </ImageBackground>
 );
 
@@ -60,9 +87,10 @@ export const CardFace: React.FC<CardFaceProps> = ({
   faceUp,
   width,
   height,
+  badgeScale = 1,
   style,
 }) => {
-  const badgeSize = badgeSizeFor(width);
+  const layout = useMemo(() => badgeLayout(width, badgeScale), [width, badgeScale]);
   const stats = getCardStatDisplay(definition);
   const cardImage = faceUp ? getCardImage(definition.image) : null;
   const imageSource = faceUp ? cardImage : cardBackImage;
@@ -85,24 +113,29 @@ export const CardFace: React.FC<CardFaceProps> = ({
             <StatBadge
               icon={costIcon}
               value={stats.cost}
-              size={badgeSize}
-              style={styles.costPos}
+              size={layout.size}
+              position={layout.cost}
+              statPaddingBottom={layout.statPaddingBottom}
+              costStatPaddingBottom={layout.costStatPaddingBottom}
             />
           ) : null}
           {stats.victory != null ? (
             <StatBadge
               icon={victoryIcon}
               value={stats.victory}
-              size={badgeSize}
-              style={styles.victoryPos}
+              size={layout.size}
+              position={layout.victory}
+              statPaddingBottom={layout.statPaddingBottom}
             />
           ) : null}
           {stats.valor != null ? (
             <StatBadge
               icon={valorIcon}
               value={stats.valor}
-              size={badgeSize}
-              style={styles.valorPos}
+              size={layout.size}
+              position={layout.valor}
+              statPaddingBottom={layout.statPaddingBottom}
+              costStatPaddingBottom={layout.costStatPaddingBottom}
             />
           ) : null}
         </View>
@@ -143,19 +176,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    paddingBottom: 5,
-  },
-  costPos: {
-    top: 2,
-    left: 2,
-  },
-  victoryPos: {
-    top: 2,
-    right: 2,
-  },
-  valorPos: {
-    bottom: 2,
-    right: 2,
   },
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
+import { getCardDefinition } from '../game/CardDefinitions';
 import { cardBack as cardBackImage } from '../assets/images';
 import CardFace from './CardFace';
 
@@ -42,7 +43,10 @@ export const CardStack: React.FC<CardStackProps> = ({
 }) => {
   const topCard = cards[cards.length - 1];
   const bgColor =
-    color ?? (topCard ? FACTION_COLORS[topCard.definition.faction] : '#222238');
+    color ??
+    (topCard?.definition?.faction
+      ? FACTION_COLORS[topCard.definition.faction]
+      : '#222238');
   const count = cards.length;
   const isEmpty = count === 0;
 
@@ -71,8 +75,10 @@ export const CardStack: React.FC<CardStackProps> = ({
       >
         {showTopCardFace && topCard && !isEmpty ? (
           <CardFace
-            definition={topCard.definition}
-            faceUp={topCard.faceUp}
+            definition={
+              topCard.definition ?? getCardDefinition(topCard.definitionId)
+            }
+            faceUp
             width={width}
             height={height}
           />

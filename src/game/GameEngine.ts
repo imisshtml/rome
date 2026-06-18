@@ -225,7 +225,10 @@ function findMarketCard(state: GameState, instanceId: string): CardInstance | un
 }
 
 function allPlayersReady(state: GameState): boolean {
-  return state.players.every((p) => state.readyPlayerIds.includes(p.id));
+  return (
+    state.players.length > 0 &&
+    state.players.every((p) => state.readyPlayerIds.includes(p.id))
+  );
 }
 
 function activateGameFromPregame(state: GameState): GameState {
@@ -292,6 +295,7 @@ function rehydratePlayer(player: PlayerState): PlayerState {
     discard: rehydrateCards(player.discard ?? []).map((c) => ({
       ...c,
       location: 'DISCARD' as const,
+      faceUp: true,
     })),
     playArea: rehydrateCards(player.playArea ?? []).map((c) => ({
       ...c,
@@ -494,11 +498,16 @@ function drawCards(player: PlayerState, count: number): PlayerState {
 }
 
 function cleanupTurnPlayer(player: PlayerState): PlayerState {
+  const toDiscard = (c: CardInstance) => ({
+    ...c,
+    location: 'DISCARD' as const,
+    faceUp: true,
+  });
   const discard = [
-    ...player.discard,
-    ...player.playArea.map((c) => ({ ...c, location: 'DISCARD' as const })),
-    ...player.itemsInPlay.map((c) => ({ ...c, location: 'DISCARD' as const })),
-    ...player.hand.map((c) => ({ ...c, location: 'DISCARD' as const })),
+    ...player.discard.map(toDiscard),
+    ...player.playArea.map(toDiscard),
+    ...player.itemsInPlay.map(toDiscard),
+    ...player.hand.map(toDiscard),
   ];
   return { ...player, hand: [], playArea: [], itemsInPlay: [], discard };
 }

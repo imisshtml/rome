@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { useSetAtom, getDefaultStore } from 'jotai';
+import { useSetAtom, useStore } from 'jotai';
 import {
   MultiplayerGameClient,
   GameSession,
@@ -16,6 +16,7 @@ import {
 } from './MultiplayerClient';
 import {
   registerRemoteDispatch,
+  registerGameStateReader,
   setGameStateAtom,
   setMultiplayerMetaAtom,
   localPlayerKeyAtom,
@@ -68,20 +69,22 @@ function resolvePhase(
   if (!session) return 'landing';
   if (session.gameId === 'local') {
     if (state?.status === 'finished') return 'postgame';
-    return 'game';
+    if (state?.status === 'active') return 'game';
+    return 'landing';
   }
   if (state?.status === 'finished') return 'postgame';
-  if (state?.phase === 'PREGAME' || state?.status === 'active') return 'game';
-  if (lobby?.status === 'lobby' || state?.status === 'lobby') return 'lobby';
+  if (state?.status === 'lobby' || lobby?.status === 'lobby') return 'lobby';
+  if (state?.status === 'active') return 'game';
   return 'lobby';
 }
 
 export function MultiplayerProvider({ children }: { children: React.ReactNode }) {
   const clientRef = useRef<MultiplayerGameClient | null>(null);
   const lobbyRef = useRef<LobbyInfo | null>(null);
+  const sessionRef = useRef<GameSession | null>(null);
   const [phase, setPhase] = useState<AppPhase>('landing');
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
-  const [session, setSession] = useState<GameSession | null>(null);
+  const [session, setSessionState] = useState<GameSession | null>(null);
   const [lobby, setLobby] = useState<LobbyInfo | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -90,49 +93,74 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
   const setGameState = useSetAtom(setGameStateAtom);
   const setMeta = useSetAtom(setMultiplayerMetaAtom);
   const setLocalPlayerKey = useSetAtom(localPlayerKeyAtom);
+  const jotaiStore = useStore();
+  const jotaiStoreRef = useRef(jotaiStore);
+  jotaiStoreRef.current = jotaiStore;
+  const setGameStateRef = useRef(setGameState);
+  setGameStateRef.current = setGameState;
 
-  useEffect(() => {
+  const applySession = useCallback((next: GameSession | null) => {
+    sessionRef.current = next;
+    setSessionState(next);
+  }, []);
+
+  const syncPhase = useCallback(
+    (state: GameState | null, lobbyInfo: LobbyInfo | null = lobbyRef.current) => {
+      const activeSession =
+        clientRef.current?.getSession() ?? sessionRef.current;
+      setPhase((prev) => {
+        const next = resolvePhase(state, activeSession, lobbyInfo);
+        return next === 'landing' ? prev : next;
+      });
+    },
+    []
+  );
+
+  const ensureClient = useCallback(() => {
+    if (clientRef.current) return clientRef.current;
+
     const client = new MultiplayerGameClient();
     clientRef.current = client;
 
     client.setStateHandler((state) => {
-      setGameState(state);
-      setPhase((prev) => {
-        const next = resolvePhase(state, client.getSession(), lobbyRef.current);
-        return next === 'landing' ? prev : next;
-      });
+      setGameStateRef.current(state);
+      syncPhase(state);
     });
 
     client.setLobbyHandler((info) => {
       lobbyRef.current = info;
       setLobby(info);
       setJoinCode(info.joinCode);
-      setPhase((prev) => {
-        const currentState = getDefaultStore().get(gameStateAtom);
-        const next = resolvePhase(currentState, client.getSession(), info);
-        return next === 'landing' ? prev : next;
-      });
+      syncPhase(jotaiStoreRef.current.get(gameStateAtom), info);
     });
 
+    return client;
+  }, [syncPhase]);
+
+  useEffect(() => {
+    ensureClient();
+
+    registerGameStateReader(() => jotaiStoreRef.current.get(gameStateAtom));
     registerRemoteDispatch(async (action) => {
-      const store = getDefaultStore();
-      const currentState = store.get(gameStateAtom);
-      return clientRef.current!.dispatchAction(currentState, action);
+      const activeClient = clientRef.current;
+      if (!activeClient) {
+        throw new Error('Multiplayer client not ready');
+      }
+      const currentState = jotaiStoreRef.current.get(gameStateAtom);
+      return activeClient.dispatchAction(currentState, action);
     });
-
-    setGameState(createLobbyGameState('pending', []));
 
     return () => {
+      registerGameStateReader(null);
       registerRemoteDispatch(null);
-      client.disconnect();
+      clientRef.current?.disconnect();
       clientRef.current = null;
     };
-  }, [setGameState]);
+  }, [ensureClient]);
 
   const runOnline = useCallback(
     async (fn: (client: MultiplayerGameClient) => Promise<GameSession>) => {
-      const client = clientRef.current;
-      if (!client) return;
+      const client = ensureClient();
       if (!isOnlineModeAvailable()) {
         setError('Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_ANON_KEY to .env');
         return;
@@ -144,7 +172,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
         client.disconnect();
         setGameState(createLobbyGameState('pending', []));
         const onlineSession = await fn(client);
-        setSession(onlineSession);
+        applySession(onlineSession);
         setLocalPlayerKey(onlineSession.playerKey);
         setJoinCode(onlineSession.joinCode);
         setMeta({ online: true, joinCode: onlineSession.joinCode, error: null });
@@ -162,7 +190,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
         setLoading(false);
       }
     },
-    [setGameState, setLocalPlayerKey, setMeta]
+    [applySession, ensureClient, setGameState, setLocalPlayerKey, setMeta]
   );
 
   const createGame = useCallback(
@@ -180,14 +208,26 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
   );
 
   const startLocalPractice = useCallback(async (displayName: string) => {
-    const client = clientRef.current;
-    if (!client) return;
+    const client = ensureClient();
     setLoading(true);
     setError(null);
     try {
       client.disconnect();
+      lobbyRef.current = null;
+
+      const localSession: GameSession = {
+        gameId: 'local',
+        joinCode: 'LOCAL',
+        playerKey: 'player_1',
+        playerId: 'player_1',
+        isHost: true,
+      };
+      applySession(localSession);
+
       const state = await client.connectLocal(displayName.trim());
-      setSession(client.getSession());
+      if (state.status !== 'active' || state.players.length === 0) {
+        throw new Error('Practice game failed to initialize');
+      }
       setLocalPlayerKey('player_1');
       setLobby(null);
       setJoinCode('LOCAL');
@@ -197,14 +237,16 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
       setStatus(client.getStatus());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start practice');
+      setPhase('landing');
+      applySession(null);
     } finally {
       setLoading(false);
     }
-  }, [setGameState, setLocalPlayerKey, setMeta]);
+  }, [applySession, ensureClient, setGameState, setLocalPlayerKey, setMeta]);
 
   const updateMaxPlayers = useCallback(async (maxPlayers: number) => {
-    const client = clientRef.current;
-    if (!client || !session?.isHost) return;
+    const client = ensureClient();
+    if (!session?.isHost) return;
     setLoading(true);
     setError(null);
     try {
@@ -215,11 +257,11 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [ensureClient, session]);
 
   const startGame = useCallback(async () => {
-    const client = clientRef.current;
-    if (!client || !session?.isHost) return;
+    const client = ensureClient();
+    if (!session?.isHost || session.gameId === 'local') return;
     setLoading(true);
     setError(null);
     try {
@@ -234,12 +276,12 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     } finally {
       setLoading(false);
     }
-  }, [session, lobby, setGameState]);
+  }, [ensureClient, session, lobby, setGameState]);
 
   const leaveToLanding = useCallback(() => {
     clientRef.current?.disconnect();
     lobbyRef.current = null;
-    setSession(null);
+    applySession(null);
     setLobby(null);
     setJoinCode('');
     setError(null);
@@ -248,7 +290,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     setLocalPlayerKey('player_1');
     setGameState(createLobbyGameState('pending', []));
     setMeta({ online: false, joinCode: '', error: null });
-  }, [setGameState, setLocalPlayerKey, setMeta]);
+  }, [applySession, setGameState, setLocalPlayerKey, setMeta]);
 
   return (
     <MultiplayerContext.Provider

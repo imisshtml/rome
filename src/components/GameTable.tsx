@@ -51,8 +51,8 @@ export const GameTable: React.FC = () => {
   const [draggedCard, setDraggedCard] = useDraggedCard();
   const [, setHoveredZone] = useHoveredZone();
   const [hoverPreviewCard] = useHoverPreviewCard();
-  const layout = useBoardLayout();
-
+  const isPregame = state.phase === 'PREGAME' && state.status === 'active';
+  const layout = useBoardLayout(!isPregame);
   const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
   const [discardPlayer, setDiscardPlayer] = useState<PlayerState | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -74,7 +74,6 @@ export const GameTable: React.FC = () => {
   const isLocalTurn = useIsLocalTurn();
   const arenaStats = getArenaChallengeStats(state.arenaCard);
 
-  const isPregame = state.phase === 'PREGAME';
   const isMainActive = state.status === 'active' && state.phase === 'MAIN';
   const canInteract = isMainActive && isLocalTurn;
   const isLocalReady = localPlayer
@@ -304,6 +303,7 @@ export const GameTable: React.FC = () => {
           playerDeck={localPlayer?.deck ?? []}
           playerDiscard={localPlayer?.discard ?? []}
           onDiscardPress={handleLocalDiscardPress}
+          onDiscardLayout={handleZoneLayout('discard')}
         />
 
         <View style={[styles.centerColumn, { width: layout.centerW }]}>
@@ -467,26 +467,6 @@ export const GameTable: React.FC = () => {
             </DropZone>
 
             <View style={[styles.handZone, { height: layout.handZoneH }]}>
-              <DropZone
-                id="discard"
-                zoneType="DISCARD"
-                label=""
-                onLayout={handleZoneLayout('discard')}
-                style={styles.handDiscardSlot}
-              >
-                {localPlayer && localPlayer.discard.length > 0 ? (
-                  <Pressable onPress={handleLocalDiscardPress}>
-                    <Card
-                      card={localPlayer.discard[localPlayer.discard.length - 1]}
-                      width={layout.playCardW}
-                      height={layout.playCardH}
-                      sizeMode="short"
-                      onLongPress={handleCardPreview}
-                    />
-                  </Pressable>
-                ) : null}
-              </DropZone>
-
               <View style={styles.handArea}>
                 <PlayerHand
                   cards={localPlayer?.hand ?? []}
@@ -576,6 +556,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+    minHeight: 0,
+    overflow: 'hidden',
   },
   opponentsBar: {
     backgroundColor: 'transparent',
@@ -626,12 +608,14 @@ const styles = StyleSheet.create({
   },
   mainRow: {
     flexDirection: 'row',
-    flex: 1,
     minHeight: 0,
+    overflow: 'hidden',
+    flexShrink: 0,
   },
   centerColumn: {
     flexDirection: 'column',
     minHeight: 0,
+    overflow: 'hidden',
   },
   bodyColumn: {
     flexDirection: 'column',
@@ -690,23 +674,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.3)',
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 6,
-    gap: 6,
-  },
-  handDiscardSlot: {
-    width: 56,
-    minHeight: 0,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(212,175,55,0.25)',
-    backgroundColor: 'transparent',
-    padding: 0,
+    paddingVertical: 4,
   },
   handArea: {
     flex: 1,
     minHeight: 0,
+    width: '100%',
   },
   emptyText: {
     color: 'rgba(255,255,255,0.25)',

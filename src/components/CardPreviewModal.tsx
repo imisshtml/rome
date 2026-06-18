@@ -12,6 +12,9 @@ import { getCardDefinition } from '../game/CardDefinitions';
 import { getEnlargedPreviewSize } from '../utils/cardDisplayUtils';
 import CardFace from './CardFace';
 
+/** Stat badges on click preview — smaller than board cards at the same ratio. */
+const ZOOM_BADGE_SCALE = 0.78;
+
 interface CardPreviewModalProps {
   card: CardInstance | null;
   visible: boolean;
@@ -48,6 +51,7 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
             faceUp={card.faceUp}
             width={cardW}
             height={cardH}
+            badgeScale={ZOOM_BADGE_SCALE}
           />
 
           <Pressable style={styles.closeBtn} onPress={onClose}>

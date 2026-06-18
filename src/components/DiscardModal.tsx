@@ -9,8 +9,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { PlayerState } from '../types/gameTypes';
-import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
+import { CardInstance } from '../types/cardTypes';
 import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
+import Card from './Card';
 
 interface DiscardModalProps {
   player: PlayerState | null;
@@ -28,8 +29,9 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
   const { width: screenW } = useWindowDimensions();
   if (!player) return null;
 
-  const cardW = Math.min(90, (screenW - 80) / 4);
+  const cardW = Math.min(100, (screenW - 80) / 3.5);
   const cardH = cardW * CARD_PORTRAIT_RATIO;
+  const discardTopFirst = [...player.discard].reverse();
 
   return (
     <Modal
@@ -39,7 +41,7 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <View style={[styles.panel, { maxWidth: Math.min(500, screenW - 32) }]}>
+        <View style={[styles.panel, { maxWidth: Math.min(560, screenW - 32) }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{player.name} — Discard Pile</Text>
             <Pressable onPress={onClose}>
@@ -54,25 +56,18 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
               contentContainerStyle={styles.grid}
               showsVerticalScrollIndicator={false}
             >
-              {player.discard.map((card) => {
-                const bg = FACTION_COLORS[card.definition.faction] ?? '#555';
-                return (
-                  <Pressable
-                    key={card.instanceId}
-                    onPress={() => onCardPress?.(card)}
-                    style={[
-                      styles.miniCard,
-                      { width: cardW, height: cardH, backgroundColor: bg },
-                    ]}
-                  >
-                    <Text style={styles.miniCost}>{card.definition.cost}</Text>
-                    <Text style={styles.miniName} numberOfLines={2}>
-                      {card.definition.name}
-                    </Text>
-                    <Text style={styles.miniValor}>⚔{card.definition.valor}</Text>
-                  </Pressable>
-                );
-              })}
+              {discardTopFirst.map((card) => (
+                <Card
+                  key={card.instanceId}
+                  card={card}
+                  width={cardW}
+                  height={cardH}
+                  sizeMode="full"
+                  hoverPreview={false}
+                  onPress={() => onCardPress?.(card)}
+                  onLongPress={() => onCardPress?.(card)}
+                />
+              ))}
             </ScrollView>
           )}
         </View>
@@ -123,39 +118,9 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     justifyContent: 'center',
-  },
-  miniCard: {
-    borderRadius: 8,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'space-between',
-  },
-  miniCost: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 11,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    textAlign: 'center',
-    lineHeight: 18,
-    overflow: 'hidden',
-  },
-  miniName: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  miniValor: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'right',
+    paddingBottom: 8,
   },
 });
 

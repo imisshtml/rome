@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { GameAction, PlayerState } from '../types/gameTypes';
+
+const MAX_VISIBLE_LOG_LINES = 48;
 
 function formatLogLine(action: GameAction, playerName: string): string {
   switch (action.type) {
@@ -40,10 +42,14 @@ export const GameLogPanel: React.FC<GameLogPanelProps> = ({ actions, players }) 
     () => Object.fromEntries(players.map((p) => [p.id, p.name])),
     [players]
   );
+  const visibleActions = useMemo(
+    () => actions.slice(-MAX_VISIBLE_LOG_LINES),
+    [actions]
+  );
 
   useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [actions.length]);
+    scrollRef.current?.scrollToEnd({ animated: false });
+  }, [visibleActions.length]);
 
   return (
     <View style={styles.panel}>
@@ -54,10 +60,10 @@ export const GameLogPanel: React.FC<GameLogPanelProps> = ({ actions, players }) 
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator
       >
-        {actions.length === 0 ? (
+        {visibleActions.length === 0 ? (
           <Text style={styles.empty}>No actions yet.</Text>
         ) : (
-          actions.map((action, index) => (
+          visibleActions.map((action, index) => (
             <Text
               key={`${action.timestamp}-${index}`}
               style={styles.line}
@@ -77,6 +83,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     minHeight: 0,
+    overflow: 'hidden',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(212,175,55,0.3)',
     paddingHorizontal: 6,
@@ -94,6 +101,9 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     minHeight: 0,
+    ...(Platform.OS === 'web'
+      ? ({ overflowY: 'auto', overflowX: 'hidden' } as object)
+      : null),
   },
   content: {
     paddingBottom: 4,

@@ -6,25 +6,28 @@ import Card from './Card';
 
 interface GalleryCardProps {
   card: CardInstance;
-  size: number;
+  /** Portrait card height in px (2.5×3.5 aspect). */
+  height?: number;
+  /** @deprecated use height */
+  size?: number;
   disabled?: boolean;
   onPress?: (card: CardInstance) => void;
   onLongPress?: (card: CardInstance) => void;
 }
 
-/** Gallery slot is square; portrait card fits height with correct 2.5×3.5 aspect. */
 export const GalleryCard: React.FC<GalleryCardProps> = ({
   card,
+  height: heightProp,
   size,
   disabled,
   onPress,
   onLongPress,
 }) => {
-  const cardH = size;
-  const cardW = Math.round(cardH / CARD_PORTRAIT_RATIO);
+  const cardH = heightProp ?? size ?? 80;
+  const cardW = cardH / CARD_PORTRAIT_RATIO;
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }]}>
+    <View style={[styles.wrap, { width: cardW, height: cardH }]}>
       <Card
         card={card}
         width={cardW}
@@ -42,8 +45,6 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
 const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
