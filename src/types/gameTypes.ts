@@ -77,6 +77,10 @@ export interface GameState {
   lastArenaResult?: ArenaChallengeResult | null;
   galleryCards: CardInstance[];
   epicCards: CardInstance[];
+  /** Top recruit card (face up, buyable). */
+  recruitCard?: CardInstance | null;
+  /** Remaining shuffled recruit pile (face down). */
+  recruitDeck?: CardInstance[];
   /** Face-down supply for gallery refills */
   gallerySupply?: CardInstance[];
   /** Face-down supply for epic row refills */

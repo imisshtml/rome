@@ -6,10 +6,12 @@ export {
   EPIC_CARD_IDS,
   getCardDefinition,
   getGalleryPoolEntries,
+  getRecruitPoolEntries,
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
   getStartingDeckEntries,
   isGalleryEventCard,
+  isRecruitDefinition,
 } from './CardCatalog';
 export type { PoolEntry } from './CardCatalog';

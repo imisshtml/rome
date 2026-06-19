@@ -34,6 +34,8 @@ export {
   CROWD_DISFAVOR,
   getCardDefinition,
   getGalleryPoolEntries,
+  getRecruitPoolEntries,
+  isRecruitDefinition,
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,

@@ -63,6 +63,8 @@ export type CardLocation =
   | 'FLAVOR_DECK'
   | 'DISFAVOR_DECK'
   | 'ARENA_DECK'
+  | 'RECRUIT'
+  | 'RECRUIT_DECK'
   | 'ITEMS_IN_PLAY';
 
 export const FACTION_COLORS: Record<Faction, string> = {

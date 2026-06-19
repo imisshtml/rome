@@ -5,4 +5,8 @@ export const turnButtonBg = require('./button.png');
 export const cardBack = require('./card_back.png');
 export const gameBackground = require('./game_background.jpg');
 export const homeBackground = require('./home_background.jpg');
+export const factionIconLudus = require('./icon_ludus.png');
+export const factionIconLegion = require('./icon_legion.png');
+export const factionIconSenate = require('./icon_senate.png');
+export const factionIconEpic = require('./icon_epic.png');
 export { CARD_IMAGES, getCardImage } from './cardImages';

@@ -406,6 +406,7 @@ export const GameTable: React.FC = () => {
               galleryCards={state.galleryCards}
               epicCards={state.epicCards}
               arenaCard={state.arenaCard}
+              recruitCard={state.recruitCard}
               players={state.players}
               readyPlayerIds={state.readyPlayerIds}
               readyCount={readyCount}
@@ -448,6 +449,17 @@ export const GameTable: React.FC = () => {
                     { gap: layout.galleryCardGap, marginTop: 6 },
                   ]}
                 >
+                  {state.recruitCard ? (
+                    <GalleryCard
+                      key={state.recruitCard.instanceId}
+                      card={state.recruitCard}
+                      size={layout.galleryCardSize}
+                      onPress={handleCardPreview}
+                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                      disabled={!isMainActive}
+                    />
+                  ) : null}
+
                   <DropZone
                     id="arena_challenge"
                     zoneType="ARENA"

@@ -82,7 +82,7 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
           <CardStack
             key={stack.key}
             cards={cards}
-            label={stack.label}
+            label={stack.key === 'disfavor' ? '' : stack.label}
             color={stack.color}
             width={stackW}
             height={stackH}

@@ -52,6 +52,7 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
             width={cardW}
             height={cardH}
             badgeScale={ZOOM_BADGE_SCALE}
+            chosenFaction={card.chosenFaction}
           />
 
           <Pressable style={styles.closeBtn} onPress={onClose}>

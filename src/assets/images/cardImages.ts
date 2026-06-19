@@ -103,6 +103,7 @@ export const CARD_IMAGES: Record<string, ImageSourcePropType> = {
   'ludus_magnus.jpg': require('./ludus/ludus_magnus.jpg'),
   'ludus_medicus.jpg': require('./ludus/ludus_medicus.jpg'),
   'ludus_murmillo.jpg': require('./ludus/ludus_murmillo.jpg'),
+  'ludus_novicii.jpg': require('./ludus/ludus_novicii.jpg'),
   'ludus_pompa.jpg': require('./ludus/ludus_pompa.jpg'),
   'ludus_praeco.jpg': require('./ludus/ludus_praeco.jpg'),
   'ludus_retarius.jpg': require('./ludus/ludus_retarius.jpg'),

@@ -189,6 +189,7 @@ export const Card: React.FC<CardProps> = ({
           faceUp={card.faceUp}
           width={width}
           height={height}
+          chosenFaction={card.chosenFaction}
           style={
             card.chosenFaction
               ? {

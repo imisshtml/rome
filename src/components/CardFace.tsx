@@ -7,16 +7,30 @@ import {
   ImageBackground,
   Platform,
   ViewStyle,
+  ImageStyle,
 } from 'react-native';
-import { CardDefinition } from '../types/cardTypes';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CardDefinition, Faction } from '../types/cardTypes';
 import {
   costIcon,
   valorIcon,
   victoryIcon,
   cardBack as cardBackImage,
   getCardImage,
+  factionIconLudus,
+  factionIconLegion,
+  factionIconSenate,
+  factionIconEpic,
 } from '../assets/images';
 import { getCardStatDisplay } from '../utils/cardDisplayUtils';
+import { getCardDisplayFaction } from '../utils/cardFactionUtils';
+
+const FACTION_ICONS: Partial<Record<Faction, number>> = {
+  Ludus: factionIconLudus,
+  Legion: factionIconLegion,
+  Senate: factionIconSenate,
+  Epic: factionIconEpic,
+};
 
 interface CardFaceProps {
   definition: CardDefinition;
@@ -25,6 +39,8 @@ interface CardFaceProps {
   height: number;
   /** Multiplier on stat badge size (e.g. zoom previews). */
   badgeScale?: number;
+  /** Spy morph — overrides definition faction for faction icon. */
+  chosenFaction?: Faction | null;
   style?: ViewStyle;
 }
 
@@ -44,8 +60,36 @@ function badgeLayout(width: number, badgeScale = 1) {
     cost: { top: -1 * scale, left: -1 * scale },
     victory: { top: -1 * scale, right: -1 * scale },
     valor: { bottom: -1 * scale, right: -3 * scale },
+    faction: { left: -1 * scale, bottom: -1 * scale },
     statPaddingBottom: Math.round(size * 0.13),
     costStatPaddingBottom: Math.round(size * 0.065),
+  };
+}
+
+function effectOverlayLayout(
+  height: number,
+  width: number,
+  badgeSize: number,
+  hasFactionIcon: boolean,
+  hasValorBadge: boolean
+) {
+  const scale = width / BADGE_REF_WIDTH;
+  const gradientHeight = height / 3;
+  const fontSize = Math.max(6, Math.round(height * 0.02));
+  const badgeGap = Math.max(6, Math.round(badgeSize * 0.22));
+  const iconReserve = hasFactionIcon ? badgeSize + badgeGap : 8;
+  const textPadding = Math.max(4, Math.round(height * 0.028));
+  const rightReserve = hasValorBadge
+    ? Math.max(textPadding, badgeSize - 3 * scale + badgeGap)
+    : textPadding;
+
+  return {
+    gradientHeight,
+    fontSize,
+    lineHeight: Math.round(fontSize * 1.28),
+    iconReserve,
+    rightReserve,
+    textPadding,
   };
 }
 
@@ -82,16 +126,50 @@ const webContainStyle =
     ? ({ objectFit: 'contain', objectPosition: 'center' } as const)
     : undefined;
 
+const FactionIcon: React.FC<{
+  faction: Faction;
+  size: number;
+  position: ImageStyle;
+}> = ({ faction, size, position }) => {
+  const icon = FACTION_ICONS[faction];
+  if (!icon) return null;
+
+  return (
+    <Image
+      source={icon}
+      style={[styles.factionIcon, { width: size, height: size }, position]}
+      resizeMode="contain"
+    />
+  );
+};
+
 export const CardFace: React.FC<CardFaceProps> = ({
   definition,
   faceUp,
   width,
   height,
   badgeScale = 1,
+  chosenFaction,
   style,
 }) => {
   const layout = useMemo(() => badgeLayout(width, badgeScale), [width, badgeScale]);
   const stats = getCardStatDisplay(definition);
+  const displayFaction = useMemo(
+    () => getCardDisplayFaction(definition, chosenFaction),
+    [definition, chosenFaction]
+  );
+  const effectText = definition.text?.trim() ?? '';
+  const effectLayout = useMemo(
+    () =>
+      effectOverlayLayout(
+        height,
+        width,
+        layout.size,
+        displayFaction != null,
+        stats.valor != null
+      ),
+    [height, width, layout.size, displayFaction, stats.valor]
+  );
   const cardImage = faceUp ? getCardImage(definition.image) : null;
   const imageSource = faceUp ? cardImage : cardBackImage;
 
@@ -109,6 +187,32 @@ export const CardFace: React.FC<CardFaceProps> = ({
 
       {faceUp ? (
         <View style={styles.overlayLayer} pointerEvents="none">
+          <View
+            style={[styles.bottomGradient, { height: effectLayout.gradientHeight }]}
+          >
+            <LinearGradient
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.88)']}
+              locations={[0, 0.42, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            {effectText ? (
+              <Text
+                style={[
+                  styles.effectText,
+                  {
+                    left: effectLayout.iconReserve,
+                    right: effectLayout.rightReserve,
+                    bottom: effectLayout.textPadding,
+                    fontSize: effectLayout.fontSize,
+                    lineHeight: effectLayout.lineHeight,
+                  },
+                ]}
+                numberOfLines={4}
+              >
+                {effectText}
+              </Text>
+            ) : null}
+          </View>
           {stats.cost != null ? (
             <StatBadge
               icon={costIcon}
@@ -138,6 +242,13 @@ export const CardFace: React.FC<CardFaceProps> = ({
               costStatPaddingBottom={layout.costStatPaddingBottom}
             />
           ) : null}
+          {displayFaction ? (
+            <FactionIcon
+              faction={displayFaction}
+              size={layout.size}
+              position={layout.faction}
+            />
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -162,6 +273,20 @@ const styles = StyleSheet.create({
   overlayLayer: {
     ...StyleSheet.absoluteFillObject,
   },
+  bottomGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  effectText: {
+    position: 'absolute',
+    color: 'rgba(255,255,255,0.94)',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   statBadge: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -176,6 +301,9 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  factionIcon: {
+    position: 'absolute',
   },
 });
 

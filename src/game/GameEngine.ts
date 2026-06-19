@@ -12,6 +12,7 @@ import {
   CROWD_DISFAVOR,
   getCardDefinition,
   getGalleryPoolEntries,
+  getRecruitPoolEntries,
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
@@ -145,6 +146,23 @@ function setupInitialGalleryRow(shuffledSupply: CardInstance[]): {
   };
 }
 
+function setupRecruitPile(): {
+  recruitCard: CardInstance | null;
+  recruitDeck: CardInstance[];
+} {
+  const shuffled = buildPoolInstances(
+    getRecruitPoolEntries(),
+    'RECRUIT_DECK',
+    'market',
+    false
+  );
+  const recruitCard =
+    shuffled.length > 0
+      ? { ...shuffled.shift()!, location: 'RECRUIT' as const, faceUp: true }
+      : null;
+  return { recruitCard, recruitDeck: shuffled };
+}
+
 function createMarketCards() {
   const shuffledGalleryPool = buildPoolInstances(
     getGalleryPoolEntries(),
@@ -189,9 +207,13 @@ function createMarketCards() {
     createCardInstance(CROWD_DISFAVOR.id, 'DISFAVOR_DECK', 'market', true),
   ];
 
+  const { recruitCard, recruitDeck } = setupRecruitPile();
+
   return {
     galleryCards,
     gallerySupply,
+    recruitCard,
+    recruitDeck,
     arenaCard,
     arenaDeck,
     epicCards,
@@ -223,6 +245,7 @@ function applyCardPlayEffects(
 }
 
 function findMarketCard(state: GameState, instanceId: string): CardInstance | undefined {
+  if (state.recruitCard?.instanceId === instanceId) return state.recruitCard;
   return (
     state.galleryCards.find((c) => c.instanceId === instanceId) ??
     state.epicCards.find((c) => c.instanceId === instanceId)
@@ -450,6 +473,14 @@ export function rehydrateGameState(state: GameState): GameState {
     gallerySupply: rehydrateCards(state.gallerySupply ?? []),
     epicCards: rehydrateCards(state.epicCards ?? []),
     epicSupply: rehydrateCards(state.epicSupply ?? []),
+    recruitCard: state.recruitCard
+      ? { ...rehydrateCard(state.recruitCard), location: 'RECRUIT' as const, faceUp: true }
+      : null,
+    recruitDeck: rehydrateCards(state.recruitDeck ?? []).map((c) => ({
+      ...c,
+      location: 'RECRUIT_DECK' as const,
+      faceUp: false,
+    })),
     flavorDeck: rehydrateCards(state.flavorDeck ?? []),
     disfavorDeck:
       (state.disfavorDeck ?? []).length > 0
@@ -675,6 +706,8 @@ export function createPregameState(
     lastArenaResult: null,
     galleryCards: market.galleryCards,
     gallerySupply: market.gallerySupply,
+    recruitCard: market.recruitCard,
+    recruitDeck: market.recruitDeck,
     epicCards: market.epicCards,
     epicSupply: market.epicSupply,
     flavorDeck: market.flavorDeck,
@@ -722,6 +755,8 @@ export function createLobbyGameState(
     arenaDeck: [],
     arenaCommitZone: [],
     galleryCards: [],
+    recruitCard: null,
+    recruitDeck: [],
     epicCards: [],
     flavorDeck: [],
     disfavorDeck: [],
@@ -955,6 +990,22 @@ export function processGameAction(
         const newEpic = [...next.epicCards];
         newEpic.splice(epicIdx, 1);
         next.epicCards = newEpic;
+      } else if (next.recruitCard?.instanceId === action.payload!.cardInstanceId) {
+        boughtCard = {
+          ...next.recruitCard,
+          location: 'DISCARD' as const,
+          ownerId: player.id,
+        };
+        const recruitDeck = [...(next.recruitDeck ?? [])];
+        next.recruitCard =
+          recruitDeck.length > 0
+            ? {
+                ...recruitDeck.shift()!,
+                location: 'RECRUIT' as const,
+                faceUp: true,
+              }
+            : null;
+        next.recruitDeck = recruitDeck;
       }
 
       if (!boughtCard) return next;

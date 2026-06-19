@@ -109,6 +109,14 @@ export const DebugPanel: React.FC = () => {
           <Row label="Gallery row" value={`${state.galleryCards.length}`} />
           <Row label="Gallery deck" value={`${state.gallerySupply?.length ?? 0}`} />
           <Row
+            label="Recruit"
+            value={
+              state.recruitCard
+                ? `${state.recruitCard.definition.name} (+${state.recruitDeck?.length ?? 0})`
+                : 'Empty'
+            }
+          />
+          <Row
             label="Arena"
             value={state.arenaCard?.definition.name ?? 'None'}
           />

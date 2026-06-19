@@ -81,6 +81,7 @@ export const CardStack: React.FC<CardStackProps> = ({
             faceUp
             width={width}
             height={height}
+            chosenFaction={topCard.chosenFaction}
           />
         ) : useCardBack ? (
           <View style={{ width, height }}>

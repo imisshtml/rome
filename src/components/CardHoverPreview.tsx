@@ -30,6 +30,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ card, width 
         width={previewW}
         height={previewH}
         badgeScale={ZOOM_BADGE_SCALE}
+        chosenFaction={card.chosenFaction}
       />
     </View>
   );

@@ -33,6 +33,7 @@ interface PregameMarketViewProps {
   galleryCards: CardInstance[];
   epicCards: CardInstance[];
   arenaCard: CardInstance | null;
+  recruitCard?: CardInstance | null;
   players: PlayerState[];
   readyPlayerIds: string[];
   readyCount: number;
@@ -77,9 +78,13 @@ function computePregameSizes(width: number, height: number) {
   );
 
   const epicCount = 3;
+  const recruitCount = 1;
   const epicGap = galleryGap;
-  const bottomUsableW = width - ROOT_W_PAD * 2 - epicGap * 4;
-  const maxRowHByWidth = Math.floor(bottomUsableW / (CARD_LANDSCAPE_RATIO + epicCount / CARD_PORTRAIT_RATIO));
+  const bottomUsableW = width - ROOT_W_PAD * 2 - epicGap * (recruitCount + epicCount + 1);
+  const maxRowHByWidth = Math.floor(
+    bottomUsableW /
+      (CARD_LANDSCAPE_RATIO + (recruitCount + epicCount) / CARD_PORTRAIT_RATIO)
+  );
   const epicSize = Math.min(
     maxRowHByWidth,
     Math.floor(bottomRowH * 0.95)
@@ -110,6 +115,7 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
   galleryCards,
   epicCards,
   arenaCard,
+  recruitCard,
   players,
   readyPlayerIds,
   readyCount,
@@ -164,6 +170,15 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
             },
           ]}
         >
+          {recruitCard ? (
+            <GalleryCard
+              card={recruitCard}
+              height={sizes.epicSize}
+              onPress={onCardPress}
+              onLongPress={onCardPress}
+            />
+          ) : null}
+
           {arenaCard ? (
             <Card
               card={arenaCard}

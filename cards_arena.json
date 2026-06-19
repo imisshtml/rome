@@ -7,7 +7,14 @@
       "image": "arena_leopard.jpg",
       "arena_type": "beast",
       "tier": "easy",
-      "valor_required": 5
+      "valor_required": 5,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 1 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 1
+      }
     },
     {
       "id": "arena_hyenas",
@@ -15,7 +22,14 @@
       "image": "arena_hyenas.jpg",
       "arena_type": "beast",
       "tier": "easy",
-      "valor_required": 6
+      "valor_required": 6,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 1 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 1
+      }
     },
     {
       "id": "arena_hounds",
@@ -23,7 +37,14 @@
       "image": "arena_hounds.jpg",
       "arena_type": "beast",
       "tier": "easy",
-      "valor_required": 5
+      "valor_required": 5,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 1 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 1
+      }
     },
     {
       "id": "arena_lion",
@@ -31,7 +52,14 @@
       "image": "arena_lion.jpg",
       "arena_type": "beast",
       "tier": "medium",
-      "valor_required": 7
+      "valor_required": 7,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_bull",
@@ -39,7 +67,14 @@
       "image": "arena_bull.jpg",
       "arena_type": "beast",
       "tier": "hard",
-      "valor_required": 8
+      "valor_required": 8,
+      "reward_vp": 4,
+      "effect_text_win": "Gain 4 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 4,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_gaul",
@@ -47,7 +82,14 @@
       "image": "arena_gaul.jpg",
       "arena_type": "gladiator",
       "tier": "medium",
-      "valor_required": 8
+      "valor_required": 8,
+      "reward_vp": 4,
+      "effect_text_win": "Gain 4 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 4,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_eques",
@@ -55,7 +97,14 @@
       "image": "arena_eques.jpg",
       "arena_type": "gladiator",
       "tier": "medium",
-      "valor_required": 7
+      "valor_required": 7,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_primus",
@@ -63,7 +112,14 @@
       "image": "arena_primus.jpg",
       "arena_type": "gladiator",
       "tier": "epic",
-      "valor_required": 11
+      "valor_required": 11,
+      "reward_vp": 5,
+      "effect_text_win": "Gain 5 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 5,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_revolt",
@@ -71,7 +127,14 @@
       "image": "arena_revolt.jpg",
       "arena_type": "gladiator",
       "tier": "epic",
-      "valor_required": 12
+      "valor_required": 12,
+      "reward_vp": 6,
+      "effect_text_win": "Gain 6 Victory Points",
+      "effect_text_loss": "Gain 3 Disfavor",
+      "effects": {
+        "gain_vp": 6,
+        "gain_crowd_disfavor": 3
+      }
     },
     {
       "id": "arena_fire",
@@ -79,7 +142,14 @@
       "image": "arena_fire.jpg",
       "arena_type": "hazard",
       "tier": "medium",
-      "valor_required": 6
+      "valor_required": 6,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 1 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 1
+      }
     },
     {
       "id": "arena_chariot",
@@ -87,7 +157,14 @@
       "image": "arena_chariot.jpg",
       "arena_type": "spectacle",
       "tier": "hard",
-      "valor_required": 8
+      "valor_required": 8,
+      "reward_vp": 4,
+      "effect_text_win": "Gain 4 Victory Points",
+      "effect_text_loss": "Gain 2 Disfavor",
+      "effects": {
+        "gain_vp": 4,
+        "gain_crowd_disfavor": 2
+      }
     },
     {
       "id": "arena_naval_battle",
@@ -95,7 +172,14 @@
       "image": "arena_naval_battle.jpg",
       "arena_type": "spectacle",
       "tier": "epic",
-      "valor_required": 10
+      "valor_required": 12,
+      "reward_vp": 6,
+      "effect_text_win": "Gain 6 Victory Points",
+      "effect_text_loss": "Gain 3 Disfavor",
+      "effects": {
+        "gain_vp": 6,
+        "gain_crowd_disfavor": 3
+      }
     }
   ]
 }

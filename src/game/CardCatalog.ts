@@ -218,6 +218,7 @@ export function getGalleryPoolEntries(): PoolEntry[] {
   const entries: PoolEntry[] = [];
   for (const raw of factionsPack.cards) {
     if (raw.deck_source !== 'gallery') continue;
+    if ('recruit' in raw && raw.recruit) continue;
     const id = factionDefinitionId(raw);
     entries.push({ definitionId: id, qty: raw.deck_qty ?? 1 });
   }
@@ -228,6 +229,23 @@ export function getGalleryPoolEntries(): PoolEntry[] {
     });
   }
   return entries;
+}
+
+/** Recruit pile — 10 copies each of the three faction recruit cards. */
+export function getRecruitPoolEntries(): PoolEntry[] {
+  return factionsPack.cards
+    .filter(
+      (raw) =>
+        raw.deck_source === 'gallery' && 'recruit' in raw && raw.recruit === true
+    )
+    .map((raw) => ({
+      definitionId: factionDefinitionId(raw),
+      qty: raw.deck_qty ?? 10,
+    }));
+}
+
+export function isRecruitDefinition(definitionId: string): boolean {
+  return getRecruitPoolEntries().some((e) => e.definitionId === definitionId);
 }
 
 export function getEpicPoolEntries(): PoolEntry[] {

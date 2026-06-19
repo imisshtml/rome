@@ -165,22 +165,21 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Gain 1 Flavor card",
-      "cost": 2,
-      "valor": 1,
+      "cost": 3,
+      "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 10,
+      "recruit": true,
       "timing": "main",
-      "effect_text": "+1 Coins",
+      "effect_text": "+2 Coins",
       "effect_keywords": [
-        "coins",
-        "destroy",
-        "favor"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 1
+        "gain_coins": 2
       }
     },
     {
@@ -867,6 +866,38 @@
       }
     },
     {
+      "id": "LEG-026",
+      "slug": "march",
+      "name": "Forced March",
+      "image": "legion_march.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Legion",
+      "banding_bonus": "Gain 1 Flavor card",
+      "cost": 7,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coins. Draw and play the top card of the Main deck. Destroy it at end of turn.",
+      "effect_keywords": [
+        "coins",
+        "main_deck",
+        "temporary_play"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "gain_card": {
+          "source": "main_deck",
+          "position": "top",
+          "play": true
+        }
+      }
+    },
+    {
       "id": "SEN-001",
       "slug": "senator",
       "name": "Senator",
@@ -900,26 +931,21 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 2,
+      "cost": 3,
       "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 10,
+      "recruit": true,
       "timing": "main",
-      "effect_text": "+1 Coins. You may destroy a card from your hand or discard.",
+      "effect_text": "+2 Coins.",
       "effect_keywords": [
-        "coins",
-        "destroy"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 1,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "gain_coins": 2
       }
     },
     {
@@ -2266,6 +2292,32 @@
       "effect_keywords": [
         "coins",
         "scaling_vp"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2
+      }
+    },
+    {
+      "id": "LUD-026",
+      "slug": "fresh-meat",
+      "name": "Novicii",
+      "image": "ludus_novicii.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Ludus",
+      "banding_bonus": "Gain 1 Flavor card",
+      "cost": 3,
+      "valor": 0,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 10,
+      "recruit": true,
+      "timing": "main",
+      "effect_text": "+2 Coins",
+      "effect_keywords": [
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
