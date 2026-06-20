@@ -5353,3 +5353,612 @@ _**Agent (composer-2.5)**_
 _**Agent (composer-2.5)**_
 
 Banding key is now vertical — Ludus, Senate, Legion stacked top to bottom. Icons are 30×30 (was 18×18), dashes slightly wider, label bumped to 8px. Each row: icon → effect → progress dashes.
+
+---
+
+_**User**_
+
+For the GallerySectionHeders, lets reduece the lines for the Recruits section and slightly expand the Epics and a little expand on the arena ones
+
+---
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GallerySectionHeader.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "**/GameTable.tsx",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "GallerySectionHeader|recruit|epic|arena"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "GallerySectionHeader|recruit|epic|arena",
+  "topFiles": [
+    {
+      "matchCount": 45,
+      "uri": "src/components/GameTable.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 45
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "**/boardLayout*",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "gallery|recruit|epic|arena"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "gallery|recruit|epic|arena",
+  "topFiles": [
+    {
+      "matchCount": 27,
+      "uri": "src/utils/boardLayout.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 27
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/utils/boardLayout.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Reducing the decorative lines for the Recruits section. Slightly expanding the Epics and arena lines.
+
+The "lines" are the decorative horizontal dividers beside each label. I'll add props to GallerySectionHeader to control their length.
+
+I'll use a `lineFlex` prop to shrink the Recruits divider. The Epics and arena lines will get a higher flex value to expand them.
+
+The column widths themselves may need adjustment. Epics already has the widest flex, so Recruits could shrink while Arena and Epics grow. Alternatively, a compactLines prop would tighten both the header lines and label padding.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder",
+  "pattern": "GallerySectionHeader"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder",
+  "pattern": "GallerySectionHeader",
+  "topFiles": [
+    {
+      "matchCount": 6,
+      "uri": ".specstory/history/2026-03-17_04-18-06Z-initial-game-table-framework-design.md"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/components/GallerySectionHeader.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/components/GameTable.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/components/PregameMarketView.tsx"
+    }
+  ],
+  "totalFiles": 4,
+  "totalMatches": 19
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx",
+  "pattern": "gallerySub|Epics|Recruits"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx",
+  "pattern": "gallerySub|Epics|Recruits",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "src/components/PregameMarketView.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 2
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Reducing Recruits header lines. Expanding Epics and Arena headers slightly.
+
+Adding a `lineFlex` prop to GallerySectionHeader to control line length. Recruits will get shorter lines. Epics will get longer lines. Arena will get slightly longer lines. Column flex values in GameTable and PregameMarketView will also be adjusted for consistency.
+
+Recruits lines will be set to 0.4. Arena lines will be 1.15. Epics lines will be 1.3. Market headers will keep the default length.
+
+Switched to a named size enum instead of a numeric prop. Compact lines for Recruits. Expanded lines for Arena. Wide lines for Epics. Bottom column flex values are now 0.78 for Recruits, 1.08 for Arena, and 1.42 for Epics.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Adding a `size` prop to control header line length and adjusting column flex ratios for Recruits, Arena, and Epics.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GallerySectionHeader.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -10</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -10
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+Done. Two tweaks:
+
+**Header lines** (`size` prop on `GallerySectionHeader`):
+- **Recruits** → `compact` (line flex 0.28 — short dashes)
+- **Arena** → `expanded` (1.18)
+- **Epics** → `wide` (1.38)
+- **Market** → default (1.0)
+
+**Column widths** (shared `GALLERY_BOTTOM_COLUMN_FLEX`):
+- Recruits: `0.78` (was 1)
+- Arena: `1.1` (was 1)
+- Epics: `1.45` (was 1.35)
+
+Applied in both `GameTable` and `PregameMarketView`.
+
+---
+
+_**User**_
+
+ok, that almost worked, the recruits look off center for their label now, the arena and epics look little better
+
+---
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The Recruits label appears off-center. Arena and epic sections look slightly better.
+
+The compact line flex may be making the recruit header lines too short. The label could also be centered against the full column width while the card above uses a different alignment.
+
+The compact lines create an asymmetric visual weight. The label appears left-aligned within its narrow column. Centering the label directly beneath the single recruit card would fix the misalignment.
+
+A centered label with minimal or no lines would work better than flex-based lines. Fixed-width lines or slightly increased line flex are other options. The label's intrinsic width plus padding may be pushing the header off-center in the narrow column.
+
+The flex layout should actually center the label, since the two lines split the remaining space equally. The misalignment likely comes from the column itself being misaligned, or from the header spanning the full column width.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Inspecting the Recruits header layout to fix the off-center label.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GallerySectionHeader.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The recruit label offset comes from the compact recruit header.
+
+The label overflows its card because the compact row spans the full column width. Tight flex lines squeeze the text. Fixed-width lines and centered headers would fix the alignment.
+
+The compact header will use two fixed 12px lines on either side of the label inside a centered row. Padding will drop to 6 and letter spacing will be reduced.
+
+The recruit column width is fine. Only the compact header needs fixing. Other sizes will keep the full-width flex layout. The compact header will be a self-contained centered block with fixed 14px lines and tighter padding.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Recruits label is off because `compact` uses full-width flex lines in a narrow column. Centering the header as a fixed-width group under the card instead.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GallerySectionHeader.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+Recruits was using full-width flex lines in a narrow column, so the label drifted left of the card.
+
+**Fix:** `compact` (Recruits) now renders a **centered chip** — fixed 14px lines on each side of the label, whole group `alignItems: 'center'` in the column. Arena/Epics unchanged.
+
+Also nudged recruit column flex `0.78 → 0.82` for a bit more breathing room.

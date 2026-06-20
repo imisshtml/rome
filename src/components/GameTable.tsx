@@ -32,7 +32,9 @@ import OpponentStrip from './OpponentStrip';
 import BoardSidebarLeft from './BoardSidebarLeft';
 import BoardSidebarRight from './BoardSidebarRight';
 import GalleryCard from './GalleryCard';
-import GallerySectionHeader from './GallerySectionHeader';
+import GallerySectionHeader, {
+  GALLERY_BOTTOM_COLUMN_FLEX,
+} from './GallerySectionHeader';
 import CardPreviewModal from './CardPreviewModal';
 import DiscardModal from './DiscardModal';
 import ArenaChallengeModal, { ArenaModalStep } from './ArenaChallengeModal';
@@ -625,7 +627,12 @@ export const GameTable: React.FC = () => {
                 </View>
 
                 <View style={[styles.gallerySubRow, { gap: layout.galleryCardGap }]}>
-                  <View style={styles.gallerySubColumn}>
+                  <View
+                    style={[
+                      styles.gallerySubColumn,
+                      { flex: GALLERY_BOTTOM_COLUMN_FLEX.recruit },
+                    ]}
+                  >
                     <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
                       {state.recruitCard ? (
                         <GalleryCard
@@ -640,10 +647,15 @@ export const GameTable: React.FC = () => {
                         <Text style={styles.emptyText}>—</Text>
                       )}
                     </View>
-                    <GallerySectionHeader label="Recruits" />
+                    <GallerySectionHeader label="Recruits" size="expanded" />
                   </View>
 
-                  <View style={styles.gallerySubColumn}>
+                  <View
+                    style={[
+                      styles.gallerySubColumn,
+                      { flex: GALLERY_BOTTOM_COLUMN_FLEX.arena },
+                    ]}
+                  >
                     <DropZone
                       id="arena_challenge"
                       zoneType="ARENA"
@@ -670,10 +682,15 @@ export const GameTable: React.FC = () => {
                         <Text style={styles.emptyText}>No Arena</Text>
                       )}
                     </DropZone>
-                    <GallerySectionHeader label="Arena" />
+                    <GallerySectionHeader label="Arena" size="expanded" />
                   </View>
 
-                  <View style={[styles.gallerySubColumn, styles.galleryEpicsColumn]}>
+                  <View
+                    style={[
+                      styles.gallerySubColumn,
+                      { flex: GALLERY_BOTTOM_COLUMN_FLEX.epics },
+                    ]}
+                  >
                     <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
                       {state.epicCards.map((card) => (
                         <GalleryCard
@@ -686,7 +703,7 @@ export const GameTable: React.FC = () => {
                         />
                       ))}
                     </View>
-                    <GallerySectionHeader label="Epics" />
+                    <GallerySectionHeader label="Epics" size="wide" />
                   </View>
                 </View>
               </View>
@@ -945,13 +962,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gallerySubColumn: {
-    flex: 1,
     alignItems: 'center',
     minWidth: 0,
     gap: 4,
-  },
-  galleryEpicsColumn: {
-    flex: 1.35,
   },
   galleryRow: {
     flexDirection: 'row',

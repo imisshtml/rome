@@ -17,7 +17,9 @@ import {
 } from '../utils/cardDisplayUtils';
 import Card from './Card';
 import GalleryCard from './GalleryCard';
-import GallerySectionHeader from './GallerySectionHeader';
+import GallerySectionHeader, {
+  GALLERY_BOTTOM_COLUMN_FLEX,
+} from './GallerySectionHeader';
 
 const TURN_BUTTON_ASPECT = 448 / 132;
 /** Slightly shrink gallery/epics from max fit (arena unchanged). */
@@ -28,7 +30,7 @@ const FOOTER_H = 110;
 const ROOT_H_PAD = 18;
 const ROOT_W_PAD = 10;
 const SECTION_LABEL_H = 20;
-const BOTTOM_COLUMN_FLEX = { recruit: 1, arena: 1, epics: 1.35 } as const;
+const BOTTOM_COLUMN_FLEX = GALLERY_BOTTOM_COLUMN_FLEX;
 
 interface PregameMarketViewProps {
   width: number;
@@ -202,7 +204,7 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
             ) : (
               <Text style={styles.emptyArena}>—</Text>
             )}
-            <GallerySectionHeader label="Recruits" />
+            <GallerySectionHeader label="Recruits" size="expanded" />
           </View>
 
           <View style={[styles.bottomSubColumn, styles.arenaSubColumn]}>
@@ -219,7 +221,7 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
             ) : (
               <Text style={styles.emptyArena}>No arena challenge</Text>
             )}
-            <GallerySectionHeader label="Arena" />
+            <GallerySectionHeader label="Arena" size="expanded" />
           </View>
 
           <View style={[styles.bottomSubColumn, styles.epicsSubColumn]}>
@@ -234,7 +236,7 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
                 />
               ))}
             </View>
-            <GallerySectionHeader label="Epics" />
+            <GallerySectionHeader label="Epics" size="wide" />
           </View>
         </View>
       </ScrollView>
