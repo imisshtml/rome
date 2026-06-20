@@ -76,7 +76,7 @@
       "id": "event_slave_revolt",
       "name": "Slave Revolt",
       "image": "event_incursion.jpg",
-      "effect_text": "Destroy the lowest-cost card in the Gallery and replace it.",
+      "effect_text": "Destroy the lowest-cost card in the Gallery and replace it. If there is a tie, destroy all cards that tied.",
       "effect_keywords": [],
       "effect_legacy": {
         "destroy_lowest_gallery_card": true

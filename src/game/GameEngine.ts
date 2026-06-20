@@ -6,8 +6,28 @@ import { applyStructuredPlayEffects, getLegacyCoinGain } from './EffectResolver'
 import {
   isSpyFactionChoice,
   requiresFactionChoiceOnPlay,
-  SPY_FACTION_CHOICES,
 } from '../utils/cardFactionUtils';
+import {
+  summarizeCardBuyEffect,
+  summarizeCardPlayEffect,
+} from '../utils/cardLogUtils';
+import {
+  splitPlayerDeckCycleCards,
+} from '../utils/deckCycleUtils';
+import { pickForcedDiscardCard } from '../utils/forcedDiscardUtils';
+import {
+  BANDING_BONUS_LABEL,
+  BandingFaction,
+  chooseSpyFactionForAI,
+  detectTriggeredBandingFaction,
+  pickAICardToPlayFirst,
+} from '../utils/bandingUtils';
+import {
+  beginGalleryEventResolution,
+  drawGallerySupplyCard,
+  galleryRefillPaused,
+  GALLERY_ROW_SIZE,
+} from './EventResolver';
 import {
   CROWD_DISFAVOR,
   getCardDefinition,
@@ -18,6 +38,8 @@ import {
   getFlavorPoolEntries,
   getStartingDeckEntries,
   isGalleryEventCard,
+  isFavorDefinitionId,
+  isPurchasableMarketCard,
 } from './CardDefinitions';
 
 export const MAX_PLAYERS = 6;
@@ -30,7 +52,6 @@ export const ARENA_CHALLENGE_STATS: Record<
   { requiredValor: number; rewardVp: number }
 > = {};
 
-const GALLERY_ROW_SIZE = 6;
 const EPIC_ROW_SIZE = 3;
 
 let instanceCounter = 0;
@@ -40,6 +61,16 @@ export interface PlayerSetup {
   id: string;
   name: string;
   isAI?: boolean;
+}
+
+function returnFavorCardToSupply(card: CardInstance): CardInstance {
+  return {
+    ...card,
+    location: 'FLAVOR_DECK',
+    ownerId: 'market',
+    faceUp: false,
+    chosenFaction: undefined,
+  };
 }
 
 function createCardInstance(
@@ -223,33 +254,194 @@ function createMarketCards() {
   };
 }
 
+function applyImperialTaxIfPending(
+  state: GameState,
+  playerIdx: number,
+  coinGainFromPlay: number
+): GameState {
+  const player = state.players[playerIdx];
+  if (!player?.imperialTaxPending || coinGainFromPlay <= 0 || state.turnCoins <= 0) {
+    return state;
+  }
+
+  const players = [...state.players];
+  players[playerIdx] = { ...player, imperialTaxPending: false };
+  return {
+    ...state,
+    players,
+    turnCoins: Math.max(0, state.turnCoins - 1),
+  };
+}
+
 function applyCardPlayEffects(
   state: GameState,
   playerIdx: number,
   card: CardInstance
 ): GameState {
+  let next = state;
+  let coinGain = 0;
   const effects = card.definition.effects;
   if (effects) {
-    return applyStructuredPlayEffects(state, playerIdx, card, effects, drawCards);
+    coinGain = effects.gain_coins ?? 0;
+    const drawForEffects = (player: PlayerState, drawCount: number) => {
+      const drawn = drawCardsIntoState(next, player, drawCount);
+      next = drawn.state;
+      return drawn.player;
+    };
+    next = applyStructuredPlayEffects(
+      next,
+      playerIdx,
+      card,
+      effects,
+      drawForEffects
+    );
+  } else {
+    coinGain = getLegacyCoinGain(card);
+    const valor = card.definition.valor ?? 0;
+    if (coinGain === 0 && valor === 0) return state;
+    next = {
+      ...state,
+      turnCoins: state.turnCoins + coinGain,
+    };
+  }
+  const discardCount = effects?.discard_cards ?? 0;
+  const forceOpponentDiscard = effects?.force_opponent_discard ?? 0;
+  if (discardCount > 0 && forceOpponentDiscard <= 0) {
+    next = {
+      ...next,
+      pendingHandDiscard: {
+        playerId: next.players[playerIdx].id,
+        remaining: discardCount,
+        sourceCardName: card.definition.name,
+      },
+    };
+  }
+  return applyImperialTaxIfPending(next, playerIdx, coinGain);
+}
+
+function applyForcedOpponentDiscard(
+  state: GameState,
+  targetPlayerId: string,
+  cardInstanceId: string
+): GameState {
+  const targetIdx = state.players.findIndex((p) => p.id === targetPlayerId);
+  if (targetIdx === -1) return state;
+
+  const target = { ...state.players[targetIdx] };
+  const handIdx = target.hand.findIndex((c) => c.instanceId === cardInstanceId);
+  if (handIdx === -1) return state;
+
+  const card = {
+    ...target.hand[handIdx],
+    location: 'DISCARD' as const,
+    faceUp: true,
+    chosenFaction: undefined,
+  };
+  target.hand = target.hand.filter((_, i) => i !== handIdx);
+  target.discard = [...target.discard, card];
+
+  const players = [...state.players];
+  players[targetIdx] = target;
+  return { ...state, players };
+}
+
+function advanceForcedOpponentDiscards(state: GameState): GameState {
+  const pending = state.pendingForcedOpponentDiscards;
+  if (!pending) return state;
+
+  let remainingTargetIds = [...pending.remainingTargetIds];
+
+  while (remainingTargetIds.length > 0) {
+    const nextTargetId = remainingTargetIds.shift()!;
+    const target = state.players.find((p) => p.id === nextTargetId);
+    if (target && target.hand.length > 0) {
+      return {
+        ...state,
+        pendingForcedOpponentDiscards: {
+          ...pending,
+          targetPlayerId: nextTargetId,
+          remainingTargetIds,
+        },
+      };
+    }
   }
 
-  const coins = getLegacyCoinGain(card);
-  const valor = card.definition.valor ?? 0;
-  if (coins === 0 && valor === 0) return state;
+  return { ...state, pendingForcedOpponentDiscards: null };
+}
 
+function resolveForcedOpponentDiscardsForAI(
+  state: GameState,
+  controllerIdx: number,
+  perOpponent: number,
+  sourceCardName?: string
+): GameState {
+  const controller = state.players[controllerIdx];
+  const opponents = state.players.filter(
+    (p) => p.id !== controller.id && p.hand.length > 0
+  );
+  if (opponents.length === 0) return state;
+
+  let next = state;
+  for (const opponent of opponents) {
+    for (let i = 0; i < perOpponent; i++) {
+      const current = next.players.find((p) => p.id === opponent.id);
+      if (!current || current.hand.length === 0) break;
+      const pick = pickForcedDiscardCard(current.hand);
+      if (!pick) break;
+      next = applyForcedOpponentDiscard(next, opponent.id, pick.instanceId);
+    }
+  }
+
+  return { ...next, pendingForcedOpponentDiscards: null };
+}
+
+function maybeBeginForcedOpponentDiscards(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  const perOpponent = card.definition.effects?.force_opponent_discard ?? 0;
+  if (perOpponent <= 0) return state;
+
+  const controller = state.players[playerIdx];
+  const opponents = state.players.filter(
+    (p) => p.id !== controller.id && p.hand.length > 0
+  );
+  if (opponents.length === 0) return state;
+
+  if (controller.isAI) {
+    return resolveForcedOpponentDiscardsForAI(
+      state,
+      playerIdx,
+      perOpponent,
+      card.definition.name
+    );
+  }
+
+  const [first, ...rest] = opponents.map((p) => p.id);
   return {
     ...state,
-    turnCoins: state.turnCoins + coins,
-    turnValor: state.turnValor + valor,
+    pendingForcedOpponentDiscards: {
+      controllerId: controller.id,
+      sourceCardName: card.definition.name,
+      targetPlayerId: first,
+      remainingTargetIds: rest,
+    },
   };
+}
+
+function isGalleryCardPurchased(state: GameState, instanceId: string): boolean {
+  return !!state.galleryPurchasedBy?.[instanceId];
 }
 
 function findMarketCard(state: GameState, instanceId: string): CardInstance | undefined {
   if (state.recruitCard?.instanceId === instanceId) return state.recruitCard;
-  return (
-    state.galleryCards.find((c) => c.instanceId === instanceId) ??
-    state.epicCards.find((c) => c.instanceId === instanceId)
-  );
+  const gallery = state.galleryCards.find((c) => c.instanceId === instanceId);
+  if (gallery) {
+    if (isGalleryCardPurchased(state, instanceId)) return undefined;
+    return gallery;
+  }
+  return state.epicCards.find((c) => c.instanceId === instanceId);
 }
 
 function allPlayersReady(state: GameState): boolean {
@@ -260,25 +452,45 @@ function allPlayersReady(state: GameState): boolean {
 }
 
 function activateGameFromPregame(state: GameState): GameState {
-  const players = state.players.map((p) => drawCards({ ...p, hand: [] }, STARTING_HAND_SIZE));
+  let flavorDeck = [...state.flavorDeck];
+  const players = state.players.map((p) => {
+    const { player, favorReturns } = drawCards({ ...p, hand: [] }, STARTING_HAND_SIZE);
+    if (favorReturns.length > 0) {
+      flavorDeck = [...flavorDeck, ...favorReturns];
+    }
+    return player;
+  });
   return {
     ...state,
     status: 'active',
     phase: 'MAIN',
     players,
+    flavorDeck,
     turnPlayerId: players[0]?.id ?? '',
     turnNumber: 1,
     turnCoins: 0,
     turnValor: 0,
+    turnBandingClaimed: [],
+    pendingBandingBonus: null,
+    turnActionHighlight: null,
+    pendingGalleryEvent: null,
+    pendingHandDiscard: null,
+    pendingForcedOpponentDiscards: null,
+    deferredTurnEnd: null,
+    pendingArenaReplacement: false,
+    purchaseCostCap: null,
+    galleryPurchasedBy: {},
     readyPlayerIds: state.readyPlayerIds,
   };
 }
 
 export function getArenaChallengeStats(arenaCard: CardInstance | null) {
-  if (!arenaCard) return { requiredValor: 6, rewardVp: 3 };
+  if (!arenaCard) return { requiredValor: 6, valorGain: 0, rewardVp: 3 };
   const def = arenaCard.definition;
+  const valorGain = def.valorRequired ?? 0;
   return {
-    requiredValor: def.valorRequired ?? 6,
+    requiredValor: valorGain > 0 ? valorGain : 6,
+    valorGain,
     rewardVp: def.rewardVp ?? 3,
   };
 }
@@ -329,7 +541,7 @@ function resolveArenaChallenge(state: GameState): GameState {
   const challengerIdx = state.players.findIndex((p) => p.id === challenge.challengerId);
   if (challengerIdx === -1) return state;
 
-  const { requiredValor, rewardVp } = getArenaChallengeStats(state.arenaCard);
+  const { requiredValor, rewardVp, valorGain } = getArenaChallengeStats(state.arenaCard);
   const totalValor = getArenaChallengeTotalValor(state);
   const success = totalValor >= requiredValor;
 
@@ -375,12 +587,9 @@ function resolveArenaChallenge(state: GameState): GameState {
 
   let arenaCard: CardInstance | null = state.arenaCard;
   let arenaDeck = [...state.arenaDeck];
+  let pendingArenaReplacement = state.pendingArenaReplacement ?? false;
   if (success) {
-    if (arenaDeck.length > 0) {
-      arenaCard = { ...arenaDeck.shift()!, location: 'ARENA', faceUp: true };
-    } else {
-      arenaCard = null;
-    }
+    pendingArenaReplacement = true;
   }
 
   return {
@@ -388,12 +597,15 @@ function resolveArenaChallenge(state: GameState): GameState {
     players,
     arenaCard,
     arenaDeck,
+    pendingArenaReplacement,
+    turnValor: state.turnValor + (success ? valorGain : 0),
     arenaCommitZone: [],
     arenaChallenge: null,
     lastArenaResult: {
       success,
       totalValor,
       requiredValor,
+      valorGain,
       rewardVp,
       challengerId: challenge.challengerId,
     },
@@ -413,38 +625,59 @@ function rehydrateCards(cards: CardInstance[]): CardInstance[] {
   return cards.map(rehydrateCard);
 }
 
-function rehydratePlayer(player: PlayerState): PlayerState {
+function rehydratePlayer(
+  player: PlayerState,
+  favorReturns?: CardInstance[]
+): PlayerState {
+  const hand = rehydrateCards(player.hand ?? []).map((c) => ({
+    ...c,
+    location: 'HAND' as const,
+    faceUp: c.faceUp ?? true,
+  }));
+  const deck = rehydrateCards(player.deck ?? []).map((c) => ({
+    ...c,
+    location: 'DECK' as const,
+    faceUp: false,
+  }));
+  const discard = rehydrateCards(player.discard ?? []).map((c) => ({
+    ...c,
+    location: 'DISCARD' as const,
+    faceUp: true,
+  }));
+  const playArea = rehydrateCards(player.playArea ?? []).map((c) => ({
+    ...c,
+    location: 'PLAY_AREA' as const,
+  }));
+  const itemsInPlay = rehydrateCards(player.itemsInPlay ?? []).map((c) => ({
+    ...c,
+    location: 'ITEMS_IN_PLAY' as const,
+  }));
+
+  const deckSplit = splitPlayerDeckCycleCards(deck);
+  const discardSplit = splitPlayerDeckCycleCards(discard);
+  const playSplit = splitPlayerDeckCycleCards(playArea);
+  if (favorReturns) {
+    favorReturns.push(
+      ...deckSplit.favorReturns,
+      ...discardSplit.favorReturns,
+      ...playSplit.favorReturns
+    );
+  }
+
   return {
     ...player,
-    hand: rehydrateCards(player.hand ?? []).map((c) => ({
-      ...c,
-      location: 'HAND' as const,
-      faceUp: c.faceUp ?? true,
-    })),
-    deck: rehydrateCards(player.deck ?? []).map((c) => ({
-      ...c,
-      location: 'DECK' as const,
-      faceUp: false,
-    })),
-    discard: rehydrateCards(player.discard ?? []).map((c) => ({
-      ...c,
-      location: 'DISCARD' as const,
-      faceUp: true,
-    })),
-    playArea: rehydrateCards(player.playArea ?? []).map((c) => ({
-      ...c,
-      location: 'PLAY_AREA' as const,
-    })),
-    itemsInPlay: rehydrateCards(player.itemsInPlay ?? []).map((c) => ({
-      ...c,
-      location: 'ITEMS_IN_PLAY' as const,
-    })),
+    hand,
+    deck: deckSplit.deckable,
+    discard: discardSplit.deckable,
+    playArea: playSplit.deckable,
+    itemsInPlay,
   };
 }
 
 /** Restore card definitions after Supabase JSON round-trip. */
 export function rehydrateGameState(state: GameState): GameState {
-  const players = (state.players ?? []).map(rehydratePlayer);
+  const favorReturns: CardInstance[] = [];
+  const players = (state.players ?? []).map((p) => rehydratePlayer(p, favorReturns));
   let phase = normalizePhase(state.phase);
   let status = state.status ?? (state.turnPlayerId ? 'active' : 'lobby');
 
@@ -461,6 +694,18 @@ export function rehydrateGameState(state: GameState): GameState {
     readyPlayerIds: state.readyPlayerIds ?? [],
     turnCoins: state.turnCoins ?? 0,
     turnValor: state.turnValor ?? 0,
+    turnBandingClaimed: state.turnBandingClaimed ?? [],
+    pendingBandingBonus: state.pendingBandingBonus ?? null,
+    turnActionHighlight: state.turnActionHighlight ?? null,
+    pendingGalleryEvent: state.pendingGalleryEvent
+      ? rehydrateCard(state.pendingGalleryEvent)
+      : null,
+    pendingEventDiscards: state.pendingEventDiscards ?? [],
+    pendingHandDiscard: state.pendingHandDiscard ?? null,
+    pendingForcedOpponentDiscards: state.pendingForcedOpponentDiscards ?? null,
+    deferredTurnEnd: state.deferredTurnEnd ?? null,
+    pendingArenaReplacement: state.pendingArenaReplacement ?? false,
+    purchaseCostCap: state.purchaseCostCap ?? null,
     arenaCard: state.arenaCard ? rehydrateCard(state.arenaCard) : null,
     arenaDeck: rehydrateCards(state.arenaDeck ?? []),
     arenaCommitZone: rehydrateCards(state.arenaCommitZone ?? []).map((c) => ({
@@ -470,6 +715,7 @@ export function rehydrateGameState(state: GameState): GameState {
     arenaChallenge: state.arenaChallenge ?? null,
     lastArenaResult: state.lastArenaResult ?? null,
     galleryCards: rehydrateCards(state.galleryCards ?? []),
+    galleryPurchasedBy: state.galleryPurchasedBy ?? {},
     gallerySupply: rehydrateCards(state.gallerySupply ?? []),
     epicCards: rehydrateCards(state.epicCards ?? []),
     epicSupply: rehydrateCards(state.epicSupply ?? []),
@@ -481,7 +727,7 @@ export function rehydrateGameState(state: GameState): GameState {
       location: 'RECRUIT_DECK' as const,
       faceUp: false,
     })),
-    flavorDeck: rehydrateCards(state.flavorDeck ?? []),
+    flavorDeck: [...rehydrateCards(state.flavorDeck ?? []), ...favorReturns],
     disfavorDeck:
       (state.disfavorDeck ?? []).length > 0
         ? rehydrateCards(state.disfavorDeck).map((c) => ({ ...c, faceUp: true }))
@@ -518,6 +764,27 @@ export function validateGameAction(
 
   if (state.status === 'finished') return 'Game is finished';
   if (state.status === 'lobby') return 'Game has not started';
+
+  if (state.pendingGalleryEvent || (state.pendingEventDiscards?.length ?? 0) > 0) {
+    if (action.type === 'RESOLVE_GALLERY_EVENT') {
+      if ((state.pendingEventDiscards?.length ?? 0) > 0) {
+        return 'All players must discard first';
+      }
+      return null;
+    }
+    if (action.type === 'EVENT_DISCARD_CARD') {
+      if (!state.pendingEventDiscards?.includes(action.playerId)) {
+        return 'Not waiting for your event discard';
+      }
+      if (!action.payload?.cardInstanceId) return 'Select a card to discard';
+      const p = state.players.find((pl) => pl.id === action.playerId);
+      if (!p?.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
+        return 'Card not in hand';
+      }
+      return null;
+    }
+    return 'Resolve gallery event first';
+  }
 
   const player = state.players.find((p) => p.id === action.playerId);
   if (!player) return 'Unknown player';
@@ -575,6 +842,42 @@ export function validateGameAction(
     return 'Not your turn';
   }
 
+  if (
+    state.pendingBandingBonus?.playerId === action.playerId &&
+    action.type !== 'ACCEPT_BANDING_BONUS' &&
+    action.type !== 'DECLINE_BANDING_BONUS'
+  ) {
+    return 'Resolve banding bonus first';
+  }
+
+  if (state.pendingHandDiscard?.playerId === action.playerId) {
+    if (action.type === 'DISCARD_CARD') {
+      if (!action.payload?.cardInstanceId) return 'Select a card to discard';
+      if (!player.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
+        return 'Discard from your hand';
+      }
+      return null;
+    }
+    return `Discard ${state.pendingHandDiscard.remaining} card(s) from hand`;
+  }
+
+  if (state.pendingForcedOpponentDiscards?.controllerId === action.playerId) {
+    if (action.type === 'FORCE_OPPONENT_DISCARD') {
+      if (!action.payload?.cardInstanceId) return 'Select a card to discard';
+      const targetId = state.pendingForcedOpponentDiscards.targetPlayerId;
+      const target = state.players.find((p) => p.id === targetId);
+      if (!target?.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
+        return 'Card not in opponent hand';
+      }
+      return null;
+    }
+    return 'Choose a card for your opponent to discard';
+  }
+
+  if (state.pendingForcedOpponentDiscards) {
+    return 'Waiting for forced discard';
+  }
+
   if (!canPerformAction(state.phase, action.type, state.status)) {
     return `Action ${action.type} not allowed in ${state.phase}`;
   }
@@ -608,29 +911,36 @@ export function validateGameAction(
       const card = findMarketCard(state, action.payload.cardInstanceId);
       if (!card) return 'Card not available to buy';
       if (state.turnCoins < card.definition.cost) return 'Not enough coins';
+      if (
+        state.purchaseCostCap != null &&
+        card.definition.cost > state.purchaseCostCap
+      ) {
+        return `Cards costing more than ${state.purchaseCostCap} cannot be purchased`;
+      }
+      if (!isPurchasableMarketCard(card)) {
+        return 'This card cannot be purchased';
+      }
       return null;
     }
+    case 'RESOLVE_GALLERY_EVENT':
+    case 'EVENT_DISCARD_CARD':
+    case 'FORCE_OPPONENT_DISCARD':
+      return null;
     case 'DRAW_CARD':
     case 'DISCARD_CARD':
     case 'END_PHASE':
       return null;
+    case 'ACCEPT_BANDING_BONUS':
+    case 'DECLINE_BANDING_BONUS': {
+      if (!state.pendingBandingBonus) return 'No banding bonus pending';
+      if (state.pendingBandingBonus.playerId !== action.playerId) {
+        return 'Not your banding bonus';
+      }
+      return null;
+    }
     default:
       return 'Unknown action';
   }
-}
-
-function refillGallery(state: GameState): GameState {
-  if (state.galleryCards.length >= GALLERY_ROW_SIZE) return state;
-  const supply = [...(state.gallerySupply ?? [])];
-  const galleryCards = [...state.galleryCards];
-  while (galleryCards.length < GALLERY_ROW_SIZE && supply.length > 0) {
-    galleryCards.push({
-      ...supply.shift()!,
-      location: 'GALLERY',
-      faceUp: true,
-    });
-  }
-  return { ...state, galleryCards, gallerySupply: supply };
 }
 
 function refillEpicRow(state: GameState): GameState {
@@ -647,43 +957,282 @@ function refillEpicRow(state: GameState): GameState {
   return { ...state, epicCards, epicSupply: supply };
 }
 
-function drawCards(player: PlayerState, count: number): PlayerState {
+function gainFlavorCard(
+  state: GameState,
+  player: PlayerState
+): { state: GameState; player: PlayerState } {
+  const flavorDeck = [...state.flavorDeck];
+  if (flavorDeck.length === 0) return { state, player };
+
+  const gained = {
+    ...flavorDeck.pop()!,
+    location: 'HAND' as const,
+    ownerId: player.id,
+    faceUp: true,
+  };
+
+  return {
+    state: { ...state, flavorDeck },
+    player: { ...player, hand: [...player.hand, gained] },
+  };
+}
+
+function applyBandingBonus(
+  state: GameState,
+  playerIdx: number,
+  faction: NonNullable<GameState['pendingBandingBonus']>['faction']
+): GameState {
+  let next = { ...state };
+  let player = { ...next.players[playerIdx] };
+
+  switch (faction) {
+    case 'Ludus': {
+      const gained = gainFlavorCard(next, player);
+      next = gained.state;
+      player = gained.player;
+      break;
+    }
+    case 'Senate':
+      next = { ...next, turnCoins: next.turnCoins + 2 };
+      next = applyImperialTaxIfPending(next, playerIdx, 2);
+      break;
+    case 'Legion': {
+      const drawn = drawCardsIntoState(next, player, 1);
+      next = drawn.state;
+      player = drawn.player;
+      break;
+    }
+  }
+
+  next.players = [...next.players];
+  next.players[playerIdx] = player;
+  return next;
+}
+
+function maybeOfferBandingBonus(
+  state: GameState,
+  playerIdx: number,
+  playedCard: CardInstance
+): GameState {
+  if (playedCard.definition.type === 'Item') return state;
+  if (state.pendingBandingBonus) return state;
+
+  const player = state.players[playerIdx];
+  const claimed = state.turnBandingClaimed ?? [];
+  const faction = detectTriggeredBandingFaction(player.playArea, claimed, playedCard);
+  if (!faction) return state;
+
+  return {
+    ...state,
+    pendingBandingBonus: {
+      playerId: player.id,
+      faction,
+      bonusText: BANDING_BONUS_LABEL[faction],
+    },
+  };
+}
+
+function enrichActionLog(state: GameState, action: GameAction): GameAction {
+  const player = state.players.find((p) => p.id === action.playerId);
+  if (!player) return action;
+
+  if (action.type === 'PLAY_CARD' && action.payload?.cardInstanceId) {
+    const card = player.hand.find((c) => c.instanceId === action.payload!.cardInstanceId);
+    if (!card) return action;
+    const chosen = action.payload.chosenFaction;
+    const cardName =
+      chosen && requiresFactionChoiceOnPlay(card.definition)
+        ? `${card.definition.name} (${chosen})`
+        : card.definition.name;
+    return {
+      ...action,
+      payload: {
+        ...action.payload,
+        cardName,
+        definitionId: card.definitionId,
+        ...(chosen ? { chosenFaction: chosen } : {}),
+        effectSummary: summarizeCardPlayEffect(card.definition),
+      },
+    };
+  }
+
+  if (action.type === 'BUY_CARD' && action.payload?.cardInstanceId) {
+    const card = findMarketCard(state, action.payload.cardInstanceId);
+    if (!card) return action;
+    return {
+      ...action,
+      payload: {
+        ...action.payload,
+        cardName: card.definition.name,
+        definitionId: card.definitionId,
+        effectSummary: summarizeCardBuyEffect(card.definition),
+      },
+    };
+  }
+
+  if (action.type === 'RESOLVE_GALLERY_EVENT' && state.pendingGalleryEvent) {
+    return {
+      ...action,
+      payload: {
+        ...action.payload,
+        cardName: state.pendingGalleryEvent.definition.name,
+        definitionId: state.pendingGalleryEvent.definitionId,
+        effectSummary: state.pendingGalleryEvent.definition.text,
+      },
+    };
+  }
+
+  if (action.type === 'EVENT_DISCARD_CARD' && action.payload?.cardInstanceId) {
+    const discardPlayer = state.players.find((p) => p.id === action.playerId);
+    const card = discardPlayer?.hand.find(
+      (c) => c.instanceId === action.payload!.cardInstanceId
+    );
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'FORCE_OPPONENT_DISCARD' && action.payload?.cardInstanceId) {
+    const pending = state.pendingForcedOpponentDiscards;
+    const target = pending
+      ? state.players.find((p) => p.id === pending.targetPlayerId)
+      : undefined;
+    const card = target?.hand.find(
+      (c) => c.instanceId === action.payload!.cardInstanceId
+    );
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'ARENA_RESPOND' && action.payload?.cardInstanceId) {
+    const card = player.hand.find(
+      (c) => c.instanceId === action.payload!.cardInstanceId
+    );
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+        },
+      };
+    }
+  }
+
+  return action;
+}
+
+function drawCards(
+  player: PlayerState,
+  count: number,
+  favorReturns?: CardInstance[]
+): { player: PlayerState; favorReturns: CardInstance[] } {
+  const collected = favorReturns ?? [];
   const newDeck = [...player.deck];
   const newHand = [...player.hand];
   const newDiscard = [...player.discard];
 
   for (let i = 0; i < count; i++) {
     if (newDeck.length === 0 && newDiscard.length > 0) {
-      const reshuffled = shuffle(newDiscard).map((c) => ({
+      const { deckable, favorReturns: fromDiscard } =
+        splitPlayerDeckCycleCards(newDiscard);
+      collected.push(...fromDiscard);
+      if (deckable.length === 0) break;
+      const reshuffled = shuffle(deckable).map((c) => ({
         ...c,
         location: 'DECK' as const,
         faceUp: false,
+        chosenFaction: undefined,
       }));
       newDeck.push(...reshuffled);
       newDiscard.length = 0;
     }
     if (newDeck.length > 0) {
       const drawn = newDeck.shift()!;
-      newHand.push({ ...drawn, location: 'HAND', faceUp: true });
+      newHand.push({
+        ...drawn,
+        location: 'HAND',
+        faceUp: true,
+        chosenFaction: undefined,
+      });
     }
   }
 
-  return { ...player, deck: newDeck, hand: newHand, discard: newDiscard };
+  return {
+    player: { ...player, deck: newDeck, hand: newHand, discard: newDiscard },
+    favorReturns: collected,
+  };
 }
 
-function cleanupTurnPlayer(player: PlayerState): PlayerState {
+function drawCardsIntoState(
+  state: GameState,
+  player: PlayerState,
+  count: number
+): { state: GameState; player: PlayerState } {
+  const { player: nextPlayer, favorReturns } = drawCards(player, count);
+  return {
+    state:
+      favorReturns.length > 0
+        ? { ...state, flavorDeck: [...state.flavorDeck, ...favorReturns] }
+        : state,
+    player: nextPlayer,
+  };
+}
+
+function cleanupTurnPlayer(player: PlayerState): {
+  player: PlayerState;
+  favorReturns: CardInstance[];
+} {
   const toDiscard = (c: CardInstance) => ({
     ...c,
     location: 'DISCARD' as const,
     faceUp: true,
+    chosenFaction: undefined,
   });
-  const discard = [
-    ...player.discard.map(toDiscard),
+
+  const deckSplit = splitPlayerDeckCycleCards(player.deck);
+  const existingDiscardSplit = splitPlayerDeckCycleCards(
+    player.discard.map(toDiscard)
+  );
+  const fromPlaySplit = splitPlayerDeckCycleCards([
     ...player.playArea.map(toDiscard),
     ...player.itemsInPlay.map(toDiscard),
     ...player.hand.map(toDiscard),
+  ]);
+
+  const favorReturns = [
+    ...deckSplit.favorReturns,
+    ...existingDiscardSplit.favorReturns,
+    ...fromPlaySplit.favorReturns,
   ];
-  return { ...player, hand: [], playArea: [], itemsInPlay: [], discard };
+
+  return {
+    player: {
+      ...player,
+      deck: deckSplit.deckable,
+      hand: [],
+      playArea: [],
+      itemsInPlay: [],
+      discard: [...existingDiscardSplit.deckable, ...fromPlaySplit.deckable],
+    },
+    favorReturns,
+  };
 }
 
 /** Board is visible; hands empty until all players ready. */
@@ -705,6 +1254,7 @@ export function createPregameState(
     arenaChallenge: null,
     lastArenaResult: null,
     galleryCards: market.galleryCards,
+    galleryPurchasedBy: {},
     gallerySupply: market.gallerySupply,
     recruitCard: market.recruitCard,
     recruitDeck: market.recruitDeck,
@@ -719,6 +1269,16 @@ export function createPregameState(
     readyPlayerIds: [],
     turnCoins: 0,
     turnValor: 0,
+    turnBandingClaimed: [],
+    pendingBandingBonus: null,
+    turnActionHighlight: null,
+    pendingGalleryEvent: null,
+    pendingEventDiscards: [],
+    pendingHandDiscard: null,
+    pendingForcedOpponentDiscards: null,
+    deferredTurnEnd: null,
+    pendingArenaReplacement: false,
+    purchaseCostCap: null,
   };
 }
 
@@ -755,6 +1315,7 @@ export function createLobbyGameState(
     arenaDeck: [],
     arenaCommitZone: [],
     galleryCards: [],
+    galleryPurchasedBy: {},
     recruitCard: null,
     recruitDeck: [],
     epicCards: [],
@@ -767,6 +1328,16 @@ export function createLobbyGameState(
     readyPlayerIds: [],
     turnCoins: 0,
     turnValor: 0,
+    turnBandingClaimed: [],
+    pendingBandingBonus: null,
+    turnActionHighlight: null,
+    pendingGalleryEvent: null,
+    pendingEventDiscards: [],
+    pendingHandDiscard: null,
+    pendingForcedOpponentDiscards: null,
+    deferredTurnEnd: null,
+    pendingArenaReplacement: false,
+    purchaseCostCap: null,
   };
 }
 
@@ -780,9 +1351,10 @@ export function processGameAction(
     return state;
   }
 
-  const next: GameState = {
+  const enrichedAction = enrichActionLog(state, action);
+  let next: GameState = {
     ...state,
-    actionLog: [...state.actionLog, action],
+    actionLog: [...state.actionLog, enrichedAction],
   };
   const playerIdx = next.players.findIndex((p) => p.id === action.playerId);
   if (playerIdx === -1 && action.type !== 'START_GAME') return next;
@@ -816,7 +1388,9 @@ export function processGameAction(
     case 'DRAW_CARD': {
       if (!player) return next;
       const count = action.payload?.count ?? 1;
-      player = drawCards(player, count);
+      const drawn = drawCardsIntoState(next, player, count);
+      next = drawn.state;
+      player = drawn.player;
       next.players = [...next.players];
       next.players[playerIdx] = player;
       return next;
@@ -840,21 +1414,100 @@ export function processGameAction(
         card.chosenFaction = action.payload.chosenFaction;
       }
 
+      const isFavorCard =
+        isFavorDefinitionId(card) || card.definition.type === 'Favor';
+
       if (card.definition.type === 'Item') {
         card.location = 'ITEMS_IN_PLAY';
         player.itemsInPlay = [...player.itemsInPlay, card];
-      } else {
+      } else if (!isFavorCard) {
         card.location = 'PLAY_AREA';
         player.playArea = [...player.playArea, card];
       }
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
-      return applyCardPlayEffects(next, playerIdx, card);
+      let result = applyCardPlayEffects(next, playerIdx, card);
+      result = maybeBeginForcedOpponentDiscards(result, playerIdx, card);
+      result = maybeOfferBandingBonus(result, playerIdx, card);
+      if (isFavorCard) {
+        result = {
+          ...result,
+          flavorDeck: [...result.flavorDeck, returnFavorCardToSupply(card)],
+        };
+      }
+      return result;
+    }
+
+    case 'ACCEPT_BANDING_BONUS': {
+      if (!player || !next.pendingBandingBonus) return next;
+      const faction = next.pendingBandingBonus.faction;
+      let resolved = applyBandingBonus(next, playerIdx, faction);
+      resolved = {
+        ...resolved,
+        pendingBandingBonus: null,
+        turnBandingClaimed: [...(resolved.turnBandingClaimed ?? []), faction],
+      };
+      return resolved;
+    }
+
+    case 'DECLINE_BANDING_BONUS': {
+      if (!next.pendingBandingBonus) return next;
+      const faction = next.pendingBandingBonus.faction;
+      return {
+        ...next,
+        pendingBandingBonus: null,
+        turnBandingClaimed: [...(next.turnBandingClaimed ?? []), faction],
+      };
+    }
+
+    case 'FORCE_OPPONENT_DISCARD': {
+      if (!next.pendingForcedOpponentDiscards || !action.payload?.cardInstanceId) {
+        return next;
+      }
+      if (action.playerId !== next.pendingForcedOpponentDiscards.controllerId) {
+        return next;
+      }
+
+      const { targetPlayerId } = next.pendingForcedOpponentDiscards;
+      next = applyForcedOpponentDiscard(
+        next,
+        targetPlayerId,
+        action.payload.cardInstanceId
+      );
+      next = advanceForcedOpponentDiscards(next);
+      return next;
     }
 
     case 'DISCARD_CARD': {
       if (!player || !action.payload?.cardInstanceId) return next;
+
+      if (next.pendingHandDiscard?.playerId === action.playerId) {
+        const handIdx = player.hand.findIndex(
+          (c) => c.instanceId === action.payload!.cardInstanceId
+        );
+        if (handIdx === -1) return next;
+
+        const card = {
+          ...player.hand[handIdx],
+          location: 'DISCARD' as const,
+          faceUp: true,
+          chosenFaction: undefined,
+        };
+        player.hand = player.hand.filter((_, i) => i !== handIdx);
+        player.discard = [...player.discard, card];
+
+        const remaining = next.pendingHandDiscard.remaining - 1;
+        next.pendingHandDiscard =
+          remaining > 0
+            ? { ...next.pendingHandDiscard, remaining }
+            : null;
+
+        next.players = [...next.players];
+        next.players[playerIdx] = player;
+        return next;
+      }
+
       const zones: (keyof PlayerState)[] = ['hand', 'playArea', 'itemsInPlay'];
       for (const zone of zones) {
         const arr = player[zone] as CardInstance[];
@@ -914,6 +1567,12 @@ export function processGameAction(
         supportByPlayerId: {},
         hinderByPlayerId: {},
       };
+      next.turnActionHighlight = {
+        playerId: challengerId,
+        kind: 'arena',
+        marketSource: 'arena',
+        card: next.arenaCard,
+      };
       return next;
     }
 
@@ -972,21 +1631,31 @@ export function processGameAction(
       );
 
       let boughtCard: CardInstance | null = null;
+      let marketSource: 'gallery' | 'epic' | 'recruit' | null = null;
+      let marketIndex: number | undefined;
       if (galleryIdx !== -1) {
+        if (isGalleryCardPurchased(next, action.payload!.cardInstanceId)) {
+          return next;
+        }
         boughtCard = {
           ...next.galleryCards[galleryIdx],
           location: 'DISCARD' as const,
           ownerId: player.id,
         };
-        const newGallery = [...next.galleryCards];
-        newGallery.splice(galleryIdx, 1);
-        next.galleryCards = newGallery;
+        marketSource = 'gallery';
+        marketIndex = galleryIdx;
+        next.galleryPurchasedBy = {
+          ...(next.galleryPurchasedBy ?? {}),
+          [boughtCard.instanceId]: player.id,
+        };
       } else if (epicIdx !== -1) {
         boughtCard = {
           ...next.epicCards[epicIdx],
           location: 'DISCARD' as const,
           ownerId: player.id,
         };
+        marketSource = 'epic';
+        marketIndex = epicIdx;
         const newEpic = [...next.epicCards];
         newEpic.splice(epicIdx, 1);
         next.epicCards = newEpic;
@@ -996,6 +1665,7 @@ export function processGameAction(
           location: 'DISCARD' as const,
           ownerId: player.id,
         };
+        marketSource = 'recruit';
         const recruitDeck = [...(next.recruitDeck ?? [])];
         next.recruitCard =
           recruitDeck.length > 0
@@ -1008,14 +1678,64 @@ export function processGameAction(
         next.recruitDeck = recruitDeck;
       }
 
-      if (!boughtCard) return next;
+      if (!boughtCard || !marketSource) return next;
+
+      next.turnActionHighlight = {
+        playerId: player.id,
+        kind: 'buy',
+        marketSource,
+        marketIndex,
+        card: boughtCard,
+      };
 
       player.discard = [...player.discard, boughtCard];
       next.turnCoins -= boughtCard.definition.cost;
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
-      return refillEpicRow(refillGallery(next));
+      return refillEpicRow(next);
+    }
+
+    case 'RESOLVE_GALLERY_EVENT': {
+      if (!next.pendingGalleryEvent) return next;
+      if ((next.pendingEventDiscards?.length ?? 0) > 0) return next;
+
+      next.pendingGalleryEvent = null;
+      next = processGalleryRefill(next);
+      return next;
+    }
+
+    case 'EVENT_DISCARD_CARD': {
+      if (!player || !action.payload?.cardInstanceId) return next;
+      if (!next.pendingEventDiscards?.includes(action.playerId)) return next;
+
+      const handIdx = player.hand.findIndex(
+        (c) => c.instanceId === action.payload!.cardInstanceId
+      );
+      if (handIdx === -1) return next;
+
+      const card = {
+        ...player.hand[handIdx],
+        location: 'DISCARD' as const,
+        faceUp: true,
+      };
+      player.hand = player.hand.filter((_, i) => i !== handIdx);
+      player.discard = [...player.discard, card];
+
+      next.players = [...next.players];
+      next.players[playerIdx] = player;
+      next.pendingEventDiscards = next.pendingEventDiscards!.filter(
+        (id) => id !== action.playerId
+      );
+
+      if ((next.pendingEventDiscards?.length ?? 0) > 0) {
+        return next;
+      }
+
+      next.pendingGalleryEvent = null;
+      next.pendingEventDiscards = [];
+      next = processGalleryRefill(next);
+      return next;
     }
 
     case 'ATTEMPT_ARENA': {
@@ -1035,6 +1755,128 @@ export function processGameAction(
   }
 }
 
+function maybeCompleteDeferredTurnPass(state: GameState): GameState {
+  if (galleryRefillPaused(state)) return state;
+  if (!state.deferredTurnEnd) return state;
+
+  const endingIdx = state.players.findIndex(
+    (p) => p.id === state.deferredTurnEnd!.endingPlayerId
+  );
+  if (endingIdx === -1) {
+    return { ...state, deferredTurnEnd: null };
+  }
+  return completeTurnPass(state, endingIdx);
+}
+
+function removePurchasedGalleryCards(state: GameState): GameState {
+  const purchased = state.galleryPurchasedBy ?? {};
+  const purchasedIds = new Set(Object.keys(purchased));
+  if (purchasedIds.size === 0) return state;
+
+  return {
+    ...state,
+    galleryCards: state.galleryCards.filter((c) => !purchasedIds.has(c.instanceId)),
+    galleryPurchasedBy: {},
+  };
+}
+
+/** Refill gallery one card at a time; pause on events until resolved. */
+function processGalleryRefill(state: GameState): GameState {
+  let next = removePurchasedGalleryCards(state);
+
+  while (
+    next.galleryCards.length < GALLERY_ROW_SIZE &&
+    (next.gallerySupply?.length ?? 0) > 0
+  ) {
+    if (galleryRefillPaused(next)) {
+      return maybeCompleteDeferredTurnPass(next);
+    }
+
+    const { state: afterDraw, flippedEvent } = drawGallerySupplyCard(next);
+    next = afterDraw;
+
+    if (flippedEvent) {
+      const eventFavorReturns: CardInstance[] = [];
+      const drawForEvent = (p: PlayerState, count: number) =>
+        drawCards(p, count, eventFavorReturns).player;
+      next = beginGalleryEventResolution(
+        next,
+        flippedEvent,
+        drawForEvent,
+        gainFlavorCard
+      );
+      if (eventFavorReturns.length > 0) {
+        next = {
+          ...next,
+          flavorDeck: [...next.flavorDeck, ...eventFavorReturns],
+        };
+      }
+      if (!galleryRefillPaused(next)) {
+        continue;
+      }
+      return maybeCompleteDeferredTurnPass(next);
+    }
+  }
+
+  return maybeCompleteDeferredTurnPass(next);
+}
+
+function replaceArenaIfPending(state: GameState): GameState {
+  if (!state.pendingArenaReplacement) return state;
+
+  let arenaCard = state.arenaCard;
+  const arenaDeck = [...state.arenaDeck];
+  if (arenaDeck.length > 0) {
+    arenaCard = { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true };
+  } else {
+    arenaCard = null;
+  }
+
+  return {
+    ...state,
+    arenaCard,
+    arenaDeck,
+    pendingArenaReplacement: false,
+  };
+}
+
+function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState {
+  const deferred = state.deferredTurnEnd;
+  const nextPlayerIdx =
+    deferred?.nextPlayerIdx ?? (endingPlayerIdx + 1) % state.players.length;
+
+  let next: GameState = {
+    ...state,
+    turnPlayerId: state.players[nextPlayerIdx].id,
+    turnNumber: state.turnNumber + 1,
+    phase: 'MAIN',
+    turnCoins: 0,
+    turnValor: 0,
+    turnBandingClaimed: [],
+    pendingBandingBonus: null,
+    turnActionHighlight: null,
+    pendingHandDiscard: null,
+    pendingForcedOpponentDiscards: null,
+    deferredTurnEnd: null,
+    purchaseCostCap: null,
+  };
+
+  const nextPlayer = next.players[nextPlayerIdx];
+  const carry = nextPlayer.carryCoins ?? 0;
+  if (carry > 0) {
+    next.turnCoins = carry;
+    next.players = [...next.players];
+    next.players[nextPlayerIdx] = { ...nextPlayer, carryCoins: 0 };
+  }
+
+  return finishGameIfNeeded(next);
+}
+
+function clearExpiredImperialTax(player: PlayerState): PlayerState {
+  if (!player.imperialTaxPending) return player;
+  return { ...player, imperialTaxPending: false };
+}
+
 function endTurnAndPass(
   state: GameState,
   playerIdx: number,
@@ -1044,23 +1886,30 @@ function endTurnAndPass(
 
   if (player) {
     const cleaned = cleanupTurnPlayer(player);
+    const drawn = drawCardsIntoState(
+      next,
+      cleaned.player,
+      STARTING_HAND_SIZE
+    );
+    let withDraw = clearExpiredImperialTax(drawn.player);
+    next = drawn.state;
     next.players = [...next.players];
-    next.players[playerIdx] = cleaned;
+    next.players[playerIdx] = withDraw;
+    if (cleaned.favorReturns.length > 0) {
+      next.flavorDeck = [...next.flavorDeck, ...cleaned.favorReturns];
+    }
   }
 
   next.arenaCommitZone = [];
+  next = replaceArenaIfPending(next);
 
   const nextPlayerIdx = (playerIdx + 1) % next.players.length;
-  next.turnPlayerId = next.players[nextPlayerIdx].id;
-  next.turnNumber += 1;
+  next.deferredTurnEnd = {
+    endingPlayerId: next.players[playerIdx].id,
+    nextPlayerIdx,
+  };
 
-  let nextPlayer = drawCards({ ...next.players[nextPlayerIdx], hand: [] }, STARTING_HAND_SIZE);
-  next.players = [...next.players];
-  next.players[nextPlayerIdx] = nextPlayer;
-  next.phase = 'MAIN';
-  next.turnCoins = 0;
-  next.turnValor = 0;
-  return finishGameIfNeeded(next);
+  return processGalleryRefill(next);
 }
 
 export function buildPlayerSetupsFromDb(
@@ -1087,7 +1936,83 @@ export function buildPlayerSetupsFromDb(
   return setups;
 }
 
+function findAIBuyTarget(state: GameState): CardInstance | null {
+  const options: CardInstance[] = [
+    ...state.galleryCards.filter(
+      (c) => !isGalleryCardPurchased(state, c.instanceId)
+    ),
+    ...state.epicCards,
+    ...(state.recruitCard ? [state.recruitCard] : []),
+  ].filter((c) => c.definition.cost <= state.turnCoins);
+  if (options.length === 0) return null;
+  return options.reduce((best, c) =>
+    c.definition.cost > best.definition.cost ? c : best
+  );
+}
+
 export function getNextAIAction(state: GameState): GameAction | null {
+  if ((state.pendingEventDiscards?.length ?? 0) > 0) {
+    const playerId = state.pendingEventDiscards![0];
+    const player = state.players.find((p) => p.id === playerId);
+    if (player?.isAI && player.hand.length > 0) {
+      const card = player.hand[player.hand.length - 1];
+      return {
+        type: 'EVENT_DISCARD_CARD',
+        playerId: player.id,
+        payload: { cardInstanceId: card.instanceId },
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
+  if (state.pendingHandDiscard) {
+    const { playerId } = state.pendingHandDiscard;
+    const player = state.players.find((p) => p.id === playerId);
+    if (player?.isAI && player.hand.length > 0) {
+      const card = player.hand.reduce((worst, c) =>
+        (c.definition?.valor ?? 0) < (worst.definition?.valor ?? 0) ? c : worst
+      );
+      return {
+        type: 'DISCARD_CARD',
+        playerId: player.id,
+        payload: { cardInstanceId: card.instanceId },
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
+  if (state.pendingForcedOpponentDiscards) {
+    const { controllerId, targetPlayerId } = state.pendingForcedOpponentDiscards;
+    const controller = state.players.find((p) => p.id === controllerId);
+    const target = state.players.find((p) => p.id === targetPlayerId);
+    if (controller?.isAI && target && target.hand.length > 0) {
+      const card = pickForcedDiscardCard(target.hand);
+      if (card) {
+        return {
+          type: 'FORCE_OPPONENT_DISCARD',
+          playerId: controllerId,
+          payload: { cardInstanceId: card.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+    }
+    return null;
+  }
+
+  if (state.pendingGalleryEvent) {
+    const ai = state.players.find((p) => p.isAI);
+    if (ai) {
+      return {
+        type: 'RESOLVE_GALLERY_EVENT',
+        playerId: ai.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
   if (state.phase === 'PREGAME') {
     const humanReady = state.players.some(
       (p) => !p.isAI && state.readyPlayerIds.includes(p.id)
@@ -1139,6 +2064,14 @@ export function getNextAIAction(state: GameState): GameAction | null {
   const current = getCurrentPlayer(state);
   if (!current?.isAI) return null;
 
+  if (state.pendingBandingBonus?.playerId === current.id) {
+    return {
+      type: 'ACCEPT_BANDING_BONUS',
+      playerId: current.id,
+      timestamp: Date.now(),
+    };
+  }
+
   const base = {
     playerId: current.id,
     timestamp: Date.now(),
@@ -1147,21 +2080,41 @@ export function getNextAIAction(state: GameState): GameAction | null {
   switch (state.phase) {
     case 'MAIN':
       if (current.hand.length > 0) {
-        const card = current.hand[0];
+        const claimed = (state.turnBandingClaimed ?? []).filter(
+          (f): f is BandingFaction =>
+            f === 'Ludus' || f === 'Legion' || f === 'Senate'
+        );
+        const card = pickAICardToPlayFirst(
+          current.hand,
+          current.playArea,
+          claimed
+        );
         const payload: GameAction['payload'] = {
           cardInstanceId: card.instanceId,
         };
         if (requiresFactionChoiceOnPlay(card.definition)) {
-          payload.chosenFaction =
-            SPY_FACTION_CHOICES[
-              Math.floor(Math.random() * SPY_FACTION_CHOICES.length)
-            ];
+          payload.chosenFaction = chooseSpyFactionForAI(
+            current.playArea,
+            current.hand,
+            claimed,
+            state.turnNumber
+          );
         }
         return {
           ...base,
           type: 'PLAY_CARD',
           payload,
         };
+      }
+      {
+        const buyTarget = findAIBuyTarget(state);
+        if (buyTarget) {
+          return {
+            ...base,
+            type: 'BUY_CARD',
+            payload: { cardInstanceId: buyTarget.instanceId },
+          };
+        }
       }
       return { ...base, type: 'END_PHASE' };
     case 'CLEANUP':

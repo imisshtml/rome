@@ -11,11 +11,10 @@ export function applyStructuredPlayEffects(
   effects: CardEffects,
   drawCards: DrawCardsFn
 ): GameState {
-  const baseValor = card.definition.valor ?? 0;
   let next: GameState = {
     ...state,
     turnCoins: state.turnCoins + effects.gain_coins,
-    turnValor: state.turnValor + baseValor + effects.gain_valor,
+    turnValor: state.turnValor + effects.gain_valor,
   };
 
   let player: PlayerState = { ...next.players[playerIdx] };

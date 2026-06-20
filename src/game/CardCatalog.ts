@@ -99,6 +99,8 @@ function fromFactionCard(raw: RawFactionCard): CardDefinition {
 function fromArenaCard(raw: RawArenaCard): CardDefinition {
   const id = slugToId(raw.id);
   const tier = raw.tier ?? 'medium';
+  const valorGain = raw.valor_required ?? 0;
+  const rewardVp = raw.reward_vp ?? ARENA_TIER_REWARD_VP[tier] ?? 3;
   return buildDefinition(id, {
     name: raw.name,
     cost: 0,
@@ -106,10 +108,12 @@ function fromArenaCard(raw: RawArenaCard): CardDefinition {
     victoryPoints: 0,
     type: 'Event',
     faction: 'Arena',
-    text: `Requires ${raw.valor_required} Valor to defeat.`,
+    text:
+      raw.effect_text_win ??
+      `Gain ${valorGain} Valor and ${rewardVp} Victory Points.`,
     image: raw.image,
-    valorRequired: raw.valor_required,
-    rewardVp: ARENA_TIER_REWARD_VP[tier] ?? 3,
+    valorRequired: valorGain,
+    rewardVp,
     tier,
   });
 }
@@ -125,6 +129,14 @@ function fromEventCard(raw: RawEventCard): CardDefinition {
     faction: 'Event',
     text: raw.effect_text ?? '',
     image: raw.image,
+    ...('effect_legacy' in raw && raw.effect_legacy
+      ? {
+          effectLegacy: raw.effect_legacy as unknown as Record<
+            string,
+            number | boolean
+          >,
+        }
+      : {}),
   });
 }
 
@@ -274,6 +286,56 @@ export function getFlavorPoolEntries(): PoolEntry[] {
 const GALLERY_EVENT_IDS = new Set(
   eventsPack.cards.map((raw) => slugToId(raw.id))
 );
+
+const FAVOR_DEFINITION_IDS = new Set(
+  favorPack.map((raw) => slugToId(raw.id))
+);
+
+export function isFavorDefinitionId(
+  cardOrId: CardInstance | CardDefinition | string
+): boolean {
+  const id =
+    typeof cardOrId === 'string'
+      ? cardOrId
+      : 'definitionId' in cardOrId
+        ? cardOrId.definitionId
+        : cardOrId.id;
+  return FAVOR_DEFINITION_IDS.has(id);
+}
+
+/** Cards that must never live in a player's deck/discard cycle. */
+export function isNonDeckablePlayerCard(
+  cardOrId: CardInstance | CardDefinition | string
+): boolean {
+  if (isGalleryEventCard(cardOrId)) return true;
+  if (isFavorDefinitionId(cardOrId)) return true;
+
+  const id =
+    typeof cardOrId === 'string'
+      ? cardOrId
+      : 'definitionId' in cardOrId
+        ? cardOrId.definitionId
+        : cardOrId.id;
+
+  if (id === CROWD_DISFAVOR.id) return true;
+
+  const def =
+    typeof cardOrId === 'string'
+      ? getCardDefinition(cardOrId)
+      : 'definition' in cardOrId && cardOrId.definition
+        ? cardOrId.definition
+        : getCardDefinition(id);
+
+  return (
+    def.type === 'Favor' ||
+    def.type === 'Event' ||
+    def.type === 'CrowdDisfavor'
+  );
+}
+
+export function isPurchasableMarketCard(card: CardInstance): boolean {
+  return !isNonDeckablePlayerCard(card);
+}
 
 /** Gallery event cards (from cards_events.json), not arena challenges. */
 export function isGalleryEventCard(

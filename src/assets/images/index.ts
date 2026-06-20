@@ -9,4 +9,5 @@ export const factionIconLudus = require('./icon_ludus.png');
 export const factionIconLegion = require('./icon_legion.png');
 export const factionIconSenate = require('./icon_senate.png');
 export const factionIconEpic = require('./icon_epic.png');
+export const buyIcon = require('./icon_buy.png');
 export { CARD_IMAGES, getCardImage } from './cardImages';

@@ -31,13 +31,15 @@ export interface CardDefinition {
   faction: Faction;
   text: string;
   image?: string;
-  /** Arena challenge requirement (arena cards only) */
+  /** Valor gained on a successful arena challenge (JSON `valor_required`). */
   valorRequired?: number;
   /** VP awarded on successful arena attempt */
   rewardVp?: number;
   tier?: string;
   /** Structured effect payload from card JSON (`effects` field). */
   effects?: CardEffects;
+  /** Legacy event payload from cards_events.json (`effect_legacy`). */
+  effectLegacy?: Record<string, number | boolean>;
 }
 
 export interface CardInstance {

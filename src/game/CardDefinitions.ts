@@ -12,6 +12,9 @@ export {
   getFlavorPoolEntries,
   getStartingDeckEntries,
   isGalleryEventCard,
+  isFavorDefinitionId,
+  isNonDeckablePlayerCard,
+  isPurchasableMarketCard,
   isRecruitDefinition,
 } from './CardCatalog';
 export type { PoolEntry } from './CardCatalog';

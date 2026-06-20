@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import { PlayerState } from '../types/gameTypes';
+import { getPlayerTotalVp } from '../game/postGame';
 
 interface PlayerAreaProps {
   player: PlayerState;
@@ -36,7 +37,7 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
       </View>
 
       <View style={styles.statsRow}>
-        <StatBadge value={player.victoryPoints} label="VP" color="#FFD700" />
+        <StatBadge value={getPlayerTotalVp(player)} label="VP" color="#FFD700" />
         <StatBadge value={player.hand.length} label="Hand" />
         <StatBadge value={player.deck.length} label="Deck" />
         <StatBadge value={player.discard.length} label="Disc" />

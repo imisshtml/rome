@@ -23,7 +23,12 @@ import {
   factionIconEpic,
 } from '../assets/images';
 import { getCardStatDisplay } from '../utils/cardDisplayUtils';
-import { getCardDisplayFaction } from '../utils/cardFactionUtils';
+import {
+  getCardDisplayFaction,
+  requiresFactionChoiceOnPlay,
+  SPY_FACTION_CHOICES,
+} from '../utils/cardFactionUtils';
+import { BANDING_FACTION_ICONS } from '../utils/factionIconAssets';
 
 const FACTION_ICONS: Partial<Record<Faction, number>> = {
   Ludus: factionIconLudus,
@@ -143,6 +148,41 @@ const FactionIcon: React.FC<{
   );
 };
 
+const SpyFactionIcons: React.FC<{
+  size: number;
+  position: ImageStyle;
+}> = ({ size, position }) => {
+  const iconSize = Math.max(10, Math.round(size * 0.68));
+  const overlap = Math.round(iconSize * 0.26);
+
+  return (
+    <View
+      style={[
+        styles.spyFactionRow,
+        position,
+        { height: iconSize, minWidth: iconSize * 2.2 },
+      ]}
+    >
+      {SPY_FACTION_CHOICES.map((faction, index) => (
+        <Image
+          key={faction}
+          source={BANDING_FACTION_ICONS[faction]}
+          style={[
+            styles.factionIcon,
+            {
+              width: iconSize,
+              height: iconSize,
+              marginLeft: index === 0 ? 0 : -overlap,
+              zIndex: index + 1,
+            },
+          ]}
+          resizeMode="contain"
+        />
+      ))}
+    </View>
+  );
+};
+
 export const CardFace: React.FC<CardFaceProps> = ({
   definition,
   faceUp,
@@ -158,18 +198,20 @@ export const CardFace: React.FC<CardFaceProps> = ({
     () => getCardDisplayFaction(definition, chosenFaction),
     [definition, chosenFaction]
   );
-  const effectText = definition.text?.trim() ?? '';
+  const showsSpyFactionPicker =
+    requiresFactionChoiceOnPlay(definition) && !chosenFaction && !displayFaction;
   const effectLayout = useMemo(
     () =>
       effectOverlayLayout(
         height,
         width,
         layout.size,
-        displayFaction != null,
+        displayFaction != null || showsSpyFactionPicker,
         stats.valor != null
       ),
-    [height, width, layout.size, displayFaction, stats.valor]
+    [height, width, layout.size, displayFaction, showsSpyFactionPicker, stats.valor]
   );
+  const effectText = definition.text?.trim() ?? '';
   const cardImage = faceUp ? getCardImage(definition.image) : null;
   const imageSource = faceUp ? cardImage : cardBackImage;
 
@@ -248,6 +290,8 @@ export const CardFace: React.FC<CardFaceProps> = ({
               size={layout.size}
               position={layout.faction}
             />
+          ) : showsSpyFactionPicker ? (
+            <SpyFactionIcons size={layout.size} position={layout.faction} />
           ) : null}
         </View>
       ) : null}
@@ -304,6 +348,11 @@ const styles = StyleSheet.create({
   },
   factionIcon: {
     position: 'absolute',
+  },
+  spyFactionRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
 });
 

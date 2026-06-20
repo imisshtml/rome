@@ -1,50 +1,204 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
+import { CardInstance } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
+import { getLogPreviewCard } from '../utils/cardLogUtils';
 
 const MAX_VISIBLE_LOG_LINES = 48;
 
-function formatLogLine(action: GameAction, playerName: string): string {
+interface LogLineProps {
+  action: GameAction;
+  playerName: string;
+  onPreviewCard?: (card: CardInstance) => void;
+}
+
+function CardNameLink({
+  name,
+  action,
+  onPreviewCard,
+}: {
+  name: string;
+  action: GameAction;
+  onPreviewCard?: (card: CardInstance) => void;
+}) {
+  const preview = getLogPreviewCard(action);
+  if (!preview || !onPreviewCard) {
+    return <Text>{name}</Text>;
+  }
+
+  return (
+    <Text style={styles.cardLink} onPress={() => onPreviewCard(preview)}>
+      {name}
+    </Text>
+  );
+}
+
+function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
+  const cardName = action.payload?.cardName;
+  const effect = action.payload?.effectSummary;
+
   switch (action.type) {
     case 'PLAY_CARD':
-      return `${playerName} played a card`;
-    case 'DRAW_CARD':
-      return `${playerName} drew ${action.payload?.count ?? 1} card(s)`;
-    case 'ATTEMPT_ARENA':
-      return `${playerName} attempted the arena`;
-    case 'CONFIRM_ARENA_FIGHTERS':
-      return `${playerName} entered the arena`;
+      if (cardName) {
+        return (
+          <Text style={styles.line} numberOfLines={3}>
+            {playerName} played{' '}
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+            {effect ? `: ${effect}` : ''}
+          </Text>
+        );
+      }
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} played a card
+        </Text>
+      );
+    case 'BUY_CARD':
+      if (cardName) {
+        return (
+          <Text style={styles.line} numberOfLines={3}>
+            {playerName} bought{' '}
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+            {effect ? ` (${effect})` : ''}
+          </Text>
+        );
+      }
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} bought a card
+        </Text>
+      );
+    case 'RESOLVE_GALLERY_EVENT':
+      if (cardName) {
+        return (
+          <Text style={styles.line} numberOfLines={3}>
+            Event:{' '}
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+            {effect ? ` — ${effect}` : ''}
+          </Text>
+        );
+      }
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          Gallery event resolved
+        </Text>
+      );
+    case 'EVENT_DISCARD_CARD':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} discarded{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}{' '}
+          for an event
+        </Text>
+      );
     case 'ARENA_RESPOND': {
       const kind = action.payload?.responseType ?? 'pass';
-      if (kind === 'support') return `${playerName} supported the arena challenge`;
-      if (kind === 'hinder') return `${playerName} hindered the arena challenge`;
-      return `${playerName} passed on the arena challenge`;
+      if ((kind === 'support' || kind === 'hinder') && cardName) {
+        return (
+          <Text style={styles.line} numberOfLines={2}>
+            {playerName} {kind === 'support' ? 'supported' : 'hindered'} with{' '}
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          </Text>
+        );
+      }
+      if (kind === 'support') {
+        return (
+          <Text style={styles.line} numberOfLines={2}>
+            {playerName} supported the arena challenge
+          </Text>
+        );
+      }
+      if (kind === 'hinder') {
+        return (
+          <Text style={styles.line} numberOfLines={2}>
+            {playerName} hindered the arena challenge
+          </Text>
+        );
+      }
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} passed on the arena challenge
+        </Text>
+      );
     }
-    case 'BUY_CARD':
-      return `${playerName} bought a card`;
+    case 'DRAW_CARD':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} drew {action.payload?.count ?? 1} card(s)
+        </Text>
+      );
+    case 'ATTEMPT_ARENA':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} attempted the arena
+        </Text>
+      );
+    case 'CONFIRM_ARENA_FIGHTERS':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} entered the arena
+        </Text>
+      );
     case 'DISCARD_CARD':
-      return `${playerName} discarded a card`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} discarded a card
+        </Text>
+      );
     case 'END_PHASE':
-      return `${playerName} ended their turn`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} ended their turn
+        </Text>
+      );
     case 'MOVE_CARD':
-      return `${playerName} moved a card`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} moved a card
+        </Text>
+      );
     case 'START_GAME':
-      return 'Game started';
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          Game started
+        </Text>
+      );
     case 'PLAYER_READY':
-      return `${playerName} is ready to start`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} is ready to start
+        </Text>
+      );
     case 'END_GAME':
-      return `${playerName} ended the game`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} ended the game
+        </Text>
+      );
     default:
-      return `${playerName}: ${action.type}`;
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName}: {action.type}
+        </Text>
+      );
   }
 }
 
 interface GameLogPanelProps {
   actions: GameAction[];
   players: PlayerState[];
+  onPreviewCard?: (card: CardInstance) => void;
 }
 
-export const GameLogPanel: React.FC<GameLogPanelProps> = ({ actions, players }) => {
+export const GameLogPanel: React.FC<GameLogPanelProps> = ({
+  actions,
+  players,
+  onPreviewCard,
+}) => {
   const scrollRef = useRef<ScrollView>(null);
   const nameById = useMemo(
     () => Object.fromEntries(players.map((p) => [p.id, p.name])),
@@ -72,13 +226,12 @@ export const GameLogPanel: React.FC<GameLogPanelProps> = ({ actions, players }) 
           <Text style={styles.empty}>No actions yet.</Text>
         ) : (
           visibleActions.map((action, index) => (
-            <Text
+            <LogLine
               key={`${action.timestamp}-${index}`}
-              style={styles.line}
-              numberOfLines={2}
-            >
-              {formatLogLine(action, nameById[action.playerId] ?? action.playerId)}
-            </Text>
+              action={action}
+              playerName={nameById[action.playerId] ?? action.playerId}
+              onPreviewCard={onPreviewCard}
+            />
           ))
         )}
       </ScrollView>
@@ -121,6 +274,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.72)',
     fontSize: 9,
     lineHeight: 13,
+  },
+  cardLink: {
+    color: '#f1c40f',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   empty: {
     color: 'rgba(255,255,255,0.3)',

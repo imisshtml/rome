@@ -17,6 +17,7 @@ import {
 } from '../utils/cardDisplayUtils';
 import Card from './Card';
 import GalleryCard from './GalleryCard';
+import GallerySectionHeader from './GallerySectionHeader';
 
 const TURN_BUTTON_ASPECT = 448 / 132;
 /** Slightly shrink gallery/epics from max fit (arena unchanged). */
@@ -26,6 +27,8 @@ const TITLE_BLOCK_H = 52;
 const FOOTER_H = 110;
 const ROOT_H_PAD = 18;
 const ROOT_W_PAD = 10;
+const SECTION_LABEL_H = 20;
+const BOTTOM_COLUMN_FLEX = { recruit: 1, arena: 1, epics: 1.35 } as const;
 
 interface PregameMarketViewProps {
   width: number;
@@ -62,8 +65,9 @@ function computePregameSizes(width: number, height: number) {
     height - TITLE_BLOCK_H - FOOTER_H - ROOT_H_PAD
   );
   const rowGap = 8;
-  const galleryRowH = Math.floor((scrollH - rowGap) * 0.48);
-  const bottomRowH = scrollH - galleryRowH - rowGap;
+  const labelReserve = SECTION_LABEL_H + 4;
+  const galleryRowH = Math.floor((scrollH - rowGap - labelReserve) * 0.48);
+  const bottomRowH = scrollH - galleryRowH - rowGap - labelReserve;
 
   const galleryGap = 6;
   const galleryCount = 6;
@@ -78,16 +82,30 @@ function computePregameSizes(width: number, height: number) {
   );
 
   const epicCount = 3;
-  const recruitCount = 1;
-  const epicGap = galleryGap;
-  const bottomUsableW = width - ROOT_W_PAD * 2 - epicGap * (recruitCount + epicCount + 1);
-  const maxRowHByWidth = Math.floor(
-    bottomUsableW /
-      (CARD_LANDSCAPE_RATIO + (recruitCount + epicCount) / CARD_PORTRAIT_RATIO)
-  );
-  const epicSize = Math.min(
-    maxRowHByWidth,
-    Math.floor(bottomRowH * 0.95)
+  const columnGap = galleryGap;
+  const bottomRowW = width - ROOT_W_PAD * 2;
+  const totalFlex =
+    BOTTOM_COLUMN_FLEX.recruit +
+    BOTTOM_COLUMN_FLEX.arena +
+    BOTTOM_COLUMN_FLEX.epics;
+  const columnsUsableW = bottomRowW - columnGap * 2;
+  const recruitColW =
+    columnsUsableW * (BOTTOM_COLUMN_FLEX.recruit / totalFlex);
+  const arenaColW = columnsUsableW * (BOTTOM_COLUMN_FLEX.arena / totalFlex);
+  const epicsColW = columnsUsableW * (BOTTOM_COLUMN_FLEX.epics / totalFlex);
+
+  const cardAreaH = bottomRowH - SECTION_LABEL_H - 4;
+  const epicMaxByCol = maxPortraitHeightInRow(epicsColW, epicCount, columnGap, 0);
+  const recruitMaxByCol = maxPortraitHeightInRow(recruitColW, 1, 0, 0);
+  const arenaMaxHByCol = Math.floor(arenaColW / CARD_LANDSCAPE_RATIO);
+
+  const epicSize = Math.floor(
+    Math.min(
+      epicMaxByCol,
+      recruitMaxByCol,
+      arenaMaxHByCol,
+      cardAreaH * 0.95
+    ) * MARKET_CARD_SCALE
   );
   const arenaH = epicSize;
   const arenaW = landscapeCardWidth(arenaH);
@@ -103,7 +121,7 @@ function computePregameSizes(width: number, height: number) {
     arenaW,
     arenaH,
     epicSize,
-    epicGap,
+    epicGap: columnGap,
     buttonW,
     buttonH,
   };
@@ -143,21 +161,24 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.galleryRow,
-            { gap: sizes.galleryGap, minHeight: sizes.galleryRowH },
-          ]}
-        >
-          {galleryCards.map((card) => (
-            <GalleryCard
-              key={card.instanceId}
-              card={card}
-              height={sizes.galleryCardSize}
-              onPress={onCardPress}
-              onLongPress={onCardPress}
-            />
-          ))}
+        <View style={styles.marketSection}>
+          <View
+            style={[
+              styles.galleryRow,
+              { gap: sizes.galleryGap, minHeight: sizes.galleryRowH },
+            ]}
+          >
+            {galleryCards.map((card) => (
+              <GalleryCard
+                key={card.instanceId}
+                card={card}
+                height={sizes.galleryCardSize}
+                onPress={onCardPress}
+                onLongPress={onCardPress}
+              />
+            ))}
+          </View>
+          <GallerySectionHeader label="Market" />
         </View>
 
         <View
@@ -170,38 +191,51 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
             },
           ]}
         >
-          {recruitCard ? (
-            <GalleryCard
-              card={recruitCard}
-              height={sizes.epicSize}
-              onPress={onCardPress}
-              onLongPress={onCardPress}
-            />
-          ) : null}
+          <View style={[styles.bottomSubColumn, styles.recruitSubColumn]}>
+            {recruitCard ? (
+              <GalleryCard
+                card={recruitCard}
+                height={sizes.epicSize}
+                onPress={onCardPress}
+                onLongPress={onCardPress}
+              />
+            ) : (
+              <Text style={styles.emptyArena}>—</Text>
+            )}
+            <GallerySectionHeader label="Recruits" />
+          </View>
 
-          {arenaCard ? (
-            <Card
-              card={arenaCard}
-              width={sizes.arenaW}
-              height={sizes.arenaH}
-              sizeMode="landscape"
-              onPress={onCardPress}
-              onLongPress={onCardPress}
-              hoverPreview
-            />
-          ) : (
-            <Text style={styles.emptyArena}>No arena challenge</Text>
-          )}
+          <View style={[styles.bottomSubColumn, styles.arenaSubColumn]}>
+            {arenaCard ? (
+              <Card
+                card={arenaCard}
+                width={sizes.arenaW}
+                height={sizes.arenaH}
+                sizeMode="landscape"
+                onPress={onCardPress}
+                onLongPress={onCardPress}
+                hoverPreview
+              />
+            ) : (
+              <Text style={styles.emptyArena}>No arena challenge</Text>
+            )}
+            <GallerySectionHeader label="Arena" />
+          </View>
 
-          {epicCards.map((card) => (
-            <GalleryCard
-              key={card.instanceId}
-              card={card}
-              height={sizes.epicSize}
-              onPress={onCardPress}
-              onLongPress={onCardPress}
-            />
-          ))}
+          <View style={[styles.bottomSubColumn, styles.epicsSubColumn]}>
+            <View style={[styles.galleryRow, { gap: sizes.epicGap }]}>
+              {epicCards.map((card) => (
+                <GalleryCard
+                  key={card.instanceId}
+                  card={card}
+                  height={sizes.epicSize}
+                  onPress={onCardPress}
+                  onLongPress={onCardPress}
+                />
+              ))}
+            </View>
+            <GallerySectionHeader label="Epics" />
+          </View>
         </View>
       </ScrollView>
 
@@ -273,18 +307,40 @@ const styles = StyleSheet.create({
   scrollContent: {
     alignItems: 'center',
     paddingBottom: 8,
+    width: '100%',
+  },
+  marketSection: {
+    width: '100%',
+    gap: 4,
+    marginBottom: 4,
   },
   galleryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
   bottomRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    width: '100%',
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
+  },
+  bottomSubColumn: {
+    flex: 1,
+    alignItems: 'center',
+    minWidth: 0,
+    gap: 4,
+  },
+  recruitSubColumn: {
+    flex: BOTTOM_COLUMN_FLEX.recruit,
+  },
+  arenaSubColumn: {
+    flex: BOTTOM_COLUMN_FLEX.arena,
+  },
+  epicsSubColumn: {
+    flex: BOTTOM_COLUMN_FLEX.epics,
+    overflow: 'visible',
   },
   emptyArena: {
     color: 'rgba(255,255,255,0.35)',

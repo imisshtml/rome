@@ -10,8 +10,8 @@ export const BOARD_RATIOS = {
   opponentsBar: 0.07,
   gallery: 0.26,
   /** Taller gallery row during MAIN so cards can render at 2× pregame size. */
-  galleryInPlay: 0.44,
-  handZone: 0.22,
+  galleryInPlay: 0.45,
+  handZone: 0.21,
   sidebarWidth: 0.15,
   zoneGap: 0.008,
 } as const;

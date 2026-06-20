@@ -16,7 +16,39 @@ export type GameActionType =
   | 'MOVE_CARD'
   | 'START_GAME'
   | 'PLAYER_READY'
-  | 'END_GAME';
+  | 'END_GAME'
+  | 'ACCEPT_BANDING_BONUS'
+  | 'DECLINE_BANDING_BONUS'
+  | 'RESOLVE_GALLERY_EVENT'
+  | 'EVENT_DISCARD_CARD'
+  | 'FORCE_OPPONENT_DISCARD';
+
+export type BandingFaction = 'Ludus' | 'Legion' | 'Senate';
+
+export interface PendingForcedOpponentDiscards {
+  controllerId: string;
+  sourceCardName?: string;
+  targetPlayerId: string;
+  remainingTargetIds: string[];
+}
+
+export interface PendingBandingBonus {
+  playerId: string;
+  faction: BandingFaction;
+  bonusText: string;
+}
+
+export type TurnActionHighlightSource = 'gallery' | 'epic' | 'recruit' | 'arena';
+
+/** Brief UI highlight after an opponent buy or arena attempt. */
+export interface TurnActionHighlight {
+  playerId: string;
+  kind: 'buy' | 'arena';
+  marketSource: TurnActionHighlightSource;
+  card: CardInstance;
+  /** Gallery/epic index at time of purchase (slot highlight after refill). */
+  marketIndex?: number;
+}
 
 export type ArenaResponseType = 'support' | 'hinder' | 'pass';
 
@@ -32,6 +64,7 @@ export interface ArenaChallengeResult {
   success: boolean;
   totalValor: number;
   requiredValor: number;
+  valorGain: number;
   rewardVp: number;
   challengerId: string;
 }
@@ -47,6 +80,9 @@ export interface GameAction {
     count?: number;
     responseType?: ArenaResponseType;
     chosenFaction?: Faction;
+    cardName?: string;
+    definitionId?: string;
+    effectSummary?: string;
   };
   timestamp: number;
 }
@@ -56,6 +92,10 @@ export interface PlayerState {
   name: string;
   isAI?: boolean;
   victoryPoints: number;
+  /** Coins from events, applied at the start of this player's next turn. */
+  carryCoins?: number;
+  /** Imperial Tax — lose 1 coin from turn coffers once on next turn. */
+  imperialTaxPending?: boolean;
   hand: CardInstance[];
   deck: CardInstance[];
   discard: CardInstance[];
@@ -77,6 +117,8 @@ export interface GameState {
   lastArenaResult?: ArenaChallengeResult | null;
   galleryCards: CardInstance[];
   epicCards: CardInstance[];
+  /** Gallery cards bought this turn — stay visible until refill (instanceId → buyerId). */
+  galleryPurchasedBy?: Record<string, string>;
   /** Top recruit card (face up, buyable). */
   recruitCard?: CardInstance | null;
   /** Remaining shuffled recruit pile (face down). */
@@ -97,6 +139,33 @@ export interface GameState {
   turnCoins: number;
   /** Valor from cards played this turn by the active player */
   turnValor: number;
+  /** Faction banding bonuses already offered/resolved this turn */
+  turnBandingClaimed?: BandingFaction[];
+  /** Waiting for active player to accept or decline a banding bonus */
+  pendingBandingBonus?: PendingBandingBonus | null;
+  /** Highlights opponent buy / arena for the active turn player */
+  turnActionHighlight?: TurnActionHighlight | null;
+  /** Face-up gallery event shown while resolving or acknowledging */
+  pendingGalleryEvent?: CardInstance | null;
+  /** Players who must pick a hand card to discard (Plague Spreads) */
+  pendingEventDiscards?: string[];
+  /** Active player must discard N cards from hand (e.g. Gladiatrix) */
+  pendingHandDiscard?: {
+    playerId: string;
+    remaining: number;
+    sourceCardName?: string;
+  } | null;
+  /** Active player chooses cards for opponents to discard (e.g. Manipulator) */
+  pendingForcedOpponentDiscards?: PendingForcedOpponentDiscards | null;
+  /** Turn pass paused until gallery refill + events finish */
+  deferredTurnEnd?: {
+    endingPlayerId: string;
+    nextPlayerIdx: number;
+  } | null;
+  /** Arena defeated this turn — replace card at end of turn */
+  pendingArenaReplacement?: boolean;
+  /** Max purchasable card cost until next turn (Grain Shortage) */
+  purchaseCostCap?: number | null;
   /** Set when status is finished */
   winnerId?: string | null;
 }

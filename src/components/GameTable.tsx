@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { createPortal } from 'react-dom';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import {
   useGameState,
   useDispatchAction,
@@ -17,29 +18,50 @@ import {
   useLocalPlayer,
   useIsLocalTurn,
 } from '../store/useGameStore';
-import { getArenaChallengeStats, getArenaChallengeTotalValor } from '../game/GameEngine';
+import { getArenaChallengeStats, getArenaChallengeTotalValor, getCurrentPlayer } from '../game/GameEngine';
+import { getPlayerTotalVp } from '../game/postGame';
 import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
 import { canDropCard } from '../utils/dragHelpers';
 import { useBoardLayout } from '../utils/boardLayout';
 import Card from './Card';
+import CardFace from './CardFace';
 import DropZone from './DropZone';
 import PlayerHand from './PlayerHand';
 import OpponentStrip from './OpponentStrip';
 import BoardSidebarLeft from './BoardSidebarLeft';
 import BoardSidebarRight from './BoardSidebarRight';
 import GalleryCard from './GalleryCard';
+import GallerySectionHeader from './GallerySectionHeader';
 import CardPreviewModal from './CardPreviewModal';
 import DiscardModal from './DiscardModal';
 import ArenaChallengeModal, { ArenaModalStep } from './ArenaChallengeModal';
 import FactionChoiceModal from './FactionChoiceModal';
+import BandingBonusModal from './BandingBonusModal';
+import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
+import GalleryEventModal from './GalleryEventModal';
 import PregameMarketView from './PregameMarketView';
-import { requiresFactionChoiceOnPlay } from '../utils/cardFactionUtils';
+import { getValorInPlay } from '../utils/combatStatsUtils';
+import { requiresFactionChoiceOnPlay, isCharityCard } from '../utils/cardFactionUtils';
 import { Faction } from '../types/cardTypes';
+import { getCardDefinition } from '../game/CardDefinitions';
 import { FullBleedBackground } from './FullBleedBackground';
 import { gameBackground } from '../assets/images';
 
 const ZONE_LAYOUTS = new Map<string, LayoutRectangle>();
+const MARKET_LOCATIONS: CardLocation[] = ['GALLERY', 'EPIC_ROW', 'RECRUIT'];
+const DOUBLE_TAP_MS = 400;
+
+function isBuyableMarketCard(
+  card: CardInstance | null,
+  galleryPurchasedBy?: Record<string, string>
+): boolean {
+  if (card == null || !MARKET_LOCATIONS.includes(card.location)) return false;
+  if (card.location === 'GALLERY' && galleryPurchasedBy?.[card.instanceId]) {
+    return false;
+  }
+  return true;
+}
 
 const ZONE_TYPE_BY_ID: Record<string, CardLocation> = {
   play_area: 'PLAY_AREA',
@@ -62,6 +84,7 @@ export const GameTable: React.FC = () => {
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [tableScreenRect, setTableScreenRect] = useState({ x: 0, y: 0 });
   const tableRef = useRef<View>(null);
+  const lastMarketTapRef = useRef<{ id: string; at: number } | null>(null);
 
   const measureTable = useCallback(() => {
     tableRef.current?.measureInWindow((x, y) => {
@@ -75,6 +98,8 @@ export const GameTable: React.FC = () => {
 
   const localPlayer = useLocalPlayer();
   const opponents = state.players.filter((p) => p.id !== localPlayer?.id);
+  const turnPlayer = getCurrentPlayer(state) ?? localPlayer;
+  const isTurnPlayerLocal = turnPlayer?.id === localPlayer?.id;
   const isLocalTurn = useIsLocalTurn();
   const arenaStats = getArenaChallengeStats(state.arenaCard);
 
@@ -85,9 +110,12 @@ export const GameTable: React.FC = () => {
     : false;
   const readyCount = state.readyPlayerIds.length;
 
-  const playValor =
-    localPlayer?.playArea.reduce((s, c) => s + (c.definition?.valor ?? 0), 0) ?? 0;
-  const valorInPlay = isMainActive && isLocalTurn ? state.turnValor + playValor : playValor;
+  const valorInPlay =
+    localPlayer && isMainActive && isLocalTurn
+      ? getValorInPlay(localPlayer, state.turnValor)
+      : localPlayer
+        ? getValorInPlay(localPlayer)
+        : 0;
   const canChallengeArena =
     canInteract && !!state.arenaCard && !state.arenaChallenge;
   const pendingArenaResponse =
@@ -118,7 +146,7 @@ export const GameTable: React.FC = () => {
   }, [state.arenaChallenge, pendingArenaResponse, arenaModalStep, localPlayer?.id]);
 
   const coinsInPlay = isMainActive && isLocalTurn ? state.turnCoins : 0;
-  const victoryPoints = localPlayer?.victoryPoints ?? 0;
+  const victoryPoints = localPlayer ? getPlayerTotalVp(localPlayer) : 0;
 
   const dispatchAction = useCallback(
     (type: GameAction['type'], payload?: GameAction['payload']) => {
@@ -161,6 +189,68 @@ export const GameTable: React.FC = () => {
     setFactionChoiceCard(null);
   }, []);
 
+  const handleDeclineBanding = useCallback(() => {
+    dispatchAction('DECLINE_BANDING_BONUS');
+  }, [dispatchAction]);
+
+  const handleAcceptBanding = useCallback(() => {
+    dispatchAction('ACCEPT_BANDING_BONUS');
+  }, [dispatchAction]);
+
+  const handleResolveGalleryEvent = useCallback(() => {
+    if (!localPlayer || !state.pendingGalleryEvent) return;
+    if ((state.pendingEventDiscards?.length ?? 0) > 0) return;
+    dispatchAction('RESOLVE_GALLERY_EVENT');
+  }, [dispatchAction, localPlayer, state.pendingGalleryEvent, state.pendingEventDiscards]);
+
+  const handleEventDiscardCard = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('EVENT_DISCARD_CARD', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const pendingBandingBonus =
+    state.pendingBandingBonus?.playerId === localPlayer?.id
+      ? state.pendingBandingBonus
+      : null;
+
+  const pendingHandDiscard =
+    state.pendingHandDiscard?.playerId === localPlayer?.id
+      ? state.pendingHandDiscard
+      : null;
+
+  const pendingForcedDiscard =
+    state.pendingForcedOpponentDiscards?.controllerId === localPlayer?.id
+      ? state.pendingForcedOpponentDiscards
+      : null;
+
+  const forcedDiscardTarget = pendingForcedDiscard
+    ? state.players.find((p) => p.id === pendingForcedDiscard.targetPlayerId) ?? null
+    : null;
+
+  const charityInHand = (localPlayer?.hand ?? []).filter(isCharityCard);
+  const canPlayAllCharity =
+    canInteract &&
+    !pendingBandingBonus &&
+    !pendingHandDiscard &&
+    !pendingForcedDiscard &&
+    charityInHand.length > 1;
+
+  const handlePlayAllCharity = useCallback(async () => {
+    if (!localPlayer || !canPlayAllCharity) return;
+
+    for (const card of charityInHand) {
+      await dispatch({
+        type: 'PLAY_CARD',
+        playerId: localPlayer.id,
+        payload: { cardInstanceId: card.instanceId },
+        timestamp: Date.now(),
+      });
+    }
+  }, [localPlayer, canPlayAllCharity, charityInHand, dispatch]);
+
   const handleEndPhase = useCallback(() => {
     if (!canInteract) return;
     dispatchAction('END_PHASE');
@@ -171,9 +261,24 @@ export const GameTable: React.FC = () => {
     dispatchAction('PLAYER_READY');
   }, [dispatchAction, isPregame, isLocalReady, localPlayer]);
 
-  const handleHandCardPress = useCallback((card: CardInstance) => {
-    setPreviewCard(card);
-  }, []);
+  const handleForcedOpponentDiscard = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer || !pendingForcedDiscard) return;
+      dispatchAction('FORCE_OPPONENT_DISCARD', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer, pendingForcedDiscard]
+  );
+
+  const handleHandCardPress = useCallback(
+    (card: CardInstance) => {
+      if (pendingHandDiscard && pendingHandDiscard.remaining > 0) {
+        dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
+        return;
+      }
+      setPreviewCard(card);
+    },
+    [dispatchAction, pendingHandDiscard]
+  );
 
   const handleCardPreview = useCallback((card: CardInstance) => {
     setPreviewCard(card);
@@ -240,6 +345,68 @@ export const GameTable: React.FC = () => {
     },
     [canInteract, dispatchAction]
   );
+
+  const handleMarketCardPress = useCallback(
+    (card: CardInstance) => {
+      const now = Date.now();
+      const last = lastMarketTapRef.current;
+      if (
+        canInteract &&
+        last?.id === card.instanceId &&
+        now - last.at <= DOUBLE_TAP_MS
+      ) {
+        lastMarketTapRef.current = null;
+        handleBuyCard(card);
+        setPreviewCard(null);
+        return;
+      }
+      lastMarketTapRef.current = { id: card.instanceId, at: now };
+      setPreviewCard(card);
+    },
+    [canInteract, handleBuyCard]
+  );
+
+  const handlePreviewPurchase = useCallback(() => {
+    if (!previewCard || !isBuyableMarketCard(previewCard, state.galleryPurchasedBy)) return;
+    handleBuyCard(previewCard);
+    setPreviewCard(null);
+  }, [previewCard, handleBuyCard]);
+
+  const previewPurchaseBlockedReason = (() => {
+    if (!previewCard || !isBuyableMarketCard(previewCard, state.galleryPurchasedBy)) return undefined;
+    if (!canInteract) return 'Not your turn';
+    if (pendingBandingBonus) return 'Resolve banding bonus first';
+    if (pendingHandDiscard) {
+      return `Discard ${pendingHandDiscard.remaining} card(s) from hand`;
+    }
+    if (pendingForcedDiscard) {
+      return 'Choose a card for your opponent to discard';
+    }
+    const cost = previewCard.definition?.cost ?? 0;
+    if (state.turnCoins < cost) {
+      return `Need ${cost} coins (${state.turnCoins} available)`;
+    }
+    return undefined;
+  })();
+
+  const previewCanPurchase =
+    !!previewCard &&
+    isBuyableMarketCard(previewCard, state.galleryPurchasedBy) &&
+    canInteract &&
+    !pendingBandingBonus &&
+    !pendingHandDiscard &&
+    !pendingForcedDiscard &&
+    state.turnCoins >= (previewCard.definition?.cost ?? 0);
+
+  const handleLogCardPreview = useCallback((card: CardInstance) => {
+    setPreviewCard(card);
+  }, []);
+
+  const opponentHighlight =
+    state.turnActionHighlight &&
+    state.turnActionHighlight.playerId !== localPlayer?.id
+      ? state.turnActionHighlight
+      : null;
 
   const handleZoneLayout = useCallback(
     (zoneId: string) => (rect: LayoutRectangle) => {
@@ -333,6 +500,18 @@ export const GameTable: React.FC = () => {
     ? dragPosition.y - tableScreenRect.y - overlayCardH / 2
     : 0;
 
+  const dragGhostFace = draggedCard ? (
+    <CardFace
+      definition={
+        draggedCard.definition ?? getCardDefinition(draggedCard.definitionId)
+      }
+      faceUp={draggedCard.faceUp}
+      width={overlayCardW}
+      height={overlayCardH}
+      chosenFaction={draggedCard.chosenFaction}
+    />
+  ) : null;
+
   const portalOverlay =
     Platform.OS === 'web' &&
     typeof document !== 'undefined' &&
@@ -350,12 +529,7 @@ export const GameTable: React.FC = () => {
           ]}
         >
           <View style={styles.dragOverlayCardShadow}>
-            <Card
-              card={draggedCard}
-              width={overlayCardW}
-              height={overlayCardH}
-              sizeMode="full"
-            />
+            {dragGhostFace}
           </View>
         </View>
       </View>,
@@ -375,6 +549,9 @@ export const GameTable: React.FC = () => {
           <OpponentStrip
             opponents={opponents}
             turnPlayerId={state.turnPlayerId}
+            turnCoins={state.turnCoins}
+            turnValor={state.turnValor}
+            barHeight={layout.opponentsBarH}
             onPressOpponent={handleOpponentPress}
           />
         ) : (
@@ -430,72 +607,87 @@ export const GameTable: React.FC = () => {
               style={styles.galleryDrop}
             >
               <View style={styles.galleryContent}>
-                <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
-                  {state.galleryCards.map((card) => (
-                    <GalleryCard
-                      key={card.instanceId}
-                      card={card}
-                      size={layout.galleryCardSize}
-                      onPress={handleCardPreview}
-                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
-                      disabled={!isMainActive}
-                    />
-                  ))}
+                <View style={styles.galleryMarketSection}>
+                  <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
+                    {state.galleryCards.map((card) => (
+                      <GalleryCard
+                        key={card.instanceId}
+                        card={card}
+                        size={layout.galleryCardSize}
+                        purchased={!!state.galleryPurchasedBy?.[card.instanceId]}
+                        onPress={handleMarketCardPress}
+                        onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                        disabled={!isMainActive}
+                      />
+                    ))}
+                  </View>
+                  <GallerySectionHeader label="Market" />
                 </View>
 
-                <View
-                  style={[
-                    styles.galleryRow,
-                    { gap: layout.galleryCardGap, marginTop: 6 },
-                  ]}
-                >
-                  {state.recruitCard ? (
-                    <GalleryCard
-                      key={state.recruitCard.instanceId}
-                      card={state.recruitCard}
-                      size={layout.galleryCardSize}
-                      onPress={handleCardPreview}
-                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
-                      disabled={!isMainActive}
-                    />
-                  ) : null}
-
-                  <DropZone
-                    id="arena_challenge"
-                    zoneType="ARENA"
-                    label=""
-                    onLayout={handleZoneLayout('arena_challenge')}
-                    showGlow={isMainActive}
-                    style={styles.arenaGallerySlot}
-                    contentColumn
-                    contentCenter
-                  >
-                    {state.arenaCard ? (
-                      <Pressable onPress={handleArenaPress} disabled={!state.arenaCard}>
-                        <Card
-                          card={state.arenaCard}
-                          width={layout.arenaCardW}
-                          height={layout.arenaCardH}
-                          sizeMode="landscape"
-                          onPress={handleArenaPress}
-                          onLongPress={handleCardPreview}
+                <View style={[styles.gallerySubRow, { gap: layout.galleryCardGap }]}>
+                  <View style={styles.gallerySubColumn}>
+                    <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
+                      {state.recruitCard ? (
+                        <GalleryCard
+                          key={state.recruitCard.instanceId}
+                          card={state.recruitCard}
+                          size={layout.galleryCardSize}
+                          onPress={handleMarketCardPress}
+                          onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                          disabled={!isMainActive}
                         />
-                      </Pressable>
-                    ) : (
-                      <Text style={styles.emptyText}>No Arena</Text>
-                    )}
-                  </DropZone>
+                      ) : (
+                        <Text style={styles.emptyText}>—</Text>
+                      )}
+                    </View>
+                    <GallerySectionHeader label="Recruits" />
+                  </View>
 
-                  {state.epicCards.map((card) => (
-                    <GalleryCard
-                      key={card.instanceId}
-                      card={card}
-                      size={layout.galleryCardSize}
-                      onPress={handleCardPreview}
-                      onLongPress={(c) => isMainActive && handleBuyCard(c)}
-                      disabled={!isMainActive}
-                    />
-                  ))}
+                  <View style={styles.gallerySubColumn}>
+                    <DropZone
+                      id="arena_challenge"
+                      zoneType="ARENA"
+                      label=""
+                      onLayout={handleZoneLayout('arena_challenge')}
+                      showGlow={isMainActive || opponentHighlight?.kind === 'arena'}
+                      highlight={opponentHighlight?.kind === 'arena'}
+                      style={styles.arenaGallerySlot}
+                      contentColumn
+                      contentCenter
+                    >
+                      {state.arenaCard ? (
+                        <Pressable onPress={handleArenaPress} disabled={!state.arenaCard}>
+                          <Card
+                            card={state.arenaCard}
+                            width={layout.arenaCardW}
+                            height={layout.arenaCardH}
+                            sizeMode="landscape"
+                            onPress={handleArenaPress}
+                            onLongPress={handleCardPreview}
+                          />
+                        </Pressable>
+                      ) : (
+                        <Text style={styles.emptyText}>No Arena</Text>
+                      )}
+                    </DropZone>
+                    <GallerySectionHeader label="Arena" />
+                  </View>
+
+                  <View style={[styles.gallerySubColumn, styles.galleryEpicsColumn]}>
+                    <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
+                      {state.epicCards.map((card) => (
+                        <GalleryCard
+                          key={card.instanceId}
+                          card={card}
+                          size={layout.galleryCardSize}
+                          onPress={handleMarketCardPress}
+                          onLongPress={(c) => isMainActive && handleBuyCard(c)}
+                          disabled={!isMainActive}
+                        />
+                      ))}
+                    </View>
+                    <GallerySectionHeader label="Epics" />
+                  </View>
                 </View>
               </View>
             </DropZone>
@@ -508,32 +700,38 @@ export const GameTable: React.FC = () => {
               zoneType="PLAY_AREA"
               label=""
               onLayout={handleZoneLayout('play_area')}
-              activePhase={isMainActive}
-              highlight={isMainActive && !!draggedCard}
+              activePhase={isMainActive && isTurnPlayerLocal}
+              highlight={isMainActive && isTurnPlayerLocal && !!draggedCard}
               contentColumn
               style={StyleSheet.flatten([styles.playField, { flex: 1 }])}
             >
               <View style={styles.playFieldCards}>
-                {(localPlayer?.playArea.length ?? 0) === 0 ? (
+                {(turnPlayer?.playArea.length ?? 0) === 0 ? (
                   isMainActive ? (
                     <Text style={styles.playFieldEmptyText}>
-                      Drag cards here from your hand
+                      {isTurnPlayerLocal
+                        ? 'Drag cards here from your hand'
+                        : `${turnPlayer?.name ?? 'Opponent'} is playing…`}
                     </Text>
                   ) : null
                 ) : (
                   <View style={styles.playedCardsRow}>
-                    {localPlayer?.playArea.map((card) => (
-                      <Card
+                    {turnPlayer?.playArea.map((card) => (
+                      <Animated.View
                         key={card.instanceId}
-                        card={card}
-                        width={layout.handCardW}
-                        height={layout.handCardH}
-                        sizeMode="full"
-                        draggable={isMainActive}
-                        onPress={handlePlayAreaCardPress}
-                        onLongPress={handleCardPreview}
-                        onDragEnd={handleDragEnd}
-                      />
+                        entering={FadeInRight.springify().damping(20).stiffness(280)}
+                      >
+                        <Card
+                          card={card}
+                          width={layout.handCardW}
+                          height={layout.handCardH}
+                          sizeMode="full"
+                          draggable={isMainActive && isTurnPlayerLocal}
+                          onPress={isTurnPlayerLocal ? handlePlayAreaCardPress : handleCardPreview}
+                          onLongPress={handleCardPreview}
+                          onDragEnd={handleDragEnd}
+                        />
+                      </Animated.View>
                     ))}
                   </View>
                 )}
@@ -541,11 +739,29 @@ export const GameTable: React.FC = () => {
             </DropZone>
 
             <View style={[styles.handZone, { height: layout.handZoneH }]}>
+              {pendingHandDiscard && (
+                <Text style={styles.handDiscardPrompt}>
+                  Discard {pendingHandDiscard.remaining} card
+                  {pendingHandDiscard.remaining === 1 ? '' : 's'} from hand
+                  {pendingHandDiscard.sourceCardName
+                    ? ` (${pendingHandDiscard.sourceCardName})`
+                    : ''}
+                </Text>
+              )}
               <View style={styles.handArea}>
                 <PlayerHand
                   cards={localPlayer?.hand ?? []}
                   cardWidth={layout.handCardW}
                   cardHeight={layout.handCardH}
+                  canPlayAllCharity={canPlayAllCharity}
+                  onPlayAllCharity={handlePlayAllCharity}
+                  showBandingKey={isMainActive}
+                  playArea={
+                    isTurnPlayerLocal ? (localPlayer?.playArea ?? []) : []
+                  }
+                  claimedBandingFactions={
+                    isTurnPlayerLocal ? (state.turnBandingClaimed ?? []) : []
+                  }
                   onCardPress={handleHandCardPress}
                   onLongPress={handleCardPreview}
                   onDragStart={(card) => setDraggedCard(card)}
@@ -575,6 +791,7 @@ export const GameTable: React.FC = () => {
           totalPlayers={state.players.length}
           onEndPhase={handleEndPhase}
           onPlayerReady={handlePlayerReady}
+          onPreviewLogCard={handleLogCardPreview}
         />
       </View>
 
@@ -590,12 +807,7 @@ export const GameTable: React.FC = () => {
                 ]}
               >
                 <View style={styles.dragOverlayCardShadow}>
-                  <Card
-                    card={draggedCard}
-                    width={overlayCardW}
-                    height={overlayCardH}
-                    sizeMode="full"
-                  />
+                  {dragGhostFace}
                 </View>
               </View>
             </View>
@@ -606,6 +818,10 @@ export const GameTable: React.FC = () => {
         card={previewCard}
         visible={previewCard !== null}
         onClose={() => setPreviewCard(null)}
+        showPurchase={isBuyableMarketCard(previewCard, state.galleryPurchasedBy)}
+        canPurchase={previewCanPurchase}
+        purchaseBlockedReason={previewPurchaseBlockedReason}
+        onPurchase={handlePreviewPurchase}
       />
       <DiscardModal
         player={discardPlayer}
@@ -621,6 +837,27 @@ export const GameTable: React.FC = () => {
         visible={factionChoiceCard !== null}
         onChoose={handleFactionChoice}
         onCancel={handleCancelFactionChoice}
+      />
+      <BandingBonusModal
+        pending={pendingBandingBonus}
+        visible={pendingBandingBonus !== null}
+        onAccept={handleAcceptBanding}
+        onDecline={handleDeclineBanding}
+      />
+      <ForcedOpponentDiscardModal
+        pending={pendingForcedDiscard}
+        targetPlayer={forcedDiscardTarget}
+        visible={pendingForcedDiscard !== null}
+        onChoose={handleForcedOpponentDiscard}
+      />
+      <GalleryEventModal
+        event={state.pendingGalleryEvent ?? null}
+        visible={state.pendingGalleryEvent != null}
+        pendingDiscardPlayerIds={state.pendingEventDiscards ?? []}
+        localPlayerId={localPlayer?.id ?? ''}
+        localHand={localPlayer?.hand ?? []}
+        onResolve={handleResolveGalleryEvent}
+        onDiscardCard={handleEventDiscardCard}
       />
       <ArenaChallengeModal
         visible={arenaModalOpen}
@@ -693,6 +930,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 2,
+  },
+  galleryMarketSection: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 4,
+  },
+  gallerySubRow: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  gallerySubColumn: {
+    flex: 1,
+    alignItems: 'center',
+    minWidth: 0,
+    gap: 4,
+  },
+  galleryEpicsColumn: {
+    flex: 1.35,
   },
   galleryRow: {
     flexDirection: 'row',
@@ -759,6 +1018,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(212,175,55,0.3)',
     paddingHorizontal: 6,
     paddingVertical: 4,
+  },
+  handDiscardPrompt: {
+    color: '#f1c40f',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
   },
   handArea: {
     flex: 1,

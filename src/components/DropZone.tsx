@@ -42,7 +42,9 @@ export const DropZone: React.FC<DropZoneProps> = ({
     canDropCard(draggedCard, draggedCard.location, zoneType);
 
   const isActive = isHovered || highlight;
-  const glowColor = isActive && canAccept
+  const showAcceptGlow = (isActive && canAccept) || (highlight && !draggedCard);
+
+  const glowColor = showAcceptGlow
     ? '#2ECC71'
     : isActive
     ? 'rgba(255,255,255,0.3)'
@@ -50,7 +52,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
     ? 'rgba(241,196,15,0.3)'
     : 'rgba(255,255,255,0.1)';
 
-  const borderW = isActive ? 2 : activePhase ? 1.5 : 1;
+  const borderW = isActive || highlight ? 2 : activePhase ? 1.5 : 1;
 
   const zoneRef = useRef<View>(null);
 
@@ -82,6 +84,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         },
         activePhase && styles.activePhaseZone,
         isActive && canAccept && styles.canAcceptZone,
+        highlight && !draggedCard && styles.canAcceptZone,
         showGlow && styles.glowZone,
         style,
       ]}

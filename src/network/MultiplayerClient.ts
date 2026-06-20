@@ -176,6 +176,17 @@ export class MultiplayerGameClient {
     return this.sync.persistGameState(next, action);
   }
 
+  private getAIDelayMs(state: GameState): number {
+    const last = state.actionLog[state.actionLog.length - 1];
+    if (last?.type === 'BUY_CARD') return 2000;
+    if (last?.type === 'RESOLVE_GALLERY_EVENT') return 1500;
+    if (last?.type === 'EVENT_DISCARD_CARD') return 800;
+    if (state.pendingGalleryEvent) return 1500;
+    if ((state.pendingEventDiscards?.length ?? 0) > 0) return 800;
+    if (state.turnActionHighlight?.kind === 'buy') return 2000;
+    return 600;
+  }
+
   private scheduleAI(state: GameState) {
     if (this.session && this.session.gameId !== 'local' && !this.session.isHost) {
       return;
@@ -188,6 +199,8 @@ export class MultiplayerGameClient {
 
     if (getNextAIAction(state) === null) return;
 
+    const delayMs = this.getAIDelayMs(state);
+
     this.aiTimer = setTimeout(async () => {
       try {
         const latest = readGameStateSnapshot();
@@ -197,7 +210,7 @@ export class MultiplayerGameClient {
       } catch (err) {
         console.warn('[AI] action failed', err);
       }
-    }, 600);
+    }, delayMs);
   }
 
   disconnect() {

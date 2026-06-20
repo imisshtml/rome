@@ -1,7 +1,8 @@
 import { CardDefinition, CardInstance, Faction } from '../types/cardTypes';
 
 /** Factions a Spy may become when played. */
-export const SPY_FACTION_CHOICES: Faction[] = ['Legion', 'Ludus', 'Senate'];
+export type BandingFactionChoice = 'Legion' | 'Ludus' | 'Senate';
+export const SPY_FACTION_CHOICES: BandingFactionChoice[] = ['Legion', 'Ludus', 'Senate'];
 
 export function requiresFactionChoiceOnPlay(definition: CardDefinition): boolean {
   return definition.effects?.choose_faction_on_play === true;
@@ -9,6 +10,13 @@ export function requiresFactionChoiceOnPlay(definition: CardDefinition): boolean
 
 export function isSpyFactionChoice(faction: string): faction is Faction {
   return (SPY_FACTION_CHOICES as string[]).includes(faction);
+}
+
+export function isCharityCard(
+  card: CardInstance | Pick<CardInstance, 'definitionId' | 'definition'>
+): boolean {
+  const id = card.definitionId ?? card.definition?.id;
+  return id === 'all_001';
 }
 
 /** Factions shown on the card edge label. */

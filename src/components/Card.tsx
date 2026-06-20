@@ -166,6 +166,9 @@ export const Card: React.FC<CardProps> = ({
         }
       : {};
 
+  const displayChosenFaction =
+    card.location !== 'HAND' ? card.chosenFaction : null;
+
   return (
     <GestureDetector gesture={composed}>
       <Animated.View
@@ -189,11 +192,11 @@ export const Card: React.FC<CardProps> = ({
           faceUp={card.faceUp}
           width={width}
           height={height}
-          chosenFaction={card.chosenFaction}
+          chosenFaction={displayChosenFaction}
           style={
-            card.chosenFaction
+            displayChosenFaction
               ? {
-                  borderColor: FACTION_COLORS[card.chosenFaction],
+                  borderColor: FACTION_COLORS[displayChosenFaction],
                   borderWidth: 2.5,
                 }
               : undefined

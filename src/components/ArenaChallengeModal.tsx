@@ -260,7 +260,7 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
         </Text>
         <Text style={[styles.resultLine, won ? styles.win : styles.loss]}>
           {won
-            ? `+${lastResult.rewardVp} Victory Points`
+            ? `+${lastResult.valorGain} Valor, +${lastResult.rewardVp} Victory Points`
             : 'Crowd Disfavor added to discard'}
         </Text>
         <Pressable style={styles.primaryBtn} onPress={onClose}>

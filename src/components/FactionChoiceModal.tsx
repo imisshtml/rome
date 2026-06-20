@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
-import { CardInstance, FACTION_COLORS, Faction } from '../types/cardTypes';
-import { SPY_FACTION_CHOICES } from '../utils/cardFactionUtils';
+import { View, Text, StyleSheet, Modal, Pressable, Image } from 'react-native';
+import { CardInstance, Faction } from '../types/cardTypes';
+import { SPY_FACTION_CHOICES, type BandingFactionChoice } from '../utils/cardFactionUtils';
+import { BANDING_FACTION_ICONS } from '../utils/factionIconAssets';
 
 interface FactionChoiceModalProps {
   card: CardInstance | null;
@@ -30,10 +31,17 @@ export const FactionChoiceModal: React.FC<FactionChoiceModalProps> = ({
             {SPY_FACTION_CHOICES.map((faction) => (
               <Pressable
                 key={faction}
-                style={[styles.factionBtn, { borderColor: FACTION_COLORS[faction] }]}
+                style={({ pressed }) => [
+                  styles.factionBtn,
+                  pressed && styles.factionBtnPressed,
+                ]}
                 onPress={() => onChoose(faction)}
               >
-                <View style={[styles.factionSwatch, { backgroundColor: FACTION_COLORS[faction] }]} />
+                <Image
+                  source={BANDING_FACTION_ICONS[faction as BandingFactionChoice]}
+                  style={styles.factionIcon}
+                  resizeMode="contain"
+                />
                 <Text style={styles.factionLabel}>{faction}</Text>
               </Pressable>
             ))}
@@ -85,16 +93,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  factionSwatch: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
+  factionBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  factionIcon: {
+    width: 28,
+    height: 28,
   },
   factionLabel: {
     color: '#fff',

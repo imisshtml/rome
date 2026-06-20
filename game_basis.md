@@ -86,7 +86,7 @@ Banding Bonus:
 
 When 3 Ludus cards are played during a turn:
 
-> Draw 1 card
+> Gain 1 Favor card
 
 ---
 
@@ -140,7 +140,7 @@ Banding Bonus:
 
 When 3 Legion cards are played during a turn:
 
-> Gain 1 Flavor card
+> Draw 1 card
 
 ---
 

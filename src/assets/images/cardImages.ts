@@ -75,6 +75,7 @@ export const CARD_IMAGES: Record<string, ImageSourcePropType> = {
   'legion_engineer.jpg': require('./legion/legion_engineer.jpg'),
   'legion_formation.jpg': require('./legion/legion_formation.jpg'),
   'legion_fresh_recruit.jpg': require('./legion/legion_fresh_recruit.jpg'),
+  'legion_march.jpg': require('./legion/legion_march.jpg'),
   'legion_medicus.jpg': require('./legion/legion_medicus.jpg'),
   'legion_pilum.jpg': require('./legion/legion_pilum.jpg'),
   'legion_praetorian.jpg': require('./legion/legion_praetorian.jpg'),

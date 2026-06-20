@@ -11,6 +11,7 @@ import {
 } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { PHASE_LABELS } from '../types/gameTypes';
+import { getPlayerTotalVp } from '../game/postGame';
 
 export const DebugPanel: React.FC = () => {
   const state = useGameState();
@@ -95,7 +96,7 @@ export const DebugPanel: React.FC = () => {
                 {p.name} {p.id === state.turnPlayerId ? '⚔' : ''}
               </Text>
               <View style={styles.playerStats}>
-                <MiniStat label="VP" value={p.victoryPoints} />
+                <MiniStat label="VP" value={getPlayerTotalVp(p)} />
                 <MiniStat label="H" value={p.hand.length} />
                 <MiniStat label="D" value={p.deck.length} />
                 <MiniStat label="X" value={p.discard.length} />

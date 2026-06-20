@@ -45,6 +45,7 @@ interface BoardSidebarRightProps {
   totalPlayers: number;
   onEndPhase: () => void;
   onPlayerReady?: () => void;
+  onPreviewLogCard?: (card: CardInstance) => void;
 }
 
 const PHASE_BUTTON_LABELS: Record<GamePhase, string> = {
@@ -68,6 +69,7 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   readyCount,
   totalPlayers,
   onEndPhase,
+  onPreviewLogCard,
 }) => {
   const buttonLabel = PHASE_BUTTON_LABELS[phase];
   const iconSize = iconSizeForSidebar(width);
@@ -77,7 +79,11 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   return (
     <View style={[styles.sidebar, { width }]}>
       <View style={styles.logSection}>
-        <GameLogPanel actions={actionLog} players={players} />
+        <GameLogPanel
+          actions={actionLog}
+          players={players}
+          onPreviewCard={onPreviewLogCard}
+        />
       </View>
 
       <View style={styles.lowerSection}>

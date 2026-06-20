@@ -21,13 +21,18 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
       'MOVE_CARD',
       'BUY_CARD',
       'CONFIRM_ARENA_FIGHTERS',
+      'ACCEPT_BANDING_BONUS',
+      'DECLINE_BANDING_BONUS',
+      'RESOLVE_GALLERY_EVENT',
+      'EVENT_DISCARD_CARD',
+      'FORCE_OPPONENT_DISCARD',
       'END_PHASE',
     ],
   },
   CLEANUP: {
     phase: 'CLEANUP',
     autoActions: [],
-    allowedActions: ['END_PHASE'],
+    allowedActions: ['END_PHASE', 'RESOLVE_GALLERY_EVENT', 'EVENT_DISCARD_CARD'],
   },
 };
 
