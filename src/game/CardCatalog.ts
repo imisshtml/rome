@@ -96,6 +96,23 @@ function fromFactionCard(raw: RawFactionCard): CardDefinition {
   });
 }
 
+function buildArenaDisplayText(raw: RawArenaCard): string {
+  const effectText = raw.effect_text?.trim();
+  if (effectText) return effectText;
+
+  const parts: string[] = [];
+  const win = raw.effect_text_win?.trim();
+  const loss = raw.effect_text_loss?.trim();
+  if (win) parts.push(win);
+  if (loss) parts.push(loss);
+  if (parts.length > 0) return parts.join('\n');
+
+  const tier = raw.tier ?? 'medium';
+  const valorGain = raw.valor_required ?? 0;
+  const rewardVp = raw.reward_vp ?? ARENA_TIER_REWARD_VP[tier] ?? 3;
+  return `Gain ${valorGain} Valor and ${rewardVp} Victory Points.`;
+}
+
 function fromArenaCard(raw: RawArenaCard): CardDefinition {
   const id = slugToId(raw.id);
   const tier = raw.tier ?? 'medium';
@@ -108,9 +125,7 @@ function fromArenaCard(raw: RawArenaCard): CardDefinition {
     victoryPoints: 0,
     type: 'Event',
     faction: 'Arena',
-    text:
-      raw.effect_text_win ??
-      `Gain ${valorGain} Valor and ${rewardVp} Victory Points.`,
+    text: buildArenaDisplayText(raw),
     image: raw.image,
     valorRequired: valorGain,
     rewardVp,
@@ -270,10 +285,35 @@ export function getEpicPoolEntries(): PoolEntry[] {
 }
 
 export function getArenaPoolEntries(): PoolEntry[] {
-  return arenaPack.cards.map((raw) => ({
-    definitionId: slugToId(raw.id),
-    qty: ARENA_TIER_COPIES[raw.tier ?? 'medium'] ?? 2,
-  }));
+  return arenaPack.cards
+    .filter(
+      (raw) =>
+        normalizeArenaDefinitionId(slugToId(raw.id)) !== OPENING_GAMES_ARENA_ID
+    )
+    .map((raw) => ({
+      definitionId: slugToId(raw.id),
+      qty: ARENA_TIER_COPIES[raw.tier ?? 'medium'] ?? 2,
+    }));
+}
+
+function normalizeArenaDefinitionId(id: string): string {
+  return id.replace(/-/g, '_').toLowerCase();
+}
+
+export const OPENING_GAMES_ARENA_ID = 'arena_opening_games';
+
+export function isOpeningGamesArenaDefinition(
+  definitionId: string
+): boolean {
+  return normalizeArenaDefinitionId(definitionId) === OPENING_GAMES_ARENA_ID;
+}
+
+export function getOpeningGamesArenaDefinitionId(): string | null {
+  const raw = arenaPack.cards.find(
+    (card) =>
+      normalizeArenaDefinitionId(slugToId(card.id)) === OPENING_GAMES_ARENA_ID
+  );
+  return raw ? slugToId(raw.id) : null;
 }
 
 export function getFlavorPoolEntries(): PoolEntry[] {

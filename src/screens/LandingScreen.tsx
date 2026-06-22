@@ -9,11 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { isSupabaseConfigured } from '../lib/env';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
-import { homeBackground } from '../assets/images';
+import { gameLogo, homeBackground } from '../assets/images';
 import { FullBleedBackground } from '../components/FullBleedBackground';
 
 export const LandingScreen: React.FC = () => {
@@ -44,8 +45,12 @@ export const LandingScreen: React.FC = () => {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Rome</Text>
-          <Text style={styles.subtitle}>Gladiator Deckbuilder</Text>
+          <Image
+            source={gameLogo}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel="Rome Gladiator Deckbuilder"
+          />
 
           <View style={styles.card}>
           <Text style={styles.label}>Nickname</Text>
@@ -145,27 +150,12 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 24,
   },
-  title: {
-    color: '#F1C40F',
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
+  logo: {
+    width: '100%',
+    maxWidth: 340,
+    height: 140,
+    alignSelf: 'center',
     marginBottom: 28,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   card: {
     backgroundColor: 'rgba(10,10,18,0.82)',

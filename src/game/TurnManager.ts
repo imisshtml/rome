@@ -26,6 +26,7 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
       'RESOLVE_GALLERY_EVENT',
       'EVENT_DISCARD_CARD',
       'FORCE_OPPONENT_DISCARD',
+      'DECLINE_ARENA',
       'END_PHASE',
     ],
   },

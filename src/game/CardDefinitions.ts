@@ -11,6 +11,8 @@ export {
   getArenaPoolEntries,
   getFlavorPoolEntries,
   getStartingDeckEntries,
+  getOpeningGamesArenaDefinitionId,
+  isOpeningGamesArenaDefinition,
   isGalleryEventCard,
   isFavorDefinitionId,
   isNonDeckablePlayerCard,

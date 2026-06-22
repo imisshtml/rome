@@ -22,6 +22,7 @@ import { getArenaChallengeStats, getArenaChallengeTotalValor, getCurrentPlayer }
 import { getPlayerTotalVp } from '../game/postGame';
 import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
+import { mustEnterArenaBeforeEndTurn } from '../utils/arenaUtils';
 import { canDropCard } from '../utils/dragHelpers';
 import { useBoardLayout } from '../utils/boardLayout';
 import Card from './Card';
@@ -120,6 +121,12 @@ export const GameTable: React.FC = () => {
         : 0;
   const canChallengeArena =
     canInteract && !!state.arenaCard && !state.arenaChallenge;
+  const mandatoryArenaPending =
+    !!localPlayer &&
+    isLocalTurn &&
+    isMainActive &&
+    mustEnterArenaBeforeEndTurn(state, localPlayer.id);
+  const mainPhaseButtonLabel = mandatoryArenaPending ? 'Enter Arena' : undefined;
   const pendingArenaResponse =
     state.arenaChallenge?.pendingResponsePlayerIds.includes(localPlayer?.id ?? '') ?? false;
   const arenaChallengeTotal = getArenaChallengeTotalValor(state);
@@ -255,8 +262,13 @@ export const GameTable: React.FC = () => {
 
   const handleEndPhase = useCallback(() => {
     if (!canInteract) return;
+    if (mandatoryArenaPending) {
+      setArenaModalStep('prompt');
+      setArenaModalOpen(true);
+      return;
+    }
     dispatchAction('END_PHASE');
-  }, [dispatchAction, canInteract]);
+  }, [dispatchAction, canInteract, mandatoryArenaPending]);
 
   const handlePlayerReady = useCallback(() => {
     if (!localPlayer || !isPregame || isLocalReady) return;
@@ -303,9 +315,12 @@ export const GameTable: React.FC = () => {
   }, [canChallengeArena, state.arenaCard]);
 
   const handleArenaDecline = useCallback(() => {
+    if (mandatoryArenaPending) {
+      dispatchAction('DECLINE_ARENA');
+    }
     setArenaModalOpen(false);
     setArenaModalStep('prompt');
-  }, []);
+  }, [mandatoryArenaPending, dispatchAction]);
 
   const handleArenaEnter = useCallback(() => {
     setArenaModalStep('select');
@@ -722,6 +737,11 @@ export const GameTable: React.FC = () => {
               contentColumn
               style={StyleSheet.flatten([styles.playField, { flex: 1 }])}
             >
+              {state.arenaOpen && isMainActive && isTurnPlayerLocal ? (
+                <Text style={styles.arenaOpenNote}>
+                  The Arena is OPEN, playing ANY Faction or Epic requires you challenge the Arena
+                </Text>
+              ) : null}
               <View style={styles.playFieldCards}>
                 {(turnPlayer?.playArea.length ?? 0) === 0 ? (
                   isMainActive ? (
@@ -806,6 +826,7 @@ export const GameTable: React.FC = () => {
           isLocalReady={isLocalReady}
           readyCount={readyCount}
           totalPlayers={state.players.length}
+          mainPhaseButtonLabel={mainPhaseButtonLabel}
           onEndPhase={handleEndPhase}
           onPlayerReady={handlePlayerReady}
           onPreviewLogCard={handleLogCardPreview}
@@ -896,6 +917,7 @@ export const GameTable: React.FC = () => {
         challengerId={state.arenaChallenge?.challengerId ?? localPlayer?.id ?? ''}
         totalValor={arenaChallengeTotal}
         lastResult={state.lastArenaResult ?? null}
+        mandatory={mandatoryArenaPending}
       />
       </View>
     </FullBleedBackground>
@@ -1003,6 +1025,15 @@ const styles = StyleSheet.create({
     minHeight: 0,
     alignItems: 'stretch',
     justifyContent: 'flex-start',
+  },
+  arenaOpenNote: {
+    color: 'rgba(241,196,15,0.9)',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    lineHeight: 14,
   },
   playFieldCards: {
     flex: 1,

@@ -16,6 +16,10 @@ import {
 } from '../utils/deckCycleUtils';
 import { pickForcedDiscardCard } from '../utils/forcedDiscardUtils';
 import {
+  isOpeningGamesArena,
+  mustEnterArenaBeforeEndTurn,
+} from '../utils/arenaUtils';
+import {
   BANDING_BONUS_LABEL,
   BandingFaction,
   chooseSpyFactionForAI,
@@ -37,6 +41,7 @@ import {
   getArenaPoolEntries,
   getFlavorPoolEntries,
   getStartingDeckEntries,
+  getOpeningGamesArenaDefinitionId,
   isGalleryEventCard,
   isFavorDefinitionId,
   isPurchasableMarketCard,
@@ -194,6 +199,27 @@ function setupRecruitPile(): {
   return { recruitCard, recruitDeck: shuffled };
 }
 
+function setupArenaSupply(): {
+  arenaCard: CardInstance | null;
+  arenaDeck: CardInstance[];
+} {
+  const openingId = getOpeningGamesArenaDefinitionId();
+  const arenaDeck = shuffle(
+    buildPoolInstances(getArenaPoolEntries(), 'ARENA_DECK', 'arena', false)
+  );
+  const arenaCard = openingId
+    ? {
+        ...createCardInstance(openingId, 'ARENA', 'arena', true),
+        location: 'ARENA' as const,
+        faceUp: true,
+      }
+    : arenaDeck.length > 0
+      ? { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true }
+      : null;
+
+  return { arenaCard, arenaDeck };
+}
+
 function createMarketCards() {
   const shuffledGalleryPool = buildPoolInstances(
     getGalleryPoolEntries(),
@@ -205,16 +231,7 @@ function createMarketCards() {
     shuffledGalleryPool
   );
 
-  const arenaDeck = buildPoolInstances(
-    getArenaPoolEntries(),
-    'ARENA_DECK',
-    'arena',
-    false
-  );
-  const arenaCard =
-    arenaDeck.length > 0
-      ? { ...arenaDeck.shift()!, location: 'ARENA' as const, faceUp: true }
-      : null;
+  const { arenaCard, arenaDeck } = setupArenaSupply();
 
   const epicSupply = buildPoolInstances(
     getEpicPoolEntries(),
@@ -481,6 +498,8 @@ function activateGameFromPregame(state: GameState): GameState {
     purchaseCostCap: null,
     galleryPurchasedBy: {},
     readyPlayerIds: state.readyPlayerIds,
+    turnArenaResolved: false,
+    turnArenaExempt: false,
   };
 }
 
@@ -588,8 +607,12 @@ function resolveArenaChallenge(state: GameState): GameState {
   let arenaCard: CardInstance | null = state.arenaCard;
   let arenaDeck = [...state.arenaDeck];
   let pendingArenaReplacement = state.pendingArenaReplacement ?? false;
+  let arenaOpen = state.arenaOpen ?? false;
   if (success) {
     pendingArenaReplacement = true;
+    if (arenaCard && isOpeningGamesArena(arenaCard)) {
+      arenaOpen = true;
+    }
   }
 
   return {
@@ -598,6 +621,8 @@ function resolveArenaChallenge(state: GameState): GameState {
     arenaCard,
     arenaDeck,
     pendingArenaReplacement,
+    arenaOpen,
+    turnArenaResolved: true,
     turnValor: state.turnValor + (success ? valorGain : 0),
     arenaCommitZone: [],
     arenaChallenge: null,
@@ -706,6 +731,9 @@ export function rehydrateGameState(state: GameState): GameState {
     deferredTurnEnd: state.deferredTurnEnd ?? null,
     pendingArenaReplacement: state.pendingArenaReplacement ?? false,
     purchaseCostCap: state.purchaseCostCap ?? null,
+    arenaOpen: state.arenaOpen ?? false,
+    turnArenaResolved: state.turnArenaResolved ?? false,
+    turnArenaExempt: state.turnArenaExempt ?? false,
     arenaCard: state.arenaCard ? rehydrateCard(state.arenaCard) : null,
     arenaDeck: rehydrateCards(state.arenaDeck ?? []),
     arenaCommitZone: rehydrateCards(state.arenaCommitZone ?? []).map((c) => ({
@@ -834,6 +862,15 @@ export function validateGameAction(
     return null;
   }
 
+  if (action.type === 'DECLINE_ARENA') {
+    if (state.turnPlayerId !== action.playerId) return 'Not your turn';
+    if (state.phase !== 'MAIN') return 'Not in main phase';
+    if (!mustEnterArenaBeforeEndTurn(state, action.playerId)) {
+      return 'Arena challenge is not mandatory';
+    }
+    return null;
+  }
+
   if (state.arenaChallenge) {
     return 'Arena challenge in progress';
   }
@@ -929,6 +966,12 @@ export function validateGameAction(
     case 'DRAW_CARD':
     case 'DISCARD_CARD':
     case 'END_PHASE':
+      if (
+        action.type === 'END_PHASE' &&
+        mustEnterArenaBeforeEndTurn(state, action.playerId)
+      ) {
+        return 'Enter the Arena before ending your turn';
+      }
       return null;
     case 'ACCEPT_BANDING_BONUS':
     case 'DECLINE_BANDING_BONUS': {
@@ -1279,6 +1322,9 @@ export function createPregameState(
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
     purchaseCostCap: null,
+    arenaOpen: false,
+    turnArenaResolved: false,
+    turnArenaExempt: false,
   };
 }
 
@@ -1743,6 +1789,22 @@ export function processGameAction(
       return next;
     }
 
+    case 'DECLINE_ARENA': {
+      if (!player || playerIdx === -1) return next;
+      if (!mustEnterArenaBeforeEndTurn(next, player.id)) return next;
+      const disfavor = createCardInstance(
+        CROWD_DISFAVOR.id,
+        'DISCARD',
+        player.id,
+        true
+      );
+      const updated = discardCardToPlayer(player, disfavor);
+      next.players = [...next.players];
+      next.players[playerIdx] = updated;
+      next.turnArenaResolved = true;
+      return next;
+    }
+
     case 'END_PHASE': {
       if (next.phase === 'MAIN') {
         return endTurnAndPass(next, playerIdx, player);
@@ -1859,6 +1921,8 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     pendingForcedOpponentDiscards: null,
     deferredTurnEnd: null,
     purchaseCostCap: null,
+    turnArenaResolved: false,
+    turnArenaExempt: false,
   };
 
   const nextPlayer = next.players[nextPlayerIdx];
@@ -2115,6 +2179,49 @@ export function getNextAIAction(state: GameState): GameAction | null {
             payload: { cardInstanceId: buyTarget.instanceId },
           };
         }
+      }
+      if (mustEnterArenaBeforeEndTurn(state, current.id)) {
+        if (current.playArea.length >= ARENA_MAX_COMMIT) {
+          const fighters = [...current.playArea]
+            .sort(
+              (a, b) => (b.definition?.valor ?? 0) - (a.definition?.valor ?? 0)
+            )
+            .slice(0, ARENA_MAX_COMMIT)
+            .map((c) => c.instanceId);
+          return {
+            ...base,
+            type: 'CONFIRM_ARENA_FIGHTERS',
+            payload: { cardInstanceIds: fighters },
+          };
+        }
+        if (current.hand.length > 0 && current.playArea.length < ARENA_MAX_COMMIT) {
+          const claimed = (state.turnBandingClaimed ?? []).filter(
+            (f): f is BandingFaction =>
+              f === 'Ludus' || f === 'Legion' || f === 'Senate'
+          );
+          const card = pickAICardToPlayFirst(
+            current.hand,
+            current.playArea,
+            claimed
+          );
+          const payload: GameAction['payload'] = {
+            cardInstanceId: card.instanceId,
+          };
+          if (requiresFactionChoiceOnPlay(card.definition)) {
+            payload.chosenFaction = chooseSpyFactionForAI(
+              current.playArea,
+              current.hand,
+              claimed,
+              state.turnNumber
+            );
+          }
+          return {
+            ...base,
+            type: 'PLAY_CARD',
+            payload,
+          };
+        }
+        return { ...base, type: 'DECLINE_ARENA' };
       }
       return { ...base, type: 'END_PHASE' };
     case 'CLEANUP':

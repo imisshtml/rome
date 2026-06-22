@@ -43,6 +43,7 @@ interface BoardSidebarRightProps {
   isLocalReady: boolean;
   readyCount: number;
   totalPlayers: number;
+  mainPhaseButtonLabel?: string;
   onEndPhase: () => void;
   onPlayerReady?: () => void;
   onPreviewLogCard?: (card: CardInstance) => void;
@@ -68,10 +69,14 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   isLocalReady,
   readyCount,
   totalPlayers,
+  mainPhaseButtonLabel,
   onEndPhase,
   onPreviewLogCard,
 }) => {
-  const buttonLabel = PHASE_BUTTON_LABELS[phase];
+  const buttonLabel =
+    phase === 'MAIN' && mainPhaseButtonLabel
+      ? mainPhaseButtonLabel
+      : PHASE_BUTTON_LABELS[phase];
   const iconSize = iconSizeForSidebar(width);
   const buttonSize = phaseButtonSize(width);
   const canPressEndTurn = !isPregame && isLocalTurn && phase === 'MAIN';

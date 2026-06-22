@@ -2,6 +2,22 @@
   "version": "1.0",
   "cards": [
     {
+      "id": "arena_opening_Games",
+      "name": "The Opening Games",
+      "image": "arena_opening_games.jpg",
+      "arena_type": "spectacle",
+      "tier": "easy",
+      "valor_required": 5,
+      "reward_vp": 3,
+      "effect_text": "Completing this challenge opens the Arena.",
+      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text_loss": "Gain 1 Disfavor",
+      "effects": {
+        "gain_vp": 3,
+        "gain_crowd_disfavor": 1
+      }
+    },
+    {
       "id": "arena_leopard",
       "name": "Leopard Hunt",
       "image": "arena_leopard.jpg",

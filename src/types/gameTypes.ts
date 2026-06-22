@@ -13,6 +13,7 @@ export type GameActionType =
   | 'BUY_CARD'
   | 'DISCARD_CARD'
   | 'END_PHASE'
+  | 'DECLINE_ARENA'
   | 'MOVE_CARD'
   | 'START_GAME'
   | 'PLAYER_READY'
@@ -162,6 +163,12 @@ export interface GameState {
     endingPlayerId: string;
     nextPlayerIdx: number;
   } | null;
+  /** Arena unlocked after The Opening Games is completed */
+  arenaOpen?: boolean;
+  /** Active player resolved mandatory arena (or declined) this turn */
+  turnArenaResolved?: boolean;
+  /** Active player exempt from mandatory arena this turn (card effect) */
+  turnArenaExempt?: boolean;
   /** Arena defeated this turn — replace card at end of turn */
   pendingArenaReplacement?: boolean;
   /** Max purchasable card cost until next turn (Grain Shortage) */

@@ -12,6 +12,7 @@ export const CARD_IMAGES: Record<string, ImageSourcePropType> = {
   'arena_lion.jpg': require('./arena/arena_lion.jpg'),
   'arena_lion2.jpg': require('./arena/arena_lion2.jpg'),
   'arena_naval_battle.jpg': require('./arena/arena_naval_battle.jpg'),
+  'arena_opening_games.jpg': require('./arena/arena_opening_games.jpg'),
   'arena_primus.jpg': require('./arena/arena_primus.jpg'),
   'arena_revolt.jpg': require('./arena/arena_revolt.jpg'),
   'charity.jpg': require('./charity.jpg'),

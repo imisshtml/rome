@@ -40,6 +40,7 @@ interface ArenaChallengeModalProps {
   challengerId: string;
   totalValor: number;
   lastResult: ArenaChallengeResult | null;
+  mandatory?: boolean;
 }
 
 export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
@@ -62,6 +63,7 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
   challengerId,
   totalValor,
   lastResult,
+  mandatory = false,
 }) => {
   const { width: screenW } = useWindowDimensions();
   const cardW = Math.min(92, (screenW - 96) / 4);
@@ -108,15 +110,18 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
         </View>
       ) : null}
       <Text style={styles.body}>
-        Enter the Arena to fight this challenge with 3 cards from your play area. Other players
-        may Support or Hinder you.
+        {mandatory
+          ? 'You must enter the Arena this turn. Choose 3 fighters from your play area. Declining adds Crowd Disfavor.'
+          : 'Enter the Arena to fight this challenge with 3 cards from your play area. Other players may Support or Hinder you.'}
       </Text>
       <View style={styles.actions}>
         <Pressable style={styles.primaryBtn} onPress={onEnterArena}>
           <Text style={styles.primaryBtnText}>Enter Arena</Text>
         </Pressable>
         <Pressable style={styles.secondaryBtn} onPress={onDecline}>
-          <Text style={styles.secondaryBtnText}>Decline</Text>
+          <Text style={styles.secondaryBtnText}>
+            {mandatory ? 'Decline (+1 Disfavor)' : 'Decline'}
+          </Text>
         </Pressable>
       </View>
     </>
