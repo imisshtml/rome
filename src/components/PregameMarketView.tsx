@@ -20,6 +20,8 @@ import GalleryCard from './GalleryCard';
 import GallerySectionHeader, {
   GALLERY_BOTTOM_COLUMN_FLEX,
 } from './GallerySectionHeader';
+import TutorialTarget from './TutorialTarget';
+import { useTutorialOptional } from '../context/TutorialContext';
 
 const TURN_BUTTON_ASPECT = 448 / 132;
 /** Slightly shrink gallery/epics from max fit (arena unchanged). */
@@ -148,8 +150,16 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
     () => computePregameSizes(width, height),
     [width, height]
   );
+  const tutorial = useTutorialOptional();
   const canPressStart = !isLocalReady;
   const buttonLabel = isLocalReady ? 'Waiting for others…' : 'Start Game';
+
+  const handleStartPress = () => {
+    if (tutorial?.isTargetClickRequired('tutorial_start_game')) {
+      tutorial.notifyTargetClicked('tutorial_start_game');
+    }
+    onStartGame();
+  };
 
   return (
     <View style={[styles.root, { width, height }]}>
@@ -164,22 +174,24 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.marketSection}>
-          <View
-            style={[
-              styles.galleryRow,
-              { gap: sizes.galleryGap, minHeight: sizes.galleryRowH },
-            ]}
-          >
-            {galleryCards.map((card) => (
-              <GalleryCard
-                key={card.instanceId}
-                card={card}
-                height={sizes.galleryCardSize}
-                onPress={onCardPress}
-                onLongPress={onCardPress}
-              />
-            ))}
-          </View>
+          <TutorialTarget targetKey="tutorial_market">
+            <View
+              style={[
+                styles.galleryRow,
+                { gap: sizes.galleryGap, minHeight: sizes.galleryRowH },
+              ]}
+            >
+              {galleryCards.map((card) => (
+                <GalleryCard
+                  key={card.instanceId}
+                  card={card}
+                  height={sizes.galleryCardSize}
+                  onPress={onCardPress}
+                  onLongPress={onCardPress}
+                />
+              ))}
+            </View>
+          </TutorialTarget>
           <GallerySectionHeader label="Market" />
         </View>
 
@@ -194,48 +206,54 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
           ]}
         >
           <View style={[styles.bottomSubColumn, styles.recruitSubColumn]}>
-            {recruitCard ? (
-              <GalleryCard
-                card={recruitCard}
-                height={sizes.epicSize}
-                onPress={onCardPress}
-                onLongPress={onCardPress}
-              />
-            ) : (
-              <Text style={styles.emptyArena}>—</Text>
-            )}
-            <GallerySectionHeader label="Recruits" size="expanded" />
-          </View>
-
-          <View style={[styles.bottomSubColumn, styles.arenaSubColumn]}>
-            {arenaCard ? (
-              <Card
-                card={arenaCard}
-                width={sizes.arenaW}
-                height={sizes.arenaH}
-                sizeMode="landscape"
-                onPress={onCardPress}
-                onLongPress={onCardPress}
-                hoverPreview
-              />
-            ) : (
-              <Text style={styles.emptyArena}>No arena challenge</Text>
-            )}
-            <GallerySectionHeader label="Arena" size="expanded" />
-          </View>
-
-          <View style={[styles.bottomSubColumn, styles.epicsSubColumn]}>
-            <View style={[styles.galleryRow, { gap: sizes.epicGap }]}>
-              {epicCards.map((card) => (
+            <TutorialTarget targetKey="tutorial_recruits">
+              {recruitCard ? (
                 <GalleryCard
-                  key={card.instanceId}
-                  card={card}
+                  card={recruitCard}
                   height={sizes.epicSize}
                   onPress={onCardPress}
                   onLongPress={onCardPress}
                 />
-              ))}
-            </View>
+              ) : (
+                <Text style={styles.emptyArena}>—</Text>
+              )}
+            </TutorialTarget>
+            <GallerySectionHeader label="Recruits" size="expanded" />
+          </View>
+
+          <View style={[styles.bottomSubColumn, styles.arenaSubColumn]}>
+            <TutorialTarget targetKey="tutorial_arena">
+              {arenaCard ? (
+                <Card
+                  card={arenaCard}
+                  width={sizes.arenaW}
+                  height={sizes.arenaH}
+                  sizeMode="landscape"
+                  onPress={onCardPress}
+                  onLongPress={onCardPress}
+                  hoverPreview
+                />
+              ) : (
+                <Text style={styles.emptyArena}>No arena challenge</Text>
+              )}
+            </TutorialTarget>
+            <GallerySectionHeader label="Arena" size="expanded" />
+          </View>
+
+          <View style={[styles.bottomSubColumn, styles.epicsSubColumn]}>
+            <TutorialTarget targetKey="tutorial_epics">
+              <View style={[styles.galleryRow, { gap: sizes.epicGap }]}>
+                {epicCards.map((card) => (
+                  <GalleryCard
+                    key={card.instanceId}
+                    card={card}
+                    height={sizes.epicSize}
+                    onPress={onCardPress}
+                    onLongPress={onCardPress}
+                  />
+                ))}
+              </View>
+            </TutorialTarget>
             <GallerySectionHeader label="Epics" size="wide" />
           </View>
         </View>
@@ -253,24 +271,26 @@ export const PregameMarketView: React.FC<PregameMarketViewProps> = ({
           {readyCount}/{totalPlayers} ready
         </Text>
 
-        <Pressable
-          onPress={onStartGame}
-          disabled={!canPressStart}
-          style={({ pressed }) => [
-            styles.buttonWrap,
-            !canPressStart && styles.buttonDisabled,
-            pressed && canPressStart && styles.buttonPressed,
-          ]}
-        >
-          <ImageBackground
-            source={turnButtonBg}
-            style={[styles.buttonBg, { width: sizes.buttonW, height: sizes.buttonH }]}
-            imageStyle={styles.buttonBgImage}
-            resizeMode="contain"
+        <TutorialTarget targetKey="tutorial_start_game">
+          <Pressable
+            onPress={handleStartPress}
+            disabled={!canPressStart}
+            style={({ pressed }) => [
+              styles.buttonWrap,
+              !canPressStart && styles.buttonDisabled,
+              pressed && canPressStart && styles.buttonPressed,
+            ]}
           >
-            <Text style={styles.buttonText}>{buttonLabel}</Text>
-          </ImageBackground>
-        </Pressable>
+            <ImageBackground
+              source={turnButtonBg}
+              style={[styles.buttonBg, { width: sizes.buttonW, height: sizes.buttonH }]}
+              imageStyle={styles.buttonBgImage}
+              resizeMode="contain"
+            >
+              <Text style={styles.buttonText}>{buttonLabel}</Text>
+            </ImageBackground>
+          </Pressable>
+        </TutorialTarget>
       </View>
     </View>
   );

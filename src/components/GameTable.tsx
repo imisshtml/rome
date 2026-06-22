@@ -44,6 +44,10 @@ import BandingBonusModal from './BandingBonusModal';
 import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
 import GalleryEventModal from './GalleryEventModal';
 import PregameMarketView from './PregameMarketView';
+import TutorialOverlay from './TutorialOverlay';
+import TutorialTarget from './TutorialTarget';
+import DebugPanel from './DebugPanel';
+import { useTutorial } from '../context/TutorialContext';
 import { getValorInPlay } from '../utils/combatStatsUtils';
 import { requiresFactionChoiceOnPlay, isCharityCard } from '../utils/cardFactionUtils';
 import { Faction } from '../types/cardTypes';
@@ -88,6 +92,15 @@ export const GameTable: React.FC = () => {
   const [tableScreenRect, setTableScreenRect] = useState({ x: 0, y: 0 });
   const tableRef = useRef<View>(null);
   const lastMarketTapRef = useRef<{ id: string; at: number } | null>(null);
+  const tutorialAutoStartedRef = useRef(false);
+  const {
+    isActive: tutorialActive,
+    isCompleted: tutorialCompleted,
+    startTutorial,
+    pendingActivePhase,
+    resumeActivePhase,
+    currentStep: tutorialStep,
+  } = useTutorial();
 
   const measureTable = useCallback(() => {
     tableRef.current?.measureInWindow((x, y) => {
@@ -99,6 +112,18 @@ export const GameTable: React.FC = () => {
     if (draggedCard) measureTable();
   }, [draggedCard, measureTable]);
 
+  useEffect(() => {
+    if (
+      isPregame &&
+      !tutorialCompleted &&
+      !tutorialActive &&
+      !tutorialAutoStartedRef.current
+    ) {
+      tutorialAutoStartedRef.current = true;
+      startTutorial();
+    }
+  }, [isPregame, tutorialCompleted, tutorialActive, startTutorial]);
+
   const localPlayer = useLocalPlayer();
   const opponents = state.players.filter((p) => p.id !== localPlayer?.id);
   const turnPlayer = getCurrentPlayer(state) ?? localPlayer;
@@ -107,6 +132,14 @@ export const GameTable: React.FC = () => {
   const arenaStats = getArenaChallengeStats(state.arenaCard);
 
   const isMainActive = state.status === 'active' && state.phase === 'MAIN';
+
+  useEffect(() => {
+    if (tutorialActive && pendingActivePhase && isMainActive) {
+      const timer = setTimeout(() => resumeActivePhase(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [tutorialActive, pendingActivePhase, isMainActive, resumeActivePhase]);
+
   const canInteract = isMainActive && isLocalTurn;
   const isLocalReady = localPlayer
     ? state.readyPlayerIds.includes(localPlayer.id)
@@ -127,6 +160,9 @@ export const GameTable: React.FC = () => {
     isMainActive &&
     mustEnterArenaBeforeEndTurn(state, localPlayer.id);
   const mainPhaseButtonLabel = mandatoryArenaPending ? 'Enter Arena' : undefined;
+  const showBandingKeyForTutorial =
+    tutorialActive && tutorialStep?.targetKey === 'tutorial_faction_key';
+  const showBandingKey = isMainActive || showBandingKeyForTutorial;
   const pendingArenaResponse =
     state.arenaChallenge?.pendingResponsePlayerIds.includes(localPlayer?.id ?? '') ?? false;
   const arenaChallengeTotal = getArenaChallengeTotalValor(state);
@@ -562,18 +598,21 @@ export const GameTable: React.FC = () => {
       <View ref={tableRef} style={styles.tableForeground} onLayout={measureTable}>
       {/* Opponents bar */}
       <View style={[styles.opponentsBar, { height: layout.opponentsBarH }]}>
-        {opponents.length > 0 ? (
-          <OpponentStrip
-            opponents={opponents}
-            turnPlayerId={state.turnPlayerId}
-            turnCoins={state.turnCoins}
-            turnValor={state.turnValor}
-            barHeight={layout.opponentsBarH}
-            onPressOpponent={handleOpponentPress}
-          />
-        ) : (
-          <Text style={styles.opponentsPlaceholder}>Opponents</Text>
-        )}
+        <TutorialTarget targetKey="tutorial_opponents" style={styles.opponentsBarContent}>
+          {opponents.length > 0 ? (
+            <OpponentStrip
+              opponents={opponents}
+              turnPlayerId={state.turnPlayerId}
+              turnCoins={state.turnCoins}
+              turnValor={state.turnValor}
+              barHeight={layout.opponentsBarH}
+              onPressOpponent={handleOpponentPress}
+            />
+          ) : (
+            <Text style={styles.opponentsPlaceholder}>Opponents</Text>
+          )}
+        </TutorialTarget>
+        <DebugPanel inOpponentsBar />
       </View>
 
       {/* Main board: sidebars span gallery + play + hand */}
@@ -582,8 +621,12 @@ export const GameTable: React.FC = () => {
           width={layout.sidebarW}
           stackW={layout.stackW}
           stackH={layout.stackH}
+          playerStackW={layout.playerStackW}
+          playerStackH={layout.playerStackH}
+          playerStackGap={layout.playerStackGap}
           stackGap={layout.stackGap}
           galleryDeck={state.gallerySupply ?? []}
+          epicDeck={state.epicSupply ?? []}
           flavorDeck={state.flavorDeck}
           disfavorDeck={state.disfavorDeck}
           playerDeck={localPlayer?.deck ?? []}
@@ -727,6 +770,7 @@ export const GameTable: React.FC = () => {
 
           {/* Play field + hand */}
           <View style={[styles.bodyColumn, { flex: 1 }]}>
+            <TutorialTarget targetKey="tutorial_play_zone" style={styles.playTargetWrap}>
             <DropZone
               id="play_area"
               zoneType="PLAY_AREA"
@@ -774,7 +818,9 @@ export const GameTable: React.FC = () => {
                 )}
               </View>
             </DropZone>
+            </TutorialTarget>
 
+            <TutorialTarget targetKey="tutorial_hand">
             <View style={[styles.handZone, { height: layout.handZoneH }]}>
               {pendingHandDiscard && (
                 <Text style={styles.handDiscardPrompt}>
@@ -792,7 +838,7 @@ export const GameTable: React.FC = () => {
                   cardHeight={layout.handCardH}
                   canPlayAllCharity={canPlayAllCharity}
                   onPlayAllCharity={handlePlayAllCharity}
-                  showBandingKey={isMainActive}
+                  showBandingKey={showBandingKey}
                   playArea={
                     isTurnPlayerLocal ? (localPlayer?.playArea ?? []) : []
                   }
@@ -807,6 +853,7 @@ export const GameTable: React.FC = () => {
                 />
               </View>
             </View>
+            </TutorialTarget>
           </View>
             </>
           )}
@@ -919,6 +966,7 @@ export const GameTable: React.FC = () => {
         lastResult={state.lastArenaResult ?? null}
         mandatory={mandatoryArenaPending}
       />
+      <TutorialOverlay />
       </View>
     </FullBleedBackground>
   );
@@ -937,10 +985,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   opponentsBar: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'transparent',
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(212,175,55,0.3)',
+    paddingRight: 44,
+  },
+  opponentsBarContent: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
   },
   opponentsPlaceholder: {
     color: 'rgba(255,255,255,0.35)',
@@ -1017,6 +1074,10 @@ const styles = StyleSheet.create({
     minHeight: 0,
     marginTop: 6,
     gap: 6,
+  },
+  playTargetWrap: {
+    flex: 1,
+    minHeight: 0,
   },
   playField: {
     backgroundColor: 'transparent',

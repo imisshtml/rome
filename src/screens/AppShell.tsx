@@ -5,7 +5,6 @@ import LandingScreen from './LandingScreen';
 import LobbyScreen from './LobbyScreen';
 import PostGameScreen from './PostGameScreen';
 import GameTable from '../components/GameTable';
-import DebugPanel from '../components/DebugPanel';
 
 export const AppShell: React.FC = () => {
   const { phase } = useMultiplayer();
@@ -25,7 +24,6 @@ export const AppShell: React.FC = () => {
   return (
     <View style={styles.game}>
       <GameTable />
-      <DebugPanel />
     </View>
   );
 };

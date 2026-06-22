@@ -3,6 +3,7 @@ import { View, StyleSheet, LayoutRectangle } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { CROWD_DISFAVOR } from '../game/CardDefinitions';
 import CardStack from './CardStack';
+import TutorialTarget from './TutorialTarget';
 
 const DISFAVOR_SUPPLY_FACE: CardInstance = {
   instanceId: 'disfavor_supply_face',
@@ -17,8 +18,12 @@ interface BoardSidebarLeftProps {
   width: number;
   stackW: number;
   stackH: number;
+  playerStackW: number;
+  playerStackH: number;
+  playerStackGap: number;
   stackGap: number;
   galleryDeck: CardInstance[];
+  epicDeck: CardInstance[];
   flavorDeck: CardInstance[];
   disfavorDeck: CardInstance[];
   playerDeck: CardInstance[];
@@ -27,20 +32,35 @@ interface BoardSidebarLeftProps {
   onDiscardLayout?: (layout: LayoutRectangle) => void;
 }
 
-const STACKS = [
-  { key: 'gallery', label: 'Gallery', color: '#6B3FA0', icon: '🛡', useCardBack: true, cardBackOverlay: false },
-  { key: 'favor', label: 'Favors', color: '#3D8B5A', icon: '🌿', useCardBack: true, cardBackOverlay: false },
-  { key: 'disfavor', label: 'Disfavor', color: '#2C3E50', useCardBack: false, showCount: false, cardBackOverlay: false },
-  { key: 'deck', label: 'Deck', color: '#8B6914', icon: '📚', useCardBack: true, cardBackOverlay: false },
-  { key: 'discard', label: 'Discard', color: '#3A3A48', icon: '🗑', useCardBack: true, cardBackOverlay: false },
+const SUPPLY_STACKS = [
+  { key: 'gallery', label: 'Market', color: '#6B3FA0', useCardBack: true, cardBackOverlay: false },
+  { key: 'epics', label: 'Epics', color: '#8B5A2B', useCardBack: true, cardBackOverlay: false },
+  { key: 'favor', label: 'Favors', color: '#3D8B5A', useCardBack: true, cardBackOverlay: false },
+  {
+    key: 'disfavor',
+    label: 'Disfavor',
+    color: '#2C3E50',
+    useCardBack: false,
+    showCount: false,
+    cardBackOverlay: false,
+  },
+] as const;
+
+const PLAYER_STACKS = [
+  { key: 'discard', label: 'Discard', color: '#3A3A48', useCardBack: true, cardBackOverlay: false },
+  { key: 'deck', label: 'Deck', color: '#8B6914', useCardBack: true, cardBackOverlay: false },
 ] as const;
 
 export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
   width,
   stackW,
   stackH,
+  playerStackW,
+  playerStackH,
+  playerStackGap,
   stackGap,
   galleryDeck,
+  epicDeck,
   flavorDeck,
   disfavorDeck,
   playerDeck,
@@ -58,68 +78,90 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
 
   useEffect(() => {
     reportDiscardLayout();
-  }, [stackW, stackH, playerDiscard.length, reportDiscardLayout]);
+  }, [playerStackW, playerStackH, playerDiscard.length, reportDiscardLayout]);
 
   const cardsByKey: Record<string, CardInstance[]> = useMemo(
     () => ({
       gallery: galleryDeck,
+      epics: epicDeck,
       favor: flavorDeck,
-      disfavor:
-        disfavorDeck.length > 0 ? disfavorDeck : [DISFAVOR_SUPPLY_FACE],
+      disfavor: disfavorDeck.length > 0 ? disfavorDeck : [DISFAVOR_SUPPLY_FACE],
       deck: playerDeck,
       discard: playerDiscard,
     }),
-    [galleryDeck, flavorDeck, disfavorDeck, playerDeck, playerDiscard]
+    [galleryDeck, epicDeck, flavorDeck, disfavorDeck, playerDeck, playerDiscard]
   );
+
+  const renderSupplyStack = (stack: (typeof SUPPLY_STACKS)[number]) => {
+    const cards = cardsByKey[stack.key];
+    const stackEl = (
+      <CardStack
+        key={stack.key}
+        cards={cards}
+        label={stack.key === 'disfavor' ? '' : stack.label}
+        color={stack.color}
+        width={stackW}
+        height={stackH}
+        sidebarStack
+        useCardBack={stack.useCardBack}
+        showTopCardFace={stack.key === 'disfavor'}
+        showCount={'showCount' in stack ? stack.showCount : true}
+        cardBackOverlay={stack.cardBackOverlay}
+      />
+    );
+    if (stack.key === 'favor') {
+      return (
+        <TutorialTarget key={stack.key} targetKey="tutorial_favors">
+          {stackEl}
+        </TutorialTarget>
+      );
+    }
+    return <React.Fragment key={stack.key}>{stackEl}</React.Fragment>;
+  };
+
+  const renderPlayerStack = (stack: (typeof PLAYER_STACKS)[number]) => {
+    const cards = cardsByKey[stack.key];
+    const hasDiscardCards = stack.key === 'discard' && playerDiscard.length > 0;
+
+    const stackEl = (
+      <CardStack
+        key={stack.key}
+        cards={cards}
+        label={stack.label}
+        color={stack.color}
+        width={playerStackW}
+        height={playerStackH}
+        sidebarStack
+        useCardBack={
+          stack.key === 'discard' ? !hasDiscardCards : stack.useCardBack
+        }
+        showTopCardFace={stack.key === 'discard' && hasDiscardCards}
+        cardBackOverlay={
+          stack.key === 'discard' ? !hasDiscardCards : stack.cardBackOverlay
+        }
+        onPress={stack.key === 'discard' ? onDiscardPress : undefined}
+      />
+    );
+
+    if (stack.key !== 'discard') {
+      return stackEl;
+    }
+
+    return (
+      <View key={stack.key} ref={discardRef} onLayout={reportDiscardLayout}>
+        {stackEl}
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.sidebar, { width, gap: stackGap }]}>
-      {STACKS.map((stack) => {
-        const cards = cardsByKey[stack.key];
-        const hasDiscardCards = stack.key === 'discard' && playerDiscard.length > 0;
-
-        const stackEl = (
-          <CardStack
-            key={stack.key}
-            cards={cards}
-            label={stack.key === 'disfavor' ? '' : stack.label}
-            color={stack.color}
-            width={stackW}
-            height={stackH}
-            sidebarStack
-            useCardBack={
-              stack.key === 'discard'
-                ? !hasDiscardCards
-                : stack.useCardBack
-            }
-            showTopCardFace={
-              stack.key === 'disfavor' ||
-              (stack.key === 'discard' && hasDiscardCards)
-            }
-            showCount={'showCount' in stack ? stack.showCount : true}
-            cardBackOverlay={
-              stack.key === 'discard'
-                ? !hasDiscardCards
-                : stack.cardBackOverlay
-            }
-            onPress={stack.key === 'discard' ? onDiscardPress : undefined}
-          />
-        );
-
-        if (stack.key !== 'discard') {
-          return stackEl;
-        }
-
-        return (
-          <View
-            key={stack.key}
-            ref={discardRef}
-            onLayout={reportDiscardLayout}
-          >
-            {stackEl}
-          </View>
-        );
-      })}
+      {SUPPLY_STACKS.map(renderSupplyStack)}
+      <TutorialTarget targetKey="tutorial_deck_discard">
+        <View style={[styles.playerRow, { gap: playerStackGap }]}>
+          {PLAYER_STACKS.map(renderPlayerStack)}
+        </View>
+      </TutorialTarget>
     </View>
   );
 };
@@ -136,6 +178,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 0,
     overflow: 'hidden',
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
 });
 

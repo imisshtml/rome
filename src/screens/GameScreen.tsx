@@ -7,6 +7,7 @@ import {
 } from 'react-native-safe-area-context';
 import { Provider as JotaiProvider } from 'jotai';
 import { MultiplayerProvider } from '../network/MultiplayerProvider';
+import { TutorialProvider } from '../context/TutorialContext';
 import AppShell from './AppShell';
 
 export const GameScreen: React.FC = () => {
@@ -15,9 +16,11 @@ export const GameScreen: React.FC = () => {
       <JotaiProvider>
         <GestureHandlerRootView style={styles.root}>
           <MultiplayerProvider>
-            <View style={styles.container}>
-              <AppShell />
-            </View>
+            <TutorialProvider>
+              <View style={styles.container}>
+                <AppShell />
+              </View>
+            </TutorialProvider>
           </MultiplayerProvider>
         </GestureHandlerRootView>
       </JotaiProvider>

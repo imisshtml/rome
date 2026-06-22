@@ -9118,3 +9118,3969 @@ Fixed in `fromArenaCard` via `buildArenaDisplayText`:
 3. **Neither** → old fallback string
 
 Previously it always preferred `effect_text_win`, which hid `effect_text` on Opening Games.
+
+---
+
+_**User**_
+
+Ok, lets setup a tutorial system!
+I added to the workspace our other project WoTf, which has tutorial setup for its game. I want to offer the same type of solution here. @wotf-app/assets/images/tutorial @wotf-app/src/context/TutorialContext.tsx @wotf-app/src/components/UI/TutorialOverlay.tsx 
+
+The tutorial for our game though should launch on the initial PREVIEW screen. It should detail each of the card aspects and end with start game.
+Steps:
+- Welcome: welcome greeting explaining this is a quick tutorial of the game layout.
+- Highlight market/gallery, first the market cards, describe that these 6 cards are the market and will replenish themselves as they are purchased, these are the core of your deck.
+- Recruits, is an always available pile of random faction cards that supply a base +2 coin, its random on which faction is available
+- Epics are the core high cards that provide large advantages typically. When this supply pile runs out, the game is over.
+- Arena, the arena allow for players to challenge the arena to gain victory points for completing it. When challenged, you can select up to 3 cards of yours in play to apply their Valor against that of the Arena. Opponents can submit 1 card each in Support or in Sabotage of your challenge. Many cards have different ways they can assist or protect you in the Arena.
+- Favors, these are gained through other cards being played and offer a temporary advantage
+- Deck/Discard this is your deck and discard pile, as you gain cards, they are put in the dicard, and as you use cards they too are put into the dicard. At the end of a turn, you discard your hand and redraw a new hand.
+- Start Game, once you have finished reviewing hte starting game board, you let the other players know you are ready by selecting to start game.
+(after start game is clicked)
+- Hand, (highlight hand) this is your hand, it consists of 5 cards, though some cards may alter this over time. You can drag cards from hand into the Play zone above.
+- Play zone, this sonze is where you play cards from hand to purchase from the market, epics, or to initiate an effect. Cards for the Arena challenge must be played here also for them to be able to fight. in the arena.
+- Faction Key (highlight left of hand) the faction key tracks how many cards this turn you have played from a faction. Playing 3 grants you a bonus!
+- Icons, (highlight the icons to the right of hte hand), these are tracking for your current Coins in play, current Valor from cards in play, and total Victory Points earned so far.
+- End Turn/Enter Arena button, this button allows you to pass the current turn or phase, depending on what part of hte game you are within.
+- Opponents (highlight opponents at top), your opponents totals and hand are seen here, so you can track them.
+- Game log, provides details of what has been played for each player, each turn.
+
+---
+
+_**Agent (composer-2.5)**_
+
+Reviewing WoTf's tutorial implementation and our pregame/preview screen structure.
+
+
+_**Agent (composer-2.5)**_
+
+File not found
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+File not found
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **** (0 files)
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "Pregame|PREVIEW|Landing|preview"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "Pregame|PREVIEW|Landing|preview",
+  "topFiles": [
+    {
+      "matchCount": 5,
+      "uri": "src/components/CardHoverPreview.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/components/Card.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/game/index.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/components/PregameMarketView.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "src/network/MultiplayerProvider.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/network/GameSyncService.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "src/network/MultiplayerClient.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/LobbyScreen.tsx"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src/components/BoardSidebarRight.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/AppShell.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/components/index.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/PostGameScreen.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/utils/cardDisplayUtils.ts"
+    },
+    {
+      "matchCount": 24,
+      "uri": "src/components/GameTable.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/components/CardPreviewModal.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/components/CardFace.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/utils/cardLogUtils.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/game/GameEngine.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/LandingScreen.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/components/GameLogPanel.tsx"
+    }
+  ],
+  "totalFiles": 20,
+  "totalMatches": 77
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **** (0 files)
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **** (0 files)
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **** (0 files)
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: find /Users/claudewild/Documents/GIT -maxdepth 3 -name "TutorialContext.tsx" 2>/dev/null | head -10</summary>
+
+```bash
+find /Users/claudewild/Documents/GIT -maxdepth 3 -name "TutorialContext.tsx" 2>/dev/null | head -10
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: find /Users/claudewild/Documents -name "TutorialOverlay.tsx" 2>/dev/null | head -5; ls /Users/claudewild/Documents/GIT/ 2>/dev/null</summary>
+
+```bash
+find /Users/claudewild/Documents -name "TutorialOverlay.tsx" 2>/dev/null | head -5; ls /Users/claudewild/Documents/GIT/ 2>/dev/null
+```
+
+```
+]633;C/Users/claudewild/Documents/GIT/wotf/wotf-app/src/components/UI/TutorialOverlay.tsx
+ARCHIVE
+Collections
+Concepts
+Examples
+GWServer
+GladiatorWars
+GladiatorWars.code-workspace
+RiftboundCodex
+RubiksDuel
+RubiksDuelExpo
+RubiksDuelServer
+RubiksOriginal
+behavioral-tracking-app
+brds
+brds_llm
+brds_test
+bta-microservice
+bta_docker
+cats
+chatgpt 3
+cruise
+deck_builder
+dominion_tracking
+imissCards
+nutri
+oms_mobile
+rpg-stream
+rubiks_bolt
+storylines
+storylines-bolt
+storylines-services
+storylines-website
+storyvotes
+storyvotes.code-workspace
+surfries
+wotf
+]633;D;0
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/AppShell.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarLeft.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PlayerHand.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/.cursor/projects/Users-claudewild-Documents-GIT-deck-builder/terminals/994441.txt</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **10000** results in **1** directory</summary>
+
+Directory: **/Users/claudewild/Documents/GIT/deck_builder** (10000 files)
+
+| File |
+|------|
+| `.specstory/history/2026-06-20_03-38-39Z-factions-comparison-csv-generation.md` |
+| `.specstory/statistics.json` |
+| `.git/gk/config` |
+| `src/components/BoardSidebarLeft.tsx` |
+| `src/utils/boardLayout.ts` |
+| `src/components/GameTable.tsx` |
+| `.specstory/history/2026-03-17_04-18-06Z-initial-game-table-framework-design.md` |
+| `.specstory/.project.json` |
+| `.git/logs/refs/remotes/origin/master` |
+| `.git/refs/remotes/origin/master` |
+| `.git/logs/refs/heads/master` |
+| `.git/logs/HEAD` |
+| `.git/refs/heads/master` |
+| `.git/COMMIT_EDITMSG` |
+| `.git/objects/a8/00a19096e216eaf1181da755b3a02bdd2114f1` |
+| `src/game/CardCatalog.ts` |
+| `src/game/GameEngine.ts` |
+| `src/components/ArenaChallengeModal.tsx` |
+| `src/components/BoardSidebarRight.tsx` |
+| `src/game/TurnManager.ts` |
+| `src/game/CardDefinitions.ts` |
+| `src/types/gameTypes.ts` |
+| `src/assets/images/cardImages.ts` |
+| `src/utils/arenaUtils.ts` |
+| `cards_arena.json` |
+| `src/screens/LandingScreen.tsx` |
+| `src/assets/images/index.ts` |
+| `.git/objects/0f/c40a03bab35451f7949374304c6274a6fc8de9` |
+| `src/components/PregameMarketView.tsx` |
+| `src/components/GallerySectionHeader.tsx` |
+| `.git/objects/b8/16a3fb2fc20bd07cdd92d11fe6f42bbe6ee704` |
+| `.git/objects/60/18b07b3f2f0e6c93adf45214b33d1dc5da9ee3` |
+| `src/components/BandingKeyChart.tsx` |
+| `src/components/PlayerHand.tsx` |
+| `cards_factions.json` |
+| `game_basis.md` |
+| `src/utils/bandingUtils.ts` |
+| `.git/objects/22/919f12237d0cfd22a3d09b767685e976bcaa05` |
+| `.git/objects/ec/64d62b5e84d79975016a094a9794cd8c853af0` |
+| `src/utils/deckCycleUtils.ts` |
+| `.git/objects/d0/de13bd6442027055d0fe02b3aba327e3915a74` |
+| `cards_factions.csv` |
+| `src/types/cardTypes.ts` |
+| `.git/objects/41/3a2b36097c41cb311cb45d154e818e16fbb437` |
+| `.git/objects/a5/72b9c475336e8ed424c48cd707ad558f4e7af3` |
+| `src/components/ForcedOpponentDiscardModal.tsx` |
+| `src/utils/forcedDiscardUtils.ts` |
+| `src/components/Card.tsx` |
+| `src/components/BandingBonusModal.tsx` |
+| `src/game/EventResolver.ts` |
+| `src/utils/combatStatsUtils.ts` |
+| `cards_events.json` |
+| `src/utils/cardFactionUtils.ts` |
+| `src/components/FactionChoiceModal.tsx` |
+| `src/components/CardFace.tsx` |
+| `src/utils/factionIconAssets.ts` |
+| `src/components/OpponentStrip.tsx` |
+| `src/game/EffectResolver.ts` |
+| `src/components/DebugPanel.tsx` |
+| `src/components/PlayerArea.tsx` |
+| `src/components/GameLogPanel.tsx` |
+| `src/utils/cardLogUtils.ts` |
+| `src/components/GalleryCard.tsx` |
+| `src/network/MultiplayerClient.ts` |
+| `src/components/GalleryEventModal.tsx` |
+| `.git/objects/06/9ce045f9d6f00c974257ee5fb8939745c2e032` |
+| `src/components/DropZone.tsx` |
+| `src/components/CardPreviewModal.tsx` |
+| `.git/objects/8a/66ddfd02d71a65228d41846c3961b7ef51ee1a` |
+| `node_modules/.package-lock.json` |
+| `package-lock.json` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/maven-metadata.xml` |
+| `node_modules/expo-linear-gradient/android/src/main/AndroidManifest.xml` |
+| `node_modules/expo-linear-gradient/src/NativeLinearGradient.web.tsx` |
+| `node_modules/expo-linear-gradient/src/NativeLinearGradient.tsx` |
+| `node_modules/expo-linear-gradient/src/NativeLinearGradient.ios.tsx` |
+| `node_modules/expo-linear-gradient/src/NativeLinearGradient.android.tsx` |
+| `node_modules/expo-linear-gradient/src/LinearGradient.tsx` |
+| `node_modules/expo-linear-gradient/src/normalizeColor.ts` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.web.d.ts` |
+| `node_modules/expo-linear-gradient/build/normalizeColor.d.ts` |
+| `node_modules/expo-linear-gradient/src/NativeLinearGradient.types.ts` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.types.d.ts` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.ios.d.ts` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.d.ts` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.android.d.ts` |
+| `node_modules/expo-linear-gradient/build/LinearGradient.d.ts` |
+| `node_modules/expo-linear-gradient/ios/LinearGradientView.swift` |
+| `node_modules/expo-linear-gradient/ios/LinearGradientModule.swift` |
+| `node_modules/expo-linear-gradient/ios/LinearGradientLayer.swift` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/maven-metadata.xml.sha512` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.pom.sha512` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.module.sha512` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.aar.sha512` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14-sources.jar.sha512` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/maven-metadata.xml.sha256` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.pom.sha256` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.module.sha256` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.aar.sha256` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14-sources.jar.sha256` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/maven-metadata.xml.sha1` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.pom.sha1` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.module.sha1` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.aar.sha1` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14-sources.jar.sha1` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.pom` |
+| `node_modules/expo-linear-gradient/ios/ExpoLinearGradient.podspec` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.module` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/maven-metadata.xml.md5` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.pom.md5` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.module.md5` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14.aar.md5` |
+| `node_modules/expo-linear-gradient/local-maven-repo/host/exp/exponent/expo.modules.lineargradient/55.0.14/expo.modules.lineargradient-55.0.14-sources.jar.md5` |
+| `node_modules/expo-linear-gradient/README.md` |
+| `node_modules/expo-linear-gradient/CHANGELOG.md` |
+| `node_modules/expo-linear-gradient/build/normalizeColor.js.map` |
+| `node_modules/expo-linear-gradient/build/normalizeColor.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.web.js.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.web.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.types.js.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.types.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.js.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.ios.js.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.ios.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.android.js.map` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.android.d.ts.map` |
+| `node_modules/expo-linear-gradient/build/LinearGradient.js.map` |
+| `node_modules/expo-linear-gradient/build/LinearGradient.d.ts.map` |
+| `node_modules/expo-linear-gradient/android/src/main/java/expo/modules/lineargradient/LinearGradientModule.kt` |
+| `node_modules/expo-linear-gradient/tsconfig.json` |
+| `node_modules/expo-linear-gradient/spm.config.json` |
+| `node_modules/expo-linear-gradient/package.json` |
+| `node_modules/expo-linear-gradient/expo-module.config.json` |
+| `node_modules/expo-linear-gradient/build/normalizeColor.js` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.web.js` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.types.js` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.js` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.ios.js` |
+| `node_modules/expo-linear-gradient/build/NativeLinearGradient.android.js` |
+| `node_modules/expo-linear-gradient/build/LinearGradient.js` |
+| `node_modules/expo-linear-gradient/jest-rsc.config.js` |
+| `node_modules/expo-linear-gradient/.eslintrc.js` |
+| `node_modules/expo-linear-gradient/android/src/main/java/expo/modules/lineargradient/LinearGradientView.java` |
+| `node_modules/expo-linear-gradient/android/build.gradle` |
+| `package.json` |
+| `.git/objects/95/ff77ddaf3d99c30314daa3bf07c8769ae383e2` |
+| `.git/objects/1a/9de48f2ad527365f1614f2756ff0e338766d93` |
+| `.git/objects/c0/9ef9316e9b460213003a6d347f676f01444000` |
+| `.git/objects/dc/7791dc760e80b829d9aad748173cf76ff0ed18` |
+| `src/components/CardStack.tsx` |
+| `src/components/CardHoverPreview.tsx` |
+| `src/game/index.ts` |
+| `.git/objects/92/b71caf76d1a3b4428d25ed646be452c1b936e8` |
+| `.git/objects/c3/44daada3ade0013cbdce5ab83e481838f9f992` |
+| `.git/objects/80/a2c32168891c578566f61c213ec3fa4a3a3c58` |
+| `.git/objects/3e/0618772b6eb27ba1834433e441b57455e606bb` |
+| `.git/objects/1b/b92d525f02212ec2f41ab6a7e75da7cd7d705f` |
+| `.vscode/settings.json` |
+| `effects_schema.json` |
+| `src/utils/dragHelpers.ts` |
+| `src/types/effectsTypes.ts` |
+| `.git/objects/e7/8c40e3219bad13f1e2b26edf2d88e63ffef52f` |
+| `src/components/DiscardModal.tsx` |
+| `.git/objects/7f/bc155fed3b353f0503879a892396fbabeed49c` |
+| `src/network/MultiplayerProvider.tsx` |
+| `src/store/useGameStore.ts` |
+| `src/network/GameSyncService.ts` |
+| `.git/objects/e7/000d3ca19f86818ba60e8bdb573a3e08833b1f` |
+| `.git/objects/05/4739baf8d9f9dcd1675d7f7fd63e8b37ab450b` |
+| `.git/objects/c3/ec065374c368b508bcd7774129bc2a1400c35c` |
+| `.git/objects/66/e95600eea06eed64ea7e524de1d01fa537e9d4` |
+| `.git/objects/48/def05e3d733009fe9d4c1c59962a5b5c1a121a` |
+| `.git/objects/f9/a660a24e64fe023bdeed3dc55a903a55980dd2` |
+| `src/utils/cardDisplayUtils.ts` |
+| `.git/objects/a3/e7c063df9d37d101f34ead93d73151cee58b63` |
+| `.git/objects/23/7d059bc328398791bf92ed3a04ae05e327ea50` |
+| `.git/objects/35/dcf659efd55a10893a4638c5f83c9eae1dd29e` |
+| `src/screens/PostGameScreen.tsx` |
+| `src/components/FullBleedBackground.tsx` |
+| `src/screens/AppShell.tsx` |
+| `src/screens/LobbyScreen.tsx` |
+| `public/index.html` |
+| `src/screens/GameScreen.tsx` |
+| `src/utils/safeViewport.ts` |
+| `src/components/index.ts` |
+| `.git/objects/e4/263d35d2c87c11a4314bebc1c8b279790feb8a` |
+| `.git/objects/93/419304a320cf5ebf82eedeaecf5d21684f648e` |
+| `.git/objects/d4/3b669ceb5059496e021ffde5811952e039f8d0` |
+| `scripts/populate-faction-effects.mjs` |
+| `.git/objects/4c/18211dd04ee2e6198276c04f9858ec7abb1087` |
+| `.git/objects/ec/9842431075ff6d41fbc9dc68f170444d66c6e9` |
+| `tsconfig.json` |
+| `src/game/postGame.ts` |
+| `.git/objects/fa/496e09c4d732ba2e6f35c6cb2478156443ddeb` |
+| `cards_favor.json` |
+| `src/types/index.ts` |
+| `.git/config` |
+| `.git/objects/78/8998a0955b3d3f4aba7da661cc50a136250315` |
+| `.git/objects/88/f6819f9e6c9c2e53faa0712df08328b3249137` |
+| `src/components/PhaseBar.tsx` |
+| `.git/objects/d3/4bcee55e38606d11aa37c56c77ddfa7ec89413` |
+| `.git/objects/d0/92102f648fe9911a9f2e550d7da58cf19fd864` |
+| `.git/objects/12/44e6681e8225f6eb1c6edbe68348464505517a` |
+| `.git/objects/ff/52cfd5f2327f8fa263cdd1f562393c14d30d4b` |
+| `.git/objects/e8/5671f3a26e458af969ea979c0351b6e7fb0f45` |
+| `.git/objects/01/fb5c2cacce2a822adfc1a8ea18395bbff42371` |
+| `src/lib/env.ts` |
+| `supabase/README.md` |
+| `src/network/index.ts` |
+| `.env.example` |
+| `src/game/GameState.ts` |
+| `src/lib/supabase.ts` |
+| `supabase/migrations/001_initial_schema.sql` |
+| `.git/objects/34/ba97d55ca2b71e05fc9fa7248597b80050944f` |
+| `.git/objects/81/dbd7d334a6431af046dfa18cfedcbfa5797511` |
+| `.git/objects/96/3f263915aeaff5e85ed9e7ff1f036326d8939f` |
+| `.git/objects/20/c1015043e1a27847dbeac5b870c4c4ba299d63` |
+| `.git/objects/b2/c2eabd4f3a40f043ab073363deefef83383918` |
+| `.git/objects/e6/f4dacd64895b1b857d7e26bec65c223a1a10ff` |
+| `.git/objects/3c/be63a0b1ee2511cb4cd312046ab421fb0df0ce` |
+| `.git/objects/95/3908e7300307564e995f6189d5fc88a6d926bc` |
+| `.git/objects/3c/d8ec9eb5fcbe9444b9774f82e37cbafac9049e` |
+| `.git/objects/18/f3b40f685e57ec693c261b6b3879dccc45fbfc` |
+| `.git/objects/b5/a869fefd923fca9513ae84f40e108fb378d95e` |
+| `src/utils/layoutTier.ts` |
+| `.specstory/cli/config.toml` |
+| `.cursorindexingignore` |
+| `.git/cursor/crepe/71b870f66a5a4bf52ab1d31768afab1ea34781ad/metadata.json` |
+| `App.tsx` |
+| `metro.config.js` |
+| `babel.config.js` |
+| `node_modules/babel-plugin-transform-import-meta/lib/index.d.ts` |
+| `node_modules/babel-plugin-transform-import-meta/lib/index.esm.mjs` |
+| `node_modules/babel-plugin-transform-import-meta/README.md` |
+| `node_modules/babel-plugin-transform-import-meta/package.json` |
+| `node_modules/babel-plugin-transform-import-meta/lib/index.js` |
+| `node_modules/babel-plugin-transform-import-meta/LICENSE` |
+| `app.json` |
+| `.expo/devices.json` |
+| `.expo/README.md` |
+| `node_modules/babel-preset-expo/build/widgets-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/web-preset.d.ts` |
+| `node_modules/babel-preset-expo/build/server-data-loaders-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/use-dom-directive-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/server-actions-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/restricted-react-api-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/minify-platform-select-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/lazyImports.d.ts` |
+| `node_modules/babel-preset-expo/build/inline-env-vars.d.ts` |
+| `node_modules/babel-preset-expo/build/index.d.ts` |
+| `node_modules/babel-preset-expo/build/import-meta-transform-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/expo-router-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/environment-restricted-imports.d.ts` |
+| `node_modules/babel-preset-expo/build/expo-inline-manifest-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/detect-dynamic-exports.d.ts` |
+| `node_modules/babel-preset-expo/build/define-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/common.d.ts` |
+| `node_modules/babel-preset-expo/build/client-module-proxy-plugin.d.ts` |
+| `node_modules/babel-preset-expo/build/babel-plugin-transform-export-namespace-from.d.ts` |
+| `node_modules/babel-preset-expo/README.md` |
+| `node_modules/babel-preset-expo/package.json` |
+| `node_modules/babel-preset-expo/build/widgets-plugin.js` |
+| `node_modules/babel-preset-expo/build/web-preset.js` |
+| `node_modules/babel-preset-expo/build/use-dom-directive-plugin.js` |
+| `node_modules/babel-preset-expo/build/server-data-loaders-plugin.js` |
+| `node_modules/babel-preset-expo/build/server-actions-plugin.js` |
+| `node_modules/babel-preset-expo/build/restricted-react-api-plugin.js` |
+| `node_modules/babel-preset-expo/build/minify-platform-select-plugin.js` |
+| `node_modules/babel-preset-expo/build/lazyImports.js` |
+| `node_modules/babel-preset-expo/lazy-imports-blacklist.js` |
+| `node_modules/babel-preset-expo/build/inline-env-vars.js` |
+| `node_modules/babel-preset-expo/build/index.js` |
+| `node_modules/babel-preset-expo/build/import-meta-transform-plugin.js` |
+| `node_modules/babel-preset-expo/build/expo-router-plugin.js` |
+| `node_modules/babel-preset-expo/build/expo-inline-manifest-plugin.js` |
+| `node_modules/babel-preset-expo/build/environment-restricted-imports.js` |
+| `node_modules/babel-preset-expo/build/detect-dynamic-exports.js` |
+| `node_modules/babel-preset-expo/build/define-plugin.js` |
+| `node_modules/babel-preset-expo/build/common.js` |
+| `node_modules/babel-preset-expo/build/client-module-proxy-plugin.js` |
+| `node_modules/babel-preset-expo/build/babel-plugin-transform-export-namespace-from.js` |
+| `node_modules/@types/uuid/package.json` |
+| `node_modules/@types/uuid/README.md` |
+| `node_modules/@types/uuid/LICENSE` |
+| `node_modules/@types/react-dom/test-utils/index.d.ts` |
+| `node_modules/@types/react-dom/static.node.d.ts` |
+| `node_modules/@types/react-dom/static.edge.d.ts` |
+| `node_modules/@types/react-dom/static.d.ts` |
+| `node_modules/@types/react-dom/static.browser.d.ts` |
+| `node_modules/@types/react-dom/server.node.d.ts` |
+| `node_modules/@types/react-dom/server.edge.d.ts` |
+| `node_modules/@types/react-dom/server.d.ts` |
+| `node_modules/@types/react-dom/server.bun.d.ts` |
+| `node_modules/@types/react-dom/server.browser.d.ts` |
+| `node_modules/@types/react-dom/package.json` |
+| `node_modules/@types/react-dom/index.d.ts` |
+| `node_modules/@types/react-dom/experimental.d.ts` |
+| `node_modules/@types/react-dom/client.d.ts` |
+| `node_modules/@types/react-dom/canary.d.ts` |
+| `node_modules/@types/react-dom/README.md` |
+| `node_modules/@types/react-dom/LICENSE` |
+| `node_modules/react-dom/package.json` |
+| `node_modules/react-dom/README.md` |
+| `node_modules/react-dom/test-utils.js` |
+| `node_modules/react-dom/static.node.js` |
+| `node_modules/react-dom/static.react-server.js` |
+| `node_modules/react-dom/static.js` |
+| `node_modules/react-dom/static.edge.js` |
+| `node_modules/react-dom/static.browser.js` |
+| `node_modules/react-dom/server.react-server.js` |
+| `node_modules/react-dom/server.node.js` |
+| `node_modules/react-dom/server.js` |
+| `node_modules/react-dom/server.edge.js` |
+| `node_modules/react-dom/server.browser.js` |
+| `node_modules/react-dom/server.bun.js` |
+| `node_modules/react-dom/cjs/react-dom.react-server.production.js` |
+| `node_modules/react-dom/react-dom.react-server.js` |
+| `node_modules/react-dom/cjs/react-dom.react-server.development.js` |
+| `node_modules/react-dom/cjs/react-dom.production.js` |
+| `node_modules/react-dom/cjs/react-dom.development.js` |
+| `node_modules/react-dom/cjs/react-dom-test-utils.production.js` |
+| `node_modules/react-dom/cjs/react-dom-test-utils.development.js` |
+| `node_modules/react-dom/cjs/react-dom-server.node.production.js` |
+| `node_modules/react-dom/cjs/react-dom-server.node.development.js` |
+| `node_modules/react-dom/cjs/react-dom-server.edge.production.js` |
+| `node_modules/react-dom/cjs/react-dom-server.edge.development.js` |
+| `node_modules/react-native-reanimated/android/src/main/AndroidManifest.xml` |
+| `node_modules/react-native-reanimated/apple/RNReanimated.xcodeproj/xcshareddata/xcschemes/RNReanimated-tvOS.xcscheme` |
+| `node_modules/react-native-reanimated/android/CMakeLists.txt` |
+| `node_modules/react-native-reanimated/src/component/ScrollView.tsx` |
+| `node_modules/react-native-reanimated/src/component/ReducedMotionConfig.tsx` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/PropsFilter.tsx` |
+| `node_modules/react-native-reanimated/src/component/PerformanceMonitor.tsx` |
+| `node_modules/react-native-reanimated/src/animation/transformationMatrix/matrixUtils.tsx` |
+| `node_modules/react-native-reanimated/src/component/LayoutAnimationConfig.tsx` |
+| `node_modules/react-native-reanimated/src/component/FlatList.tsx` |
+| `node_modules/react-native-reanimated/src/css/component/createAnimatedComponent.tsx` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/createAnimatedComponent.tsx` |
+| `node_modules/react-native-reanimated/src/animationBuilder.tsx` |
+| `node_modules/react-native-reanimated/src/css/component/AnimatedComponent.tsx` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/AnimatedComponent.tsx` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Zoom.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Zoom.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Zoom.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Zoom.d.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/workletsVersion.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/workletsVersion.d.ts` |
+| `node_modules/react-native-reanimated/src/workletFunctions.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/workletFunctions.d.ts` |
+| `node_modules/react-native-reanimated/src/WorkletEventHandler.ts` |
+| `node_modules/react-dom/cjs/react-dom-server.bun.production.js` |
+| `node_modules/react-native-reanimated/lib/typescript/WorkletEventHandler.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/webUtils.web.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/webUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/webUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/WebSensor.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/WebSensor.d.ts` |
+| `node_modules/react-native-reanimated/src/ViewDescriptorsSet.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ViewDescriptorsSet.d.ts` |
+| `node_modules/react-native-reanimated/src/component/View.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/View.d.ts` |
+| `node_modules/react-native-reanimated/src/valueSetter.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/valueSetter.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/utils.ts` |
+| `node_modules/react-native-reanimated/src/css/web/utils.ts` |
+| `node_modules/react-native-reanimated/src/css/component/utils.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/utils.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/utils.ts` |
+| `node_modules/react-native-reanimated/src/animation/decay/utils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/utils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/utils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/utils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/utils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/utils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/utils.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/util.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/util.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useSharedValue.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useSharedValue.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useScrollOffset.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useScrollOffset.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useReducedMotion.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useReducedMotion.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useHandler.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useHandler.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useFrameCallback.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useFrameCallback.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useEvent.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useEvent.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useDerivedValue.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useDerivedValue.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useComposedEventHandler.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useComposedEventHandler.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedStyle.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedStyle.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedSensor.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedSensor.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedScrollHandler.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedScrollHandler.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedRef.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedRef.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedReaction.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedReaction.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedProps.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedProps.d.ts` |
+| `node_modules/react-native-reanimated/src/hook/useAnimatedKeyboard.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedKeyboard.d.ts` |
+| `node_modules/react-native-reanimated/src/updateProps/updateProps.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/updateProps/updateProps.d.ts` |
+| `node_modules/react-native-reanimated/src/UpdateLayoutAnimations.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/UpdateLayoutAnimations.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/types.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/types.ts` |
+| `node_modules/react-native-reanimated/src/css/easing/types.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/types.ts` |
+| `node_modules/react-native-reanimated/src/common/style/types.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/types.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/types.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/types.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/types.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/types.d.ts` |
+| `node_modules/react-native-reanimated/src/css/web/normalization/transition.ts` |
+| `node_modules/react-native-reanimated/src/css/types/transition.ts` |
+| `node_modules/react-native-reanimated/src/css/native/types/transition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/normalization/transition.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/transition.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/types/transition.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/builders/transforms.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/transforms.d.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/transformOrigin.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/transformOrigin.d.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/transform.ts` |
+| `node_modules/react-dom/cjs/react-dom-server.bun.development.js` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/transform.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/timing.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/timing.d.ts` |
+| `node_modules/react-native-reanimated/src/component/Text.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/Text.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/swipeSimulator.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/swipeSimulator.d.ts` |
+| `node_modules/react-native-reanimated/src/common/utils/suffix.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/styleUpdater.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/suffix.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/styleUpdater.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/stylesheet.d.ts` |
+| `node_modules/react-native-reanimated/src/css/stylesheet/stylesheet.ts` |
+| `node_modules/react-native-reanimated/src/animation/styleAnimation.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/styleAnimation.d.ts` |
+| `node_modules/react-native-reanimated/src/common/types/style.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/style.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/processors/stroke.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/stroke.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Stretch.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Stretch.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Stretch.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Stretch.d.ts` |
+| `node_modules/react-native-reanimated/src/css/easing/steps.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/steps.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/spring/springUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/springUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/spring/springConfigs.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/springConfigs.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/spring/spring.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/spring.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Slide.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Slide.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Slide.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Slide.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/transition/shorthand.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/shorthand.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/SharedTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/SharedTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/shadows.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/builders/shadows.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/shadows.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/shadows.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/shadows.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/shadows.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/transition/settings.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/common/settings.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/animation/settings.ts` |
+| `node_modules/react-native-reanimated/src/css/constants/settings.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/settings.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/common/settings.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/settings.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/settings.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/setNativeProps.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/setNativeProps.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/setNativeProps.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/setGestureState.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/setGestureState.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/setGestureState.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/SequencedTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/SequencedTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/Sequenced.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Sequenced.web.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/sequence.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/sequence.d.ts` |
+| `node_modules/react-native-reanimated/src/SensorContainer.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/SensorContainer.d.ts` |
+| `node_modules/react-native-reanimated/src/Sensor.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/Sensor.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/ScrollView.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/scrollTo.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/scrollTo.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/scrollTo.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/decay/rubberBandDecay.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/rubberBandDecay.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Rotate.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Rotate.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Rotate.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Rotate.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Roll.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Roll.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Roll.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Roll.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/RNScreensTurboModule.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/RNScreensTurboModule.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/decay/rigidDecay.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/rigidDecay.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/repeat.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/repeat.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/registry.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/registry.d.ts` |
+| `node_modules/react-native-reanimated/src/css/constants/regex.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/regex.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/ReducedMotionConfig.d.ts` |
+| `node_modules/react-native-reanimated/src/ReducedMotion.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReducedMotion.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/rect.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/rect.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/reanimatedModuleProxy.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/reanimatedModuleProxy.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/reanimatedModuleInstance.web.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/reanimatedModuleInstance.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/reanimatedModuleInstance.d.ts` |
+| `node_modules/react-native-reanimated/src/reactUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/reactUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/react-native-web.d.ts` |
+| `node_modules/react-native-reanimated/src/publicGlobals.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/publicGlobals.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/proxy.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/proxy.d.ts` |
+| `node_modules/react-native-reanimated/src/PropsRegistryGarbageCollector.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/PropsRegistryGarbageCollector.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/PropsFilter.d.ts` |
+| `node_modules/react-native-reanimated/src/css/utils/props.ts` |
+| `node_modules/react-native-reanimated/src/css/types/props.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/props.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/props.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/animation/properties.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/properties.d.ts` |
+| `node_modules/react-native-reanimated/src/PropAdapters.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/PropAdapters.d.ts` |
+| `node_modules/react-native-reanimated/src/privateGlobals.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/presets.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/presets.d.ts` |
+| `node_modules/react-native-reanimated/src/pluginUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/pluginUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/css/platform.web.ts` |
+| `node_modules/react-native-reanimated/src/css/platform.ts` |
+| `node_modules/react-native-reanimated/src/common/constants/platform.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/platform.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/platform.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Pinwheel.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Pinwheel.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Pinwheel.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Pinwheel.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/PerformanceMonitor.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/path.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/path.d.ts` |
+| `node_modules/react-native-reanimated/src/css/utils/parsers.ts` |
+| `node_modules/react-native-reanimated/src/common/utils/parsers.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/parsers.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/parsers.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/paddings.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/paddings.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/processors/others.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/others.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/others.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/others.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/processors/opacity.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/opacity.d.ts` |
+| `node_modules/react-native-reanimated/src/culori/oklab.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/oklab.d.ts` |
+| `node_modules/react-native-reanimated/src/specs/NativeReanimatedModule.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/specs/NativeReanimatedModule.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/NativeReanimated.ts` |
+| `node_modules/react-dom/cjs/react-dom-server.browser.production.js` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/NativeReanimated.d.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/NativeEventsManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/NativeEventsManager.d.ts` |
+| `node_modules/react-native-reanimated/src/mutables.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/mutables.d.ts` |
+| `node_modules/react-native-reanimated/src/mock.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/mock.d.ts` |
+| `node_modules/react-native-reanimated/src/mock-svg.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/mock-svg.d.ts` |
+| `node_modules/react-native-reanimated/src/css/constants/misc.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/misc.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/measure.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/measure.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/measure.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/transformationMatrix/matrixUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/margins.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/margins.d.ts` |
+| `node_modules/react-native-reanimated/src/mappers.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/mappers.d.ts` |
+| `node_modules/react-native-reanimated/src/culori/lrgb.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/lrgb.d.ts` |
+| `node_modules/react-native-reanimated/src/common/logger.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/logger.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/LinearTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/LinearTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/Linear.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Linear.web.d.ts` |
+| `node_modules/react-native-reanimated/src/css/easing/linear.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/linear.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/line.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/line.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Lightspeed.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Lightspeed.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Lightspeed.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Lightspeed.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/LayoutAnimationConfig.d.ts` |
+| `node_modules/react-native-reanimated/src/css/stylesheet/keyframes.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/animation/keyframes.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/keyframes.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/keyframes.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/animationBuilder/Keyframe.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/Keyframe.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/JumpingTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/JumpingTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/Jumping.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Jumping.web.d.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/jsVersion.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/jsVersion.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/JSReanimated.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/JSReanimated.d.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/JSPropsUpdater.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/JSPropsUpdater.d.ts` |
+| `node_modules/react-native-reanimated/src/jestUtils.web.ts` |
+| `node_modules/react-native-reanimated/src/jestUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/jestUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/isSharedValue.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/isSharedValue.d.ts` |
+| `node_modules/react-native-reanimated/src/interpolation.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/interpolation.d.ts` |
+| `node_modules/react-native-reanimated/src/interpolateColor.ts` |
+| `node_modules/react-dom/cjs/react-dom-server.browser.development.js` |
+| `node_modules/react-native-reanimated/lib/typescript/interpolateColor.d.ts` |
+| `node_modules/react-native-reanimated/src/css/types/interfaces.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/interfaces.d.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/insets.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/insets.d.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/InlinePropManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/InlinePropManager.d.ts` |
+| `node_modules/react-native-reanimated/src/initializers.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/initializers.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/init.web.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/init.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/init.d.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/index.web.ts` |
+| `node_modules/react-native-reanimated/src/updateProps/index.ts` |
+| `node_modules/react-native-reanimated/src/specs/index.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/index.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/js-reanimated/index.ts` |
+| `node_modules/react-native-reanimated/src/ReanimatedModule/index.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/index.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/index.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/index.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/index.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/index.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/animationBuilder/index.ts` |
+| `node_modules/react-native-reanimated/src/index.ts` |
+| `node_modules/react-native-reanimated/src/hook/index.ts` |
+| `node_modules/react-native-reanimated/src/frameCallback/index.ts` |
+| `node_modules/react-native-reanimated/src/featureFlags/index.ts` |
+| `node_modules/react-native-reanimated/src/culori/index.ts` |
+| `node_modules/react-native-reanimated/src/css/web/normalization/index.ts` |
+| `node_modules/react-native-reanimated/src/css/web/managers/index.ts` |
+| `node_modules/react-native-reanimated/src/css/web/keyframes/index.ts` |
+| `node_modules/react-native-reanimated/src/css/web/index.ts` |
+| `node_modules/react-native-reanimated/src/css/utils/index.ts` |
+| `node_modules/react-native-reanimated/src/css/types/index.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/processors/index.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/index.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/index.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/index.ts` |
+| `node_modules/react-native-reanimated/src/css/stylesheet/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/types/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/transition/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/common/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/animation/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/managers/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/keyframes/index.ts` |
+| `node_modules/react-native-reanimated/src/css/native/index.ts` |
+| `node_modules/react-native-reanimated/src/css/models/index.ts` |
+| `node_modules/react-native-reanimated/src/css/index.ts` |
+| `node_modules/react-native-reanimated/src/css/easing/index.ts` |
+| `node_modules/react-native-reanimated/src/css/constants/index.ts` |
+| `node_modules/react-native-reanimated/src/css/component/index.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/index.ts` |
+| `node_modules/react-native-reanimated/src/common/web/utils/index.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/index.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/index.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/builders/index.ts` |
+| `node_modules/react-native-reanimated/src/common/web/index.ts` |
+| `node_modules/react-native-reanimated/src/common/utils/index.ts` |
+| `node_modules/react-native-reanimated/src/common/types/index.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/index.ts` |
+| `node_modules/react-native-reanimated/src/common/style/index.ts` |
+| `node_modules/react-native-reanimated/src/common/index.ts` |
+| `node_modules/react-native-reanimated/src/common/constants/index.ts` |
+| `node_modules/react-native-reanimated/src/animation/spring/index.ts` |
+| `node_modules/react-native-reanimated/src/animation/index.ts` |
+| `node_modules/react-native-reanimated/src/animation/decay/index.ts` |
+| `node_modules/react-native-reanimated/plugin/index.d.ts` |
+| `node_modules/react-native-reanimated/metro-config/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/updateProps/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/specs/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/featureFlags/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/normalization/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/keyframes/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/types/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/common/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/models/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/utils/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/index.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/index.d.ts` |
+| `node_modules/react-native-reanimated/src/component/Image.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/Image.d.ts` |
+| `node_modules/react-native-reanimated/src/helperTypes.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/helperTypes.d.ts` |
+| `node_modules/react-native-reanimated/src/css/types/helpers.ts` |
+| `node_modules/react-native-reanimated/src/common/types/helpers.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/helpers.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/helpers.d.ts` |
+| `node_modules/react-native-reanimated/src/css/utils/guards.ts` |
+| `node_modules/react-native-reanimated/src/common/utils/guards.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/guards.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/guards.d.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/getViewInfo.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/getViewInfo.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/getRelativeCoords.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/getRelativeCoords.d.ts` |
+| `node_modules/react-native-reanimated/src/frameCallback/FrameCallbackRegistryUI.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/FrameCallbackRegistryUI.d.ts` |
+| `node_modules/react-native-reanimated/src/frameCallback/FrameCallbackRegistryJS.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/FrameCallbackRegistryJS.d.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/font.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/font.ts` |
+| `node_modules/react-native-reanimated/src/common/constants/font.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/font.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/font.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/font.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Flip.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Flip.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Flip.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Flip.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/FlatList.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/findNodeHandle.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/findNodeHandle.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/findNodeHandle.d.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/findHostInstance.web.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/findHostInstance.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/findHostInstance.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/filter.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/filter.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/filter.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/filter.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/FadingTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/FadingTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/Fading.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Fading.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Fade.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Fade.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Fade.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Fade.d.ts` |
+| `node_modules/react-native-reanimated/src/fabricUtils.web.ts` |
+| `node_modules/react-native-reanimated/src/fabricUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/fabricUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/common/errors.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/errors.d.ts` |
+| `node_modules/react-native-reanimated/src/css/utils/equality.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/equality.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/EntryExitTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/EntryExitTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/EntryExit.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/EntryExit.web.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/ellipse.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/ellipse.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/Easing.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/Easing.web.d.ts` |
+| `node_modules/react-native-reanimated/src/Easing.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/Easing.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/domUtils.ts` |
+| `node_modules/react-native-reanimated/src/css/web/domUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/domUtils.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/domUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/utils/dom.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/utils/dom.d.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/dispatchCommand.web.ts` |
+| `node_modules/react-native-reanimated/src/platformFunctions/dispatchCommand.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/dispatchCommand.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/delay.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/delay.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/decay/decay.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/decay.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultTransitions/CurvedTransition.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/CurvedTransition.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/transition/Curved.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Curved.web.d.ts` |
+| `node_modules/react-native-reanimated/src/css/easing/cubicBezier.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/cubicBezier.d.ts` |
+| `node_modules/react-native-reanimated/src/css/web/managers/CSSTransitionsManager.ts` |
+| `node_modules/react-native-reanimated/src/css/native/managers/CSSTransitionsManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSTransitionsManager.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSTransitionsManager.d.ts` |
+| `node_modules/react-native-reanimated/src/css/web/managers/CSSManager.ts` |
+| `node_modules/react-native-reanimated/src/css/native/managers/CSSManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSManager.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSManager.d.ts` |
+| `node_modules/react-native-reanimated/src/css/web/keyframes/CSSKeyframesRuleImpl.ts` |
+| `node_modules/react-native-reanimated/src/css/native/keyframes/CSSKeyframesRuleImpl.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/keyframes/CSSKeyframesRuleImpl.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/CSSKeyframesRuleImpl.d.ts` |
+| `node_modules/react-native-reanimated/src/css/models/CSSKeyframesRuleBase.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/models/CSSKeyframesRuleBase.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/keyframes/CSSKeyframesRegistry.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/CSSKeyframesRegistry.d.ts` |
+| `node_modules/react-native-reanimated/src/css/web/managers/CSSAnimationsManager.ts` |
+| `node_modules/react-native-reanimated/src/css/native/managers/CSSAnimationsManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSAnimationsManager.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSAnimationsManager.d.ts` |
+| `node_modules/react-native-reanimated/src/common/style/createStyleBuilder.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/createStyleBuilder.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/createAnimation.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/createAnimation.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/createAnimatedComponent.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/createAnimatedComponent.d.ts` |
+| `node_modules/react-native-reanimated/src/core.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/core.d.ts` |
+| `node_modules/react-native-reanimated/src/common/utils/conversions.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/conversions.d.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/transition/constants.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/animation/constants.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/constants.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/constants.d.ts` |
+| `node_modules/react-native-reanimated/src/ConfigHelper.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/ConfigHelper.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/config.ts` |
+| `node_modules/react-native-reanimated/src/css/native/normalization/transition/config.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/config.ts` |
+| `node_modules/react-dom/cjs/react-dom-server-legacy.node.production.js` |
+| `node_modules/react-native-reanimated/src/common/types/config.ts` |
+| `node_modules/react-native-reanimated/src/common/style/config.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/config.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/config.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/config.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/config.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/config.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/componentUtils.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/componentUtils.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/componentStyle.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/componentStyle.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/animationBuilder/ComplexAnimationBuilder.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/ComplexAnimationBuilder.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/commonTypes.ts` |
+| `node_modules/react-native-reanimated/src/hook/commonTypes.ts` |
+| `node_modules/react-native-reanimated/src/createAnimatedComponent/commonTypes.ts` |
+| `node_modules/react-native-reanimated/src/commonTypes.ts` |
+| `node_modules/react-native-reanimated/src/animation/commonTypes.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/commonTypes.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/commonTypes.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/commonTypes.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/commonTypes.d.ts` |
+| `node_modules/react-native-gesture-handler/android/src/main/AndroidManifest.xml` |
+| `node_modules/react-native-gesture-handler/android/src/main/jni/CMakeLists.txt` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/Wrap.web.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableWithoutFeedback.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableOpacity.tsx` |
+| `node_modules/react-native-gesture-handler/src/useIsomorphicLayoutEffect.tsx` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/Wrap.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableNativeFeedbackProps.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableNativeFeedback.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableNativeFeedback.android.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/TouchableHighlight.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/Text.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/Swipeable.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/StateMachine.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/ReanimatedSwipeable/ReanimatedSwipeable.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/ReanimatedDrawerLayout.tsx` |
+| `node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/commonTypes.d.ts` |
+| `node_modules/react-native-reanimated/src/css/types/common.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/common.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/common.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/common.d.ts` |
+| `node_modules/react-native-reanimated/src/culori/Colors.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/processors/colors.ts` |
+| `node_modules/react-native-reanimated/src/common/web/utils/colors.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/processors/colors.ts` |
+| `node_modules/react-native-reanimated/src/common/style/processors/colors.ts` |
+| `node_modules/react-native-reanimated/src/Colors.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/Colors.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/colors.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/utils/colors.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/colors.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/colors.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/Colors.d.ts` |
+| `node_modules/react-native-reanimated/src/animation/clamp.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/clamp.d.ts` |
+| `node_modules/react-native-reanimated/src/css/svg/native/configs/circle.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/circle.d.ts` |
+| `node_modules/react-native-reanimated/src/platform-specific/checkCppVersion.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/checkCppVersion.d.ts` |
+| `node_modules/react-native-reanimated/src/common/web/style/builderFactories.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builderFactories.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animation/Bounce.web.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Bounce.web.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/defaultAnimations/Bounce.ts` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/PressableProps.tsx` |
+| `node_modules/react-native-gesture-handler/src/mocks/Pressable.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/Pressable.tsx` |
+| `node_modules/react-native-gesture-handler/src/handlers/PressabilityDebugView.web.tsx` |
+| `node_modules/react-native-gesture-handler/src/handlers/PressabilityDebugView.tsx` |
+| `node_modules/react-native-gesture-handler/src/mocks/mocks.tsx` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/index.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.web.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.android.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/gestureHandlerRootHOC.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureHandlerButton.web.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureHandlerButton.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureComponents.web.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureComponents.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/GestureButtons.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/GenericTouchable.tsx` |
+| `node_modules/react-native-gesture-handler/src/components/DrawerLayout.tsx` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Bounce.d.ts` |
+| `node_modules/react-native-reanimated/src/Bezier.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/Bezier.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/animationBuilder/BaseAnimationBuilder.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/BaseAnimationBuilder.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animationsManager.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/animationsManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animationsManager.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationsManager.d.ts` |
+| `node_modules/react-native-reanimated/src/layoutReanimation/web/animationParser.ts` |
+| `node_modules/react-native-reanimated/src/css/web/animationParser.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animationParser.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/animationParser.d.ts` |
+| `node_modules/react-native-reanimated/src/screenTransition/animationManager.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/animationManager.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/animationBuilder.d.ts` |
+| `node_modules/react-native-reanimated/src/css/types/animation.ts` |
+| `node_modules/react-native-reanimated/src/css/native/types/animation.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/animation.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/types/animation.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/AnimatedComponent.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/AnimatedComponent.d.ts` |
+| `node_modules/react-native-reanimated/src/Animated.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/Animated.d.ts` |
+| `node_modules/react-native-reanimated/scripts/reanimated_utils.rb` |
+| `node_modules/react-native-reanimated/android/gradle.properties` |
+| `node_modules/react-native-reanimated/android/gradle/wrapper/gradle-wrapper.properties` |
+| `node_modules/react-native-reanimated/android/proguard-rules.pro` |
+| `node_modules/react-native-reanimated/RNReanimated.podspec` |
+| `node_modules/react-native-reanimated/apple/RNReanimated.xcodeproj/project.pbxproj` |
+| `node_modules/react-native-gesture-handler/src/handlers/createNativeWrapper.tsx` |
+| `node_modules/react-native-gesture-handler/src/handlers/createHandler.tsx` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/Wrap.web.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/Wrap.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/WheelEventManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/WheelEventManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/VelocityTracker.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/VelocityTracker.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/Vector.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/Vector.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/utils.ts` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/native/SetGestureState.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/REASlowAnimations.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/REANodesManager.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/ReanimatedModule.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/keyboardObserver/REAKeyboardEventObserver.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/native/PlatformDepMethodsHolderImpl.mm` |
+| `node_modules/react-native-reanimated/apple/reanimated/apple/native/NativeProxy.mm` |
+| `node_modules/react-native-reanimated/README.md` |
+| `node_modules/react-native-reanimated/android/README.md` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Zoom.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Zoom.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Zoom.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Zoom.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platform-specific/workletsVersion.js.map` |
+| `node_modules/react-native-gesture-handler/src/utils.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/utils.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/utils.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/utils.ts` |
+| `node_modules/react-native-gesture-handler/src/components/utils.ts` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/utils.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/utils.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/useViewRefHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useViewRefHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/useMountReactions.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useMountReactions.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/useIsomorphicLayoutEffect.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/useDetectorUpdater.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useDetectorUpdater.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/useAnimatedGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useAnimatedGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/updateHandlers.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/updateHandlers.d.ts` |
+| `node_modules/react-native-gesture-handler/src/typeUtils.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/typeUtils.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/types.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/types.d.ts` |
+| `node_modules/react-native-gesture-handler/src/TouchEventType.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/TouchEventType.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableWithoutFeedback.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableOpacity.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedbackProps.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedback.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedback.android.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableHighlight.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Text.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/TapGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/TapGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/TapGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/TapGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/TapGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/TapGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/tapGesture.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/workletsVersion.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/workletFunctions.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/workletFunctions.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/WorkletEventHandler.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/WorkletEventHandler.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/webUtils.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/WebSensor.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/webUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/webUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/WebSensor.js.map` |
+| `node_modules/react-native-reanimated/lib/module/ViewDescriptorsSet.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ViewDescriptorsSet.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/View.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/View.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/valueSetter.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/valueSetter.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/component/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/decay/utils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/utils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/util.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/util.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useSharedValue.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useSharedValue.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useScrollOffset.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useScrollOffset.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useReducedMotion.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useReducedMotion.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useHandler.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useHandler.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useFrameCallback.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useFrameCallback.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useEvent.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useEvent.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useDerivedValue.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useDerivedValue.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useComposedEventHandler.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useComposedEventHandler.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedStyle.js.map` |
+| `node_modules/react-dom/cjs/react-dom-server-legacy.browser.production.js` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/tapGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Swipeable.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/StateMachine.d.ts` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/stateDefinitions.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/stateDefinitions.d.ts` |
+| `node_modules/react-native-gesture-handler/src/State.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/State.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/detectors/ScaleGestureDetector.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/detectors/ScaleGestureDetector.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/RotationGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/RotationGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/RotationGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/RotationGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/RotationGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/RotationGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/detectors/RotationGestureDetector.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/detectors/RotationGestureDetector.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/rotationGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/rotationGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/RNRenderer.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/RNRenderer.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/RNRenderer.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/RNRenderer.d.ts` |
+| `node_modules/react-native-gesture-handler/src/specs/RNGestureHandlerRootViewNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/module/specs/RNGestureHandlerRootViewNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/specs/RNGestureHandlerRootViewNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/specs/RNGestureHandlerRootViewNativeComponent.d.ts` |
+| `node_modules/react-native-gesture-handler/src/RNGestureHandlerModule.windows.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/RNGestureHandlerModule.windows.d.ts` |
+| `node_modules/react-native-gesture-handler/src/RNGestureHandlerModule.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/RNGestureHandlerModule.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/RNGestureHandlerModule.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/RNGestureHandlerModule.d.ts` |
+| `node_modules/react-native-gesture-handler/src/specs/RNGestureHandlerButtonNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/module/specs/RNGestureHandlerButtonNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/specs/RNGestureHandlerButtonNativeComponent.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/specs/RNGestureHandlerButtonNativeComponent.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/reanimatedWrapper.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/reanimatedWrapper.d.ts` |
+| `node_modules/react-native-gesture-handler/src/components/ReanimatedSwipeable/ReanimatedSwipeableProps.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/ReanimatedSwipeable/ReanimatedSwipeableProps.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/ReanimatedSwipeable/ReanimatedSwipeable.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/ReanimatedDrawerLayout.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/PressGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/PressGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/PressableProps.d.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedStyle.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedSensor.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedSensor.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedScrollHandler.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedScrollHandler.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedRef.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedRef.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedReaction.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedReaction.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedProps.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedProps.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/useAnimatedKeyboard.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/useAnimatedKeyboard.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/updateProps/updateProps.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/updateProps/updateProps.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/UpdateLayoutAnimations.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/UpdateLayoutAnimations.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/types.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platform-specific/types.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/easing/types.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/types.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/types.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/types.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/types.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/types.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/types.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/types.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/normalization/transition.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/types/transition.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/types/transition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/normalization/transition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/transition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/types/transition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/builders/transforms.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/transforms.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/transformOrigin.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/transformOrigin.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/transform.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/transform.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/timing.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/timing.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/Text.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/Text.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/screenTransition/swipeSimulator.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/mocks/Pressable.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/Pressable.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/PressabilityDebugView.web.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/PressabilityDebugView.d.ts` |
+| `node_modules/react-native-gesture-handler/src/PointerType.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/PointerType.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/PointerTracker.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/PointerTracker.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/PointerEventManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/PointerEventManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/PlatformConstants.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/PlatformConstants.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/PlatformConstants.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/PlatformConstants.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/PinchGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/PinchGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/PinchGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/PinchGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/PinchGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/PinchGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/pinchGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/pinchGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/PanGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/PanGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/PanGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/PanGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/PanGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/PanGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/panGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/panGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/NodeManager.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/NodeManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/NodeManager.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/NodeManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/needsToReattach.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/needsToReattach.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/NativeViewGestureHandler.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/swipeSimulator.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/utils/suffix.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/suffix.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/screenTransition/styleUpdater.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/styleUpdater.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/stylesheet/stylesheet.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/stylesheet.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/styleAnimation.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/styleAnimation.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/types/style.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/style.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/processors/stroke.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/stroke.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Stretch.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Stretch.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Stretch.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Stretch.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/steps.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/easing/steps.js.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/spring/springUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/springUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/spring/springConfigs.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/springConfigs.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/spring/spring.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/spring.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Slide.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Slide.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Slide.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Slide.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/transition/shorthand.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/shorthand.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/SharedTransition.js.map` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/NativeViewGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/NativeViewGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/NativeViewGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/NativeViewGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/NativeViewGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/specs/NativeRNGestureHandlerModule.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/specs/NativeRNGestureHandlerModule.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/nativeGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/nativeGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/mountRegistry.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/mountRegistry.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/mocks/mocks.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/ManualGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/ManualGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/manualGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/manualGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/LongPressGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/LongPressGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/LongPressGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/LongPressGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/LongPressGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/longPressGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/LongPressGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/longPressGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/LeastSquareSolver.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/LeastSquareSolver.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/KeyboardEventManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/KeyboardEventManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/jestUtils/jestUtils.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/jestUtils/jestUtils.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/interfaces.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/interfaces.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/InteractionManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/InteractionManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/init.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/init.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/IndiscreteGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/IndiscreteGestureHandler.d.ts` |
+| `node_modules/react-dom/cjs/react-dom-server-legacy.browser.development.js` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/SharedTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/shadows.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/builders/shadows.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/shadows.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/shadows.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/shadows.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/shadows.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/transition/settings.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/common/settings.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/animation/settings.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/constants/settings.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/settings.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/common/settings.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/settings.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/settings.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/setNativeProps.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/setNativeProps.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/setNativeProps.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/setGestureState.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/setGestureState.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/setGestureState.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/SequencedTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/SequencedTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/Sequenced.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Sequenced.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/sequence.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/sequence.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/SensorContainer.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/SensorContainer.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/Sensor.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/Sensor.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/ScrollView.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/ScrollView.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/scrollTo.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/scrollTo.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/scrollTo.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/decay/rubberBandDecay.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/rubberBandDecay.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Rotate.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Rotate.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Rotate.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Rotate.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Roll.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Roll.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Roll.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Roll.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/screenTransition/RNScreensTurboModule.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/RNScreensTurboModule.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/decay/rigidDecay.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/rigidDecay.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/repeat.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/repeat.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/registry.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/registry.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/constants/regex.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/regex.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/ReducedMotionConfig.js.map` |
+| `node_modules/react-native-gesture-handler/src/jestUtils/index.ts` |
+| `node_modules/react-native-gesture-handler/src/index.ts` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/index.ts` |
+| `node_modules/react-native-gesture-handler/src/components/ReanimatedSwipeable/index.ts` |
+| `node_modules/react-native-gesture-handler/src/components/Pressable/index.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/jestUtils/index.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/index.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/index.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/index.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/ReanimatedSwipeable/index.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/index.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/IGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/IGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/HoverGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/HoverGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/hoverGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/hoverGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/handlersRegistry.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/handlersRegistry.d.ts` |
+| `node_modules/react-native-gesture-handler/src/ghQueueMicrotask.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/ghQueueMicrotask.d.ts` |
+| `node_modules/react-native-gesture-handler/src/getShadowNodeFromRef.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/getShadowNodeFromRef.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/getShadowNodeFromRef.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/getShadowNodeFromRef.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/getNextHandlerTag.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/getNextHandlerTag.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/gestureStateManager.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/gestureStateManager.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/gestureStateManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/gestureStateManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/Gestures.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/Gestures.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/gestureObjects.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/gestureObjects.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/GestureHandlerWebDelegate.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/GestureHandlerWebDelegate.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestureHandlerTypesCompat.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestureHandlerTypesCompat.d.ts` |
+| `node_modules/react-native-gesture-handler/src/GestureHandlerRootViewContext.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/GestureHandlerRootViewContext.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureHandlerRootView.web.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureHandlerRootView.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureHandlerRootView.android.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/gestureHandlerRootHOC.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/GestureHandlerOrchestrator.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/GestureHandlerOrchestrator.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/GestureHandlerEventPayload.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/GestureHandlerEventPayload.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/GestureHandlerDelegate.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/GestureHandlerDelegate.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestureHandlerCommon.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/component/ReducedMotionConfig.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReducedMotion.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReducedMotion.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/configs/rect.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/rect.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/reanimatedModuleProxy.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/reanimatedModuleProxy.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/reanimatedModuleInstance.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/reanimatedModuleInstance.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/reanimatedModuleInstance.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/reactUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/reactUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/react-native-web.d.js.map` |
+| `node_modules/react-native-reanimated/lib/module/publicGlobals.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/publicGlobals.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/proxy.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/proxy.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/PropsRegistryGarbageCollector.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/PropsRegistryGarbageCollector.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/PropsFilter.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/PropsFilter.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/utils/props.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/types/props.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/props.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/props.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/animation/properties.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/properties.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/PropAdapters.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/PropAdapters.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/privateGlobals.d.js.map` |
+| `node_modules/react-native-reanimated/lib/module/screenTransition/presets.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/presets.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/pluginUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/pluginUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/platform.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/platform.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/constants/platform.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/platform.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/platform.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Pinwheel.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Pinwheel.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Pinwheel.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Pinwheel.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/PerformanceMonitor.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/PerformanceMonitor.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/configs/path.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/path.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/utils/parsers.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/utils/parsers.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/parsers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/parsers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/paddings.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/paddings.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/processors/others.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/others.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/others.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/others.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/processors/opacity.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/opacity.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/culori/oklab.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/oklab.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/specs/NativeReanimatedModule.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/specs/NativeReanimatedModule.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/NativeReanimated.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/NativeReanimated.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/NativeEventsManager.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestureHandlerCommon.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureHandlerButton.web.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureHandlerButton.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/GestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/GestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/GestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/GestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/gestureComposition.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/gestureComposition.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureComponents.web.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureComponents.d.ts` |
+| `node_modules/react-native-gesture-handler/src/components/GestureButtonsProps.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureButtonsProps.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/GestureButtons.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/gesture.ts` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/NativeEventsManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/mutables.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/mutables.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/mock.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/mock.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/mock-svg.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/mock-svg.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/constants/misc.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/misc.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/measure.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/measure.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/measure.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/transformationMatrix/matrixUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/transformationMatrix/matrixUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/margins.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/margins.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/mappers.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/mappers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/culori/lrgb.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/lrgb.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/logger.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/logger.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/LinearTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/LinearTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/Linear.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Linear.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/easing/linear.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/linear.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/configs/line.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/gesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/GenericTouchableProps.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/GenericTouchableProps.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/GenericTouchable.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/ForceTouchGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/ForceTouchGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/forceTouchGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/forceTouchGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/handlers/FlingGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/FlingGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/FlingGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/FlingGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/FlingGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/FlingGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/flingGesture.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/flingGesture.d.ts` |
+| `node_modules/react-native-gesture-handler/src/findNodeHandle.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/findNodeHandle.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/findNodeHandle.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/findNodeHandle.d.ts` |
+| `node_modules/react-native-gesture-handler/src/components/touchables/ExtraButtonProps.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/ExtraButtonProps.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/eventReceiver.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/eventReceiver.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/EventManager.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/EventManager.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/Errors.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/Errors.d.ts` |
+| `node_modules/react-native-gesture-handler/src/EnableNewWebImplementation.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/EnableNewWebImplementation.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/dropHandlers.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/dropHandlers.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/DrawerLayout.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/DraggingGestureHandler.ts` |
+| `node_modules/react-dom/cjs/react-dom-profiling.profiling.js` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/line.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Lightspeed.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Lightspeed.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Lightspeed.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Lightspeed.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/LayoutAnimationConfig.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/LayoutAnimationConfig.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/stylesheet/keyframes.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/animation/keyframes.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/keyframes.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/keyframes.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/animationBuilder/Keyframe.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/Keyframe.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/JumpingTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/JumpingTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/Jumping.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Jumping.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platform-specific/jsVersion.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/jsVersion.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/JSReanimated.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/JSReanimated.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/JSPropsUpdater.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/JSPropsUpdater.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/jestUtils.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/jestUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/jestUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/isSharedValue.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/isSharedValue.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/interpolation.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/interpolation.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/interpolateColor.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/DraggingGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/DiscreteGestureHandler.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/DiscreteGestureHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/Directions.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/Directions.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/customDirectEventTypes.web.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/customDirectEventTypes.web.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/customDirectEventTypes.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/customDirectEventTypes.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/createNativeWrapper.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/createHandler.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/constants.ts` |
+| `node_modules/react-native-gesture-handler/src/web_hammer/constants.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/constants.d.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/constants.d.ts` |
+| `node_modules/react-native-gesture-handler/src/web/tools/CircularBuffer.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/CircularBuffer.d.ts` |
+| `node_modules/react-native-gesture-handler/src/handlers/gestures/GestureDetector/attachHandlers.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/attachHandlers.d.ts` |
+| `node_modules/react-native-gesture-handler/src/ActionType.ts` |
+| `node_modules/react-native-gesture-handler/lib/typescript/ActionType.d.ts` |
+| `node_modules/react-native-gesture-handler/scripts/gesture_handler_utils.rb` |
+| `node_modules/react-native-gesture-handler/android/gradle.properties` |
+| `node_modules/react-native-gesture-handler/RNGestureHandler.podspec` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandler.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandler.xcodeproj/project.pbxproj` |
+| `node_modules/react-native-gesture-handler/apple/Handlers/RNNativeViewHandler.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerRootViewComponentView.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerModule.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerManager.mm` |
+| `node_modules/react-native-reanimated/lib/typescript/interpolateColor.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/types/interfaces.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/interfaces.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/insets.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/insets.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/InlinePropManager.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/InlinePropManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/initializers.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/initializers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/init.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/init.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/init.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/index.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/updateProps/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/specs/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/screenTransition/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/js-reanimated/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/ReanimatedModule/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/animationBuilder/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/hook/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/frameCallback/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/featureFlags/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/culori/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/normalization/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/managers/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/keyframes/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/utils/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/types/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/processors/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/configs/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/stylesheet/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/types/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/transition/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/common/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/animation/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/managers/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/keyframes/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/models/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/easing/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/constants/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/component/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/utils/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/builders/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/utils/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/types/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/constants/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/spring/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/index.js.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/decay/index.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/updateProps/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/specs/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/screenTransition/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/js-reanimated/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ReanimatedModule/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/animationBuilder/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/hook/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/featureFlags/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/culori/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/normalization/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/keyframes/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/processors/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/stylesheet/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/types/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/common/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/models/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/constants/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/utils/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/builders/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/spring/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/index.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/Image.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/Image.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/helperTypes.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/helperTypes.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/types/helpers.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/types/helpers.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/types/helpers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/helpers.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/utils/guards.js.map` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerButtonManager.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerButtonComponentView.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandlerButton.mm` |
+| `node_modules/react-native-gesture-handler/apple/RNGestureHandler.mm` |
+| `node_modules/react-native-gesture-handler/README.md` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/Wrap.web.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/Wrap.web.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/Wrap.web.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/Wrap.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/Wrap.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/Wrap.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web/tools/WheelEventManager.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web/tools/WheelEventManager.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/WheelEventManager.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web/tools/VelocityTracker.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/utils/guards.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/guards.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/guards.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/getViewInfo.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/getViewInfo.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/getRelativeCoords.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/getRelativeCoords.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/frameCallback/FrameCallbackRegistryUI.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/FrameCallbackRegistryUI.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/frameCallback/FrameCallbackRegistryJS.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/frameCallback/FrameCallbackRegistryJS.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/font.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/font.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/constants/font.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/font.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/font.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/constants/font.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Flip.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Flip.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Flip.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Flip.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/component/FlatList.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/component/FlatList.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/findNodeHandle.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/findNodeHandle.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/findNodeHandle.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platform-specific/findHostInstance.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platform-specific/findHostInstance.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platform-specific/findHostInstance.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/processors/filter.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/processors/filter.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/processors/filter.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/processors/filter.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/FadingTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/FadingTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/Fading.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Fading.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/animation/Fade.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/animation/Fade.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultAnimations/Fade.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultAnimations/Fade.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/fabricUtils.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/fabricUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/fabricUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/errors.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/errors.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/utils/equality.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/utils/equality.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/EntryExitTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/EntryExitTransition.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web/tools/VelocityTracker.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/VelocityTracker.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web/tools/Vector.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web/tools/Vector.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/tools/Vector.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web_hammer/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/Pressable/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web_hammer/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/Pressable/utils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web_hammer/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Pressable/utils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/useViewRefHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/useViewRefHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useViewRefHandler.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/useMountReactions.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/useMountReactions.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useMountReactions.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/useIsomorphicLayoutEffect.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/useIsomorphicLayoutEffect.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/useIsomorphicLayoutEffect.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/useDetectorUpdater.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/useDetectorUpdater.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useDetectorUpdater.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/useAnimatedGesture.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/useAnimatedGesture.js.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/EntryExit.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/EntryExit.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/svg/native/configs/ellipse.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/svg/native/configs/ellipse.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/Easing.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/Easing.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/Easing.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/Easing.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/domUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/domUtils.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/domUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/domUtils.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/utils/dom.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/utils/dom.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/dispatchCommand.web.js.map` |
+| `node_modules/react-native-reanimated/lib/module/platformFunctions/dispatchCommand.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/platformFunctions/dispatchCommand.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/delay.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/delay.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/animation/decay/decay.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/animation/decay/decay.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/defaultTransitions/CurvedTransition.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/defaultTransitions/CurvedTransition.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/transition/Curved.web.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/transition/Curved.web.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/easing/cubicBezier.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/easing/cubicBezier.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/managers/CSSTransitionsManager.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/managers/CSSTransitionsManager.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSTransitionsManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSTransitionsManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/managers/CSSManager.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/managers/CSSManager.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/keyframes/CSSKeyframesRuleImpl.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/keyframes/CSSKeyframesRuleImpl.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/keyframes/CSSKeyframesRuleImpl.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/CSSKeyframesRuleImpl.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/models/CSSKeyframesRuleBase.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/models/CSSKeyframesRuleBase.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/keyframes/CSSKeyframesRegistry.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/keyframes/CSSKeyframesRegistry.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/web/managers/CSSAnimationsManager.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/managers/CSSAnimationsManager.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/web/managers/CSSAnimationsManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/managers/CSSAnimationsManager.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/createStyleBuilder.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/createStyleBuilder.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/createAnimation.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/createAnimation.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/component/createAnimatedComponent.js.map` |
+| `node_modules/react-native-reanimated/lib/module/createAnimatedComponent/createAnimatedComponent.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/component/createAnimatedComponent.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/createAnimatedComponent/createAnimatedComponent.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/core.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/core.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/common/utils/conversions.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/utils/conversions.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/transition/constants.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/animation/constants.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/constants.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/animation/constants.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/ConfigHelper.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/ConfigHelper.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/config.js.map` |
+| `node_modules/react-native-reanimated/lib/module/css/native/normalization/transition/config.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/web/style/config.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/types/config.js.map` |
+| `node_modules/react-native-reanimated/lib/module/common/style/config.js.map` |
+| `node_modules/react-native-reanimated/lib/typescript/layoutReanimation/web/config.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/css/native/normalization/transition/config.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/web/style/config.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/types/config.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/typescript/common/style/config.d.ts.map` |
+| `node_modules/react-native-reanimated/lib/module/layoutReanimation/web/componentUtils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/useAnimatedGesture.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/updateHandlers.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/updateHandlers.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/updateHandlers.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/typeUtils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/typeUtils.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/typeUtils.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/gestures/GestureDetector/types.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/GestureDetector/types.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/handlers/gestures/GestureDetector/types.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/TouchEventType.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/TouchEventType.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/TouchEventType.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableWithoutFeedback.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableWithoutFeedback.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableWithoutFeedback.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableOpacity.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableOpacity.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableOpacity.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableNativeFeedbackProps.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableNativeFeedbackProps.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedbackProps.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableNativeFeedback.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableNativeFeedback.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedback.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableNativeFeedback.android.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableNativeFeedback.android.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableNativeFeedback.android.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/touchables/TouchableHighlight.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/touchables/TouchableHighlight.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/touchables/TouchableHighlight.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/components/Text.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/components/Text.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/components/Text.d.ts.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web/handlers/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/web_hammer/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/module/handlers/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web/handlers/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/web_hammer/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/commonjs/handlers/TapGestureHandler.js.map` |
+| `node_modules/react-native-gesture-handler/lib/typescript/web/handlers/TapGestureHandler.d.ts.map` |
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/package.json</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/OpponentStrip.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+AsyncStorage is missing from package.json.
+
+A custom `tutorialStorage` utility will handle tutorial completion state across platforms. It will use localStorage on web and a simple in-memory flag on native.
+
+Native users will see the tutorial every launch since AsyncStorage is unavailable. Adding the dependency is deferred for now.
+
+The tutorial will auto-launch on the initial pregame preview screen. Completion will persist so it does not repeat. A TutorialContext will manage the tutorial state, steps, and advancement logic.
+
+A TutorialOverlay component will render a dimmed background with a spotlight hole and tooltip panel. A TutorialTarget wrapper will register UI elements for precise spotlight targeting. Step definitions will live in a dedicated file with titles, bodies, and phase markers. The tutorial splits into two phases: a pregame walkthrough covering the welcome screen, market, recruits, epics, arena, favors, deck, and start game; then an active game walkthrough covering the hand, play zone, faction key, icons, end turn button, opponents, and game log.
+
+Phase 2 begins after the user clicks Start Game. The tutorial will pause on that step until the user either presses Next or actually starts the match. This ensures the walkthrough transitions cleanly into the active game state.
+
+Steps will carry an `interactionRequired` flag. When the user presses the highlighted element, the tutorial advances and simultaneously triggers the game start action.
+
+Phase 2 will resume at the hand step once the game transitions from pregame to active. A concrete `TutorialStepId` union type and `TutorialStep` interface are being drafted to define every tutorial step.
+
+The TutorialStep interface now includes optional targetKey, placement, and requireTargetClick fields. TutorialContext will store active state, step index, and a Map of registered target layouts with coordinate data. The overlay will use a full-screen pressable with four surrounding dark rectangles and a centered tooltip card for navigation.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PlayerHand.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder",
+  "pattern": "TutorialProvider|App\\.tsx|index\\.ts"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder",
+  "pattern": "TutorialProvider|App\\.tsx|index\\.ts",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "package.json"
+    },
+    {
+      "matchCount": 19,
+      "uri": ".specstory/history/2026-06-20_03-38-39Z-factions-comparison-csv-generation.md"
+    },
+    {
+      "matchCount": 67,
+      "uri": ".specstory/history/2026-03-17_04-18-06Z-initial-game-table-framework-design.md"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 87
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/App.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/network/MultiplayerProvider.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/GameScreen.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Beginning implementation of the full tutorial system.
+
+Creating five new tutorial files and modifying GameScreen, GameTable, and PregameMarketView to integrate the overlay, context, and target references.
+
+Adding tutorial targets to the board sidebars and player hand. Building a TutorialTarget wrapper component that measures mounted views via measureInWindow to capture exact screen coordinates for overlay highlighting.
+
+TutorialTarget now registers measured coordinates and cleans up on unmount. TutorialContext will expose a start method and auto-launch the tutorial on the pregame screen when the user has not yet completed it.
+
+Refining the tutorial flow. The last pregame step disables Next and requires clicking Start Game. That button becomes a tutorial target. Clicking it advances the tutorial and triggers the game start. A useEffect then jumps to the first active step once the game phase changes.
+
+Defined the full 16-step tutorial sequence. The welcome step appears centered without a highlighted target. Subsequent steps cover the market, recruits, epics, arena, favors, deck and discard, start game, hand, play zone, faction key, stats icons, end turn, opponents, game log, and a final completion step.
+
+The overlay will include a skip option, back and next controls, and a finish button on the last step. Next remains disabled until the user clicks the required target element.
+
+The Start Game button in PregameMarketView will intercept clicks during the tutorial's final step. When the user presses it, the tutorial advances to the active phase before the normal game start handler runs.
+
+Refining the tutorial state machine. The `goToActivePhase()` helper will set the phase transition flag and jump to the first active step. For multiplayer, the tutorial pauses at the start-game step until the game actually enters the main phase. Clicking Start Game during the tutorial will trigger player readiness and set a resume flag so the overlay can advance once the phase change completes.
+
+Adding localStorage persistence so the tutorial never reappears after completion. Auto-start will fire only on the first pregame session if the user has not finished the tutorial. A useEffect in GameTable will detect the pregame phase and launch the tutorial once per session.</details></think>
+
+_**Agent (composer-2.5)**_
+
+WoTf files aren't in the workspace — implementing a matching tutorial system from your step list.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialSteps.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialStorage.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/context/TutorialContext.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/TutorialTarget.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/TutorialOverlay.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Starting to wire up the tutorial components.
+
+Mapping tutorial targets across six components. GameScreen gets the provider. PregameMarketView wraps the start game button. BoardSidebars get targets for stats, end turn, and game log. PlayerHand gets the faction key. GameTable gets opponent and play zone targets plus the overlay. The start game spotlight hole must allow clicks through.
+
+Confirmed the tutorial overlay blocks clicks outside the spotlight hole while allowing passage through the hole itself. Now adding the tutorial trigger to the PregameMarketView start game handler.
+
+PregameMarketView now triggers the tutorial start-game target before invoking the actual start handler. GameTable wraps the ready callback to fire that same target. A 300ms effect resumes the active tutorial phase once the main view becomes visible. Auto-start logic is being wired into the tutorial context.
+
+Auto-start fires once during pregame if the tutorial is not yet active or completed. BoardSidebarLeft will wrap the favor stack and player row with TutorialTarget. BoardSidebarRight targets still need to be added.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/GameScreen.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/GameScreen.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PregameMarketView.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarLeft.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarLeft.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarLeft.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarRight.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarRight.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarRight.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PlayerHand.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PlayerHand.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/PlayerHand.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Updating GameTable with tutorial imports, auto-start, resume logic, and targets for opponents, hand, and play zone. Adding TutorialOverlay and showBandingKey during the tutorial faction step.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarLeft.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Opponent display is already fixed.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx",
+  "pattern": "showBandingKey|playField|handZone|TutorialOverlay"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx",
+  "pattern": "showBandingKey|playField|handZone|TutorialOverlay",
+  "topFiles": [
+    {
+      "matchCount": 12,
+      "uri": "src/components/GameTable.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 12
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The play area DropZone will be wrapped with a TutorialTarget component.
+
+The hand zone will also be wrapped with a TutorialTarget. The banding key toggle will be switched to a state variable. TutorialOverlay will be inserted before the background closes. Steps will be filtered by current phase. Pregame welcome steps will appear during pregame. Active steps will appear during active play.
+
+During multiplayer waits for other players, the tutorial remains on the start-game step until the main phase begins. If a step targets a zone that does not yet exist, the overlay will skip it rather than highlighting a missing element.
+
+resumeActivePhase handles the transition into the active phase. The opponents step is hidden during pregame because it only appears once the game is active. Users can skip the start-game step and advance through earlier tutorial steps using Next. The faction key banding key will only display when that specific tutorial step is active.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Wrapping the DropZone play area in TutorialTarget may not work well.
+
+The play zone and hand will each get a TutorialTarget wrapper. TutorialOverlay will be placed inside FullBleedBackground, positioned as a sibling to tableForeground for full-screen coverage.
+
+TutorialOverlay will be a child of FullBleedBackground with flex 1, placed after the tableForeground view. The showBandingKey prop needs fixing. TutorialOverlay should be hidden when its step phase does not match the current game phase, since resumeActivePhase has a 350ms delay that could briefly trigger wrong highlights.
+
+A `tutorialVisible` flag will gate TutorialOverlay. It renders only when the current step phase matches the game state, or when the step is `start-game`. This prevents wrong highlights while `resumeActivePhase` transitions from pregame to active play.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/GameTable.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Adding a tutorial reset option to the DebugPanel for easier testing.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/DebugPanel.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -30</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -30
+```
+
+```
+src/components/BoardSidebarRight.tsx(86,8): error TS2304: Cannot find name 'TutorialTarget'.
+src/components/BoardSidebarRight.tsx(92,9): error TS2304: Cannot find name 'TutorialTarget'.
+src/components/BoardSidebarRight.tsx(106,12): error TS2304: Cannot find name 'TutorialTarget'.
+src/components/BoardSidebarRight.tsx(112,13): error TS2304: Cannot find name 'TutorialTarget'.
+src/components/BoardSidebarRight.tsx(116,10): error TS2304: Cannot find name 'TutorialTarget'.
+src/components/BoardSidebarRight.tsx(135,11): error TS2304: Cannot find name 'TutorialTarget'.
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/BoardSidebarRight.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -20</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -20
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Adding a debug reset option for the tutorial in the DebugPanel to aid testing.
+
+Adding component index exports. The tutorial reset button needs to import `resetTutorialCompleted` from the tutorial storage module. The tutorial overlay will work correctly in single-player local practice and AI opponent scenarios.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/DebugPanel.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/DebugPanel.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/DebugPanel.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/DebugPanel.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -5</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -5
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+TutorialContext needs to allow replaying the tutorial after it is completed. Currently startTutorial exits early when the tutorial is finished.
+
+Adding a `force` parameter to `startTutorial` fixes replay. When forced, it resets the completed state so the tutorial can restart even if storage indicates completion.
+
+A simpler approach avoids adding a `force` parameter. Resetting the completed flag in storage makes `isTutorialCompleted()` return false, so `startTutorial` can run without extra logic. The provider's React state may remain true, but the storage check handles replay correctly.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Tutorial system is in — WoTf files weren't in the workspace, so this follows the same pattern (context + spotlight overlay + registered targets).
+
+**How it works**
+- Auto-starts on first **Review the Market** (pregame) screen if not completed before
+- **15 steps**: welcome → market → recruits → epics → arena → favors → deck/discard → **Start Game** (must tap the button) → hand → play zone → faction key → stats → end turn → opponents → game log
+- After Start Game, waits for `MAIN` phase then continues with the in-game steps
+- Completion persisted in `localStorage` on web (`bl_tutorial_completed_v1`)
+- **Debug panel → Replay Tutorial** to reset and rerun
+
+**New files**
+- `src/tutorial/tutorialSteps.ts` — step copy + targets
+- `src/tutorial/tutorialStorage.ts` — completion flag
+- `src/context/TutorialContext.tsx`
+- `src/components/TutorialOverlay.tsx` — dim + gold spotlight + tooltip
+- `src/components/TutorialTarget.tsx` — measures highlight regions
+
+**Wired targets**
+- Pregame: market, recruits, epics, arena, start button
+- Left sidebar: favors, deck/discard
+- Active game: hand, play zone, faction key, stats, end turn, opponents, game log
+
+If you drop the WoTf tutorial images into `src/assets/images/tutorial/`, we can add them to the tooltip panel next. Same if you want native persistence via AsyncStorage.
+
+---
+
+_**User**_
+
+<system_notification>
+The following task has finished. If you were already aware, ignore this notification and do not restate prior responses.
+
+<task>
+kind: shell
+status: success
+task_id: 994441
+title: Search for WoTf tutorial files broadly
+output_path: /Users/claudewild/.cursor/projects/Users-claudewild-Documents-GIT-deck-builder/terminals/994441.txt
+</task>
+</system_notification>
+<user_query>Briefly inform the user about the task result and perform any follow-up actions (if needed). If there's no follow-ups needed, don't explicitly say that.</user_query>
+
+---
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/.cursor/projects/Users-claudewild-Documents-GIT-deck-builder/terminals/994441.txt</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+The search found WoTf at `/Users/claudewild/Documents/GIT/wotf/wotf-app/` — `TutorialOverlay.tsx` is at `src/components/UI/TutorialOverlay.tsx` there. It wasn't in the `deck_builder` workspace when the tutorial was built, so we implemented the same pattern (context + spotlight overlay + targets) from your step list instead.
+
+If you want it closer to WoTf visually, we can pull over their overlay styling and anything from `wotf-app/assets/images/tutorial`.
+
+---
+
+_**User**_
+
+For recruits, show the info to the right of the highlight
+For epics show the info to the left of the highlight
+For the Arena, show the info tp the right of the highlight
+For the deck and discard, show the info box uch higher as it gets cutoff, it should not fall below the screen bottom.
+start game should show above the highlight, currently covers it.
+your hand should be above the highlight, currently is covering it
+play zone should be ABOVE the highloight, currently its below and gets cut off by the screen
+faction key should be higher as its cut off by the screen
+turn stats should be higher as its cut off by the screen
+end turn should be higher as its cut off by the screen
+
+
+
+---
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialSteps.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/components/TutorialOverlay.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Recruits currently place info above the highlight instead of to its right. The remaining layout issues are still being identified.
+
+Epics and arena info boxes should sit to the left and right of their highlights. Deck-discard, start-game, hand, play-zone, faction-key, stats-icons, and end-turn all need upward repositioning to avoid screen cutoff. The root cause is incorrect step placements for recruits, epics, arena, and play-zone.
+
+Fixed tooltip height of 160 pixels overflows long text off-screen. Top placement overlaps the highlight when space is tight. Right and left placement calculations push panels too low when the highlight sits near the bottom edge. A better approach is needed for all placements.
+
+A simpler fix is preferred over complex dynamic measurement. The plan is to update the placements in tutorialSteps and rewrite the tooltipLayout engine. Optional vertical offsets per step will allow fine-tuning. Vertical clamping will keep panels inside the screen margins. Top placement will be adjusted to avoid overlapping the highlight.
+
+The estimated tooltip height will rise to 200–220 pixels to accommodate longer body text. After calculating the top position, it will be clamped to the screen bottom margin. For top placement, the panel will sit above the highlight with a gap, but if that pushes it too high, it will flip to the side or shrink. The Start Game button sits at the bottom of the screen, so its tooltip needs special handling.
+
+New `verticalBias` and `anchorY` options will let panels sit higher on the screen. `anchorY` can align the panel top with the highlight top or vertically center it. This keeps bottom sidebar items like deck-discard and faction-key from falling below the viewport.
+
+A `clampPanelTop` helper will enforce the screen margin and prevent the panel from overlapping the highlight. When a bottom-side highlight forces the tooltip upward, the panel will be anchored to the upper half of the viewport rather than pushed off-screen.
+
+Right placement works for recruits, epics, and arena. Deck-discard will sit near the highlight top with a small offset, then be shifted upward if the screen bottom would otherwise clip it.
+
+A `tooltipVertical` option will let each step choose between placing the panel above, beside, or below the highlight. Estimated tooltip height is set to 210 pixels. Step definitions will explicitly set `placement` and `verticalAlign` to control alignment precisely.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Updating step placements and improving tooltip positioning so panels stay on-screen and don't cover highlights.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialSteps.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialSteps.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/tutorial/tutorialSteps.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/TutorialOverlay.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The overlap on start-game, hand, and play-zone was caused by an estimated height that was too small, which forced the panel downward through clamping.
+
+Top placement now uses a larger height estimate. A check ensures the panel does not overlap the highlight even if clamping pushes it downward.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/components/TutorialOverlay.tsx</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -5</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && npx tsc --noEmit 2>&1 | head -5
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+Fixed. Changes:
+
+**Placements**
+- Recruits → right | Epics → left | Arena → right | Play zone → top
+
+**Layout engine** (`TutorialOverlay`)
+- Estimates panel height from body text (no more fixed 160px clipping)
+- `top` placement sits fully above the highlight with a 16px gap
+- `anchorHigh` on deck/discard, faction key, turn stats, end turn — pins tooltip higher (won’t spill off the bottom)
+
+Use Debug → **Replay Tutorial** to walk through again.
+
+---
+
+_**User**_
+
+lets move the little cog for debug up into the opponents bar, far right (absolute position it)
+
+---
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Status: **loading**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Status: **loading**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>

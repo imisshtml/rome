@@ -11,6 +11,7 @@ import { GameAction, GamePhase, PHASE_LABELS, PlayerState } from '../types/gameT
 import { costIcon, valorIcon, victoryIcon, turnButtonBg } from '../assets/images';
 import CardHoverPreview from './CardHoverPreview';
 import GameLogPanel from './GameLogPanel';
+import TutorialTarget from './TutorialTarget';
 
 const STAT_ICON_GAP = 2;
 const SIDEBAR_H_PAD = 4;
@@ -83,13 +84,13 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
 
   return (
     <View style={[styles.sidebar, { width }]}>
-      <View style={styles.logSection}>
+      <TutorialTarget targetKey="tutorial_game_log" style={styles.logSection}>
         <GameLogPanel
           actions={actionLog}
           players={players}
           onPreviewCard={onPreviewLogCard}
         />
-      </View>
+      </TutorialTarget>
 
       <View style={styles.lowerSection}>
         <CardHoverPreview card={hoverPreviewCard} width={width} />
@@ -103,14 +104,17 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
         </Text>
 
         {!isPregame ? (
-          <View style={styles.statsRow}>
-            <StatBadge icon={costIcon} value={coinsInPlay} size={iconSize} gapAfter />
-            <StatBadge icon={valorIcon} value={valorInPlay} size={iconSize} gapAfter />
-            <StatBadge icon={victoryIcon} value={victoryPoints} size={iconSize} />
-          </View>
+          <TutorialTarget targetKey="tutorial_stats">
+            <View style={styles.statsRow}>
+              <StatBadge icon={costIcon} value={coinsInPlay} size={iconSize} gapAfter />
+              <StatBadge icon={valorIcon} value={valorInPlay} size={iconSize} gapAfter />
+              <StatBadge icon={victoryIcon} value={victoryPoints} size={iconSize} />
+            </View>
+          </TutorialTarget>
         ) : null}
 
         {!isPregame ? (
+        <TutorialTarget targetKey="tutorial_end_turn">
         <Pressable
           onPress={onEndPhase}
           disabled={!canPressEndTurn}
@@ -129,6 +133,7 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
             <Text style={styles.buttonText}>{buttonLabel}</Text>
           </ImageBackground>
         </Pressable>
+        </TutorialTarget>
         ) : null}
         </View>
       </View>

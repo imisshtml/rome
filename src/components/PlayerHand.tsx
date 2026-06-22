@@ -6,6 +6,7 @@ import { calculateHandFanAngle } from '../utils/dragHelpers';
 import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
 import Card from './Card';
 import BandingKeyChart from './BandingKeyChart';
+import TutorialTarget from './TutorialTarget';
 
 interface PlayerHandProps {
   cards: CardInstance[];
@@ -90,12 +91,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </ScrollView>
 
       {showBandingKey ? (
-        <View style={styles.bandingOverlay} pointerEvents="none">
-          <BandingKeyChart
-            playArea={playArea}
-            claimedFactions={claimedBandingFactions}
-          />
-        </View>
+        <TutorialTarget targetKey="tutorial_faction_key" style={styles.bandingOverlay}>
+          <View style={styles.bandingInner} pointerEvents="none">
+            <BandingKeyChart
+              playArea={playArea}
+              claimedFactions={claimedBandingFactions}
+            />
+          </View>
+        </TutorialTarget>
       ) : null}
 
       {canPlayAllCharity && onPlayAllCharity ? (
@@ -143,6 +146,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     zIndex: 20,
+  },
+  bandingInner: {
+    flex: 1,
+    justifyContent: 'center',
   },
   playAllCharityBtn: {
     position: 'absolute',

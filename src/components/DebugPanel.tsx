@@ -10,10 +10,14 @@ import {
   useDispatchAction,
 } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
+import { useTutorialOptional } from '../context/TutorialContext';
+import { resetTutorialCompleted } from '../tutorial/tutorialStorage';
 import { PHASE_LABELS } from '../types/gameTypes';
 import { getPlayerTotalVp } from '../game/postGame';
 
-export const DebugPanel: React.FC = () => {
+export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
+  inOpponentsBar = false,
+}) => {
   const state = useGameState();
   const [visible, setVisible] = useDebugVisible();
   const resetGame = useResetGame();
@@ -22,13 +26,14 @@ export const DebugPanel: React.FC = () => {
   const localPlayerKey = useLocalPlayerKey();
   const dispatch = useDispatchAction();
   const { joinCode, isOnline, startGame, session } = useMultiplayer();
+  const tutorial = useTutorialOptional();
 
   const currentPlayer = state.players.find(
     (p) => p.id === state.turnPlayerId
   );
 
   return (
-    <View style={styles.wrapper}>
+    <View style={inOpponentsBar ? styles.opponentsAnchor : styles.wrapper}>
       <Pressable
         style={styles.toggleBtn}
         onPress={() => setVisible(!visible)}
@@ -39,7 +44,13 @@ export const DebugPanel: React.FC = () => {
       </Pressable>
 
       {visible && (
-        <ScrollView style={styles.panel} nestedScrollEnabled>
+        <ScrollView
+          style={[
+            styles.panel,
+            inOpponentsBar ? styles.panelInOpponentsBar : null,
+          ]}
+          nestedScrollEnabled
+        >
           <Text style={styles.header}>Debug</Text>
 
           <View style={styles.section}>
@@ -136,6 +147,18 @@ export const DebugPanel: React.FC = () => {
             </Text>
           ))}
 
+          {tutorial ? (
+            <Pressable
+              style={styles.resetBtn}
+              onPress={() => {
+                resetTutorialCompleted();
+                tutorial.startTutorial();
+              }}
+            >
+              <Text style={styles.resetText}>Replay Tutorial</Text>
+            </Pressable>
+          ) : null}
+
           <Pressable style={styles.resetBtn} onPress={() => resetGame()}>
             <Text style={styles.resetText}>Reset Game</Text>
           </Pressable>
@@ -174,6 +197,15 @@ const styles = StyleSheet.create({
     right: 8,
     zIndex: 9999,
   },
+  opponentsAnchor: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    zIndex: 10000,
+  },
   toggleBtn: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     width: 32,
@@ -198,6 +230,13 @@ const styles = StyleSheet.create({
     width: 240,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+  },
+  panelInOpponentsBar: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    marginTop: 0,
+    maxHeight: 420,
   },
   header: {
     color: '#F1C40F',

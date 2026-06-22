@@ -19,6 +19,12 @@ export const BOARD_RATIOS = {
 const GALLERY_IN_PLAY_SCALE = 2;
 /** Slightly smaller deck stacks in the left sidebar. */
 const SIDEBAR_STACK_SCALE = 0.88;
+/** Full-height supply stacks (Market, Epics, Favors, Disfavor). */
+const FULL_SIDEBAR_STACK_COUNT = 4;
+/** Supply pile size vs layout unit (~20% smaller than prior full stacks). */
+const SUPPLY_STACK_SCALE = 0.8;
+/** Player deck + discard row — slightly larger after supply shrink. */
+const PLAYER_STACK_SCALE = 0.55;
 
 export interface BoardLayoutMetrics {
   boardW: number;
@@ -40,6 +46,9 @@ export interface BoardLayoutMetrics {
   playCardH: number;
   stackW: number;
   stackH: number;
+  playerStackW: number;
+  playerStackH: number;
+  playerStackGap: number;
   stackGap: number;
   mainContentH: number;
 }
@@ -93,18 +102,32 @@ export function computeBoardLayout(
   const playCardW = Math.floor(handCardW * 0.52);
   const playCardH = portraitCardHeight(playCardW);
 
-  const stackCount = 5;
+  const sidebarRowCount = FULL_SIDEBAR_STACK_COUNT + 1;
   const stackGap = Math.max(2, Math.round(mainContentH * 0.004));
+  const playerStackGap = Math.max(2, stackGap);
   const sidebarInnerH = mainContentH - 16;
-  let stackW = Math.floor(sidebarW * 0.88 * SIDEBAR_STACK_SCALE);
-  let stackH = Math.floor(stackW * CARD_PORTRAIT_RATIO);
-  const stacksTotalH = stackCount * stackH + (stackCount - 1) * stackGap;
-  if (stacksTotalH > sidebarInnerH) {
-    stackH = Math.floor(
-      (sidebarInnerH - (stackCount - 1) * stackGap) / stackCount
-    );
-    stackW = Math.floor(stackH / CARD_PORTRAIT_RATIO);
+  const stackWeight =
+    FULL_SIDEBAR_STACK_COUNT * SUPPLY_STACK_SCALE + PLAYER_STACK_SCALE;
+  const maxStackW = Math.floor(sidebarW * 0.88 * SIDEBAR_STACK_SCALE);
+  const maxPlayerStackW = Math.floor((sidebarW - 8 - playerStackGap) / 2);
+
+  const unitH = Math.floor(
+    (sidebarInnerH - (sidebarRowCount - 1) * stackGap) / stackWeight
+  );
+  let stackH = Math.floor(unitH * SUPPLY_STACK_SCALE);
+  let stackW = Math.floor(stackH / CARD_PORTRAIT_RATIO);
+  stackH = portraitCardHeight(stackW);
+  if (stackW > maxStackW) {
+    stackW = maxStackW;
     stackH = portraitCardHeight(stackW);
+  }
+
+  let playerStackH = Math.floor(unitH * PLAYER_STACK_SCALE);
+  let playerStackW = Math.floor(playerStackH / CARD_PORTRAIT_RATIO);
+  playerStackH = portraitCardHeight(playerStackW);
+  if (playerStackW > maxPlayerStackW) {
+    playerStackW = maxPlayerStackW;
+    playerStackH = portraitCardHeight(playerStackW);
   }
 
   return {
@@ -127,6 +150,9 @@ export function computeBoardLayout(
     playCardH,
     stackW,
     stackH,
+    playerStackW,
+    playerStackH,
+    playerStackGap,
     stackGap,
     mainContentH,
   };
