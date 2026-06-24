@@ -183,7 +183,7 @@ export class GameSyncService {
               this.emit(state, row.version, row.join_code);
             }
           }
-          if (row.status === 'lobby') {
+          if (row.status === 'lobby' || row.status === 'active') {
             const lobby = await this.fetchLobbyInfo(gameId);
             this.emitLobby(lobby);
           }

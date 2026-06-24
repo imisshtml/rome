@@ -73,8 +73,8 @@ function resolvePhase(
     return 'landing';
   }
   if (state?.status === 'finished') return 'postgame';
-  if (state?.status === 'lobby' || lobby?.status === 'lobby') return 'lobby';
   if (state?.status === 'active') return 'game';
+  if (state?.status === 'lobby' || lobby?.status === 'lobby') return 'lobby';
   return 'lobby';
 }
 
@@ -124,6 +124,15 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
     client.setStateHandler((state) => {
       setGameStateRef.current(state);
+      if (
+        state?.status === 'active' &&
+        lobbyRef.current &&
+        lobbyRef.current.status === 'lobby'
+      ) {
+        const updated = { ...lobbyRef.current, status: 'active' as const };
+        lobbyRef.current = updated;
+        setLobby(updated);
+      }
       syncPhase(state);
     });
 

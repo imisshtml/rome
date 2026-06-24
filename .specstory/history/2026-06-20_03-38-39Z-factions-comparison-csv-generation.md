@@ -27760,4 +27760,632 @@ Cards 7 through 11 check out. Card 12's destroy effect is ambiguous—whether to
 
 Card 12 will use a per-opponent destroy flag. Cards 13 through 16 are confirmed: imperial tax forces all opponents to discard one card; arena wager triggers augur consultation; merchant caravan gives four coins; triumphal parade grants one gratia and one draw; temple blessing grants one gratia and one draw.
 
-Card 18 gains a card up to five and discards one. The order matters. Card 19 destroys a card from hand or play and gains a market or epic card costing up to two more than the destroyed card. Card 20 destroys the top card of each player’s deck and replaces it</details></think>
+Card 18 gains a card up to five and discards one. The order matters. Card 19 destroys a card from hand or play and gains a market or epic card costing up to two more than the destroyed card. Card 20 destroys the top card of each player’s deck and replaces it from the market. Gratitude granted by cards goes to the discard pile.
+
+I’ll extend the effects type to support optional flags and object-based gain_card values. The slave revolt card will use an optional destroy effect targeting one card from hand or discard. I’m fixing cards_favor.json directly and writing a validation script.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Fixing JSON mismatches and adding a validation script. Checking how `mergeCardEffects` handles extended favor fields:
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/types/effectsTypes.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/game/CardCatalog.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Found a type mismatch in `mergeCardEffects`: `gain_card` with `{ faction: "legion" }` merges correctly, but `CardEffects` expects `string | null`.
+
+Runtime spread preserves nested objects in favor card effects. The fix requires either skipping mergeCardEffects for complex favor effects or extending it to preserve unknown keys.
+
+Confirmed that spreading the raw effects object after mergeCardEffects preserves unknown keys like `gain_gratia`. Next steps are updating `cards_favor.json` and creating a validation script using `FAVOR_EFFECT_SPECS`. The `gain_card` entry for military tribute must include `source` in its JSON definition.</details></think>
+
+_**Agent (composer-2.5)**_
+
+Fixing clear JSON errors and adding validation. Implementing `gain_gratia` on play since two cards depend on it.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/scripts/favor-effect-specs.mjs</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/cards_favor.json</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/scripts/validate-favor-cards.mjs</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+Implementing gain_gratia in GameEngine.applyCardPlayEffects. Updating CardCatalog.fromFavorCard to preserve extended effects.
+
+`fromFavorCard` now passes raw effects directly through `mergeCardEffects`, preserving extra keys like `gain_gratia`. Started writing `applyGratiaGain` to apply the bonus.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts",
+  "pattern": "GRATIA"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts",
+  "pattern": "GRATIA",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts",
+  "pattern": "from './CardCatalog'|from \\\"./CardCatalog\\\""
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts",
+  "pattern": "from './CardCatalog'|from \\\"./CardCatalog\\\"",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/game/CardDefinitions.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/game/GameEngine.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/src/utils/cardLogUtils.ts</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && node scripts/validate-favor-cards.mjs && npx tsc --noEmit 2>&1 | head -20</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && node scripts/validate-favor-cards.mjs && npx tsc --noEmit 2>&1 | head -20
+```
+
+```
+=== Favor card validation ===
+
+favor_bread_circuses: image file missing: favor_bread_circus.jpg
+OK  Bread &amp; Circuses (qty 1) → play: gain_coins
+favor_mars: image file missing: favor_mars.jpg
+OK  Favor of Mars (qty 1) → play: draw_cards
+favor_boast: image file missing: favor_boast.jpg
+OK  Gladiator's Boast (qty 1) → play: draw_cards
+favor_patrons_donation: image file missing: favor_spoils.jpg
+OK  Patron's Donation (qty 1) → play: gain_coins
+favor_slave_revolt: image file missing: favor_revolt.jpg
+PENDING  Slave Revolt → play: optional destroy (pending)
+favor_military_tribute: image file missing: favor_legion_tribute.jpg
+PENDING  Military Tribute → play: gain_card (pending)
+favor_senate_decree: image file missing: favor_senate_control.jpg
+PENDING  Senate Decree → play: gain_card (pending)
+favor_ludus_recruitment: image file missing: favor_ludus_recruits.jpg
+PENDING  Ludus Recruitment → play: gain_card (pending)
+favor_hidden_stash: image file missing: favor_hidden_stash.jpg
+OK  Hidden Stash (qty 1) → play: gain_coins + draw
+favor_oracles_warning: image file missing: favor_oracle.jpg
+PENDING  Oracle's Warning → play: look/reorder deck (pending)
+favor_veterans_advice: image file missing: favor_advice.jpg
+OK  Veteran's Advice (qty 1) → play: draw + discard prompt
+favor_spoils_of_victory: image file missing: favor_spoils_of_war.jpg
+PENDING  Spoils of Victory → play: destroy opponent hand pick (pending)
+favor_imperial_tax: image file missing: favor_imperial_tax.jpg
+OK  Imperial Tax (qty 1) → play: force_opponent_discard all
+favor_arena_wager: image file missing: favor_wager.jpg
+PENDING  Arena Wager → play: consult_augur (pending)
+favor_merchant_caravan: image file missing: favor_merchants.jpg
+OK  Merchant Caravan (qty 2) → play: gain_coins
+favor_triumphal_parade: image file missing: favor_parade.jpg
+OK  Triumphal Parade (qty 1) → play: gain_gratia
+favor_temple_blessing: image file missing: favor_temple_blessing.jpg
+OK  Temple Blessing (qty 2) → play: gain_gratia + draw
+favor_black_market_deal: image file missing: favor_black_market.jpg
+PENDING  Black Market Deal → play: gain_card + discard (partial)
+favor_gladiators_funeral: image file missing: favor_pyre.jpg
+PENDING  Gladiator's Funeral → play: destroy then gain (pending)
+favor_crowd_frenzy: image file missing: favor_crowd.jpg
+PENDING  Crowd Frenzy → play: deck-top swap (pending)
+
+20 favor types, 23 cards in deck
+20 error(s), 10 pending engine handler(s)
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/claudewild/Documents/GIT/deck_builder/scripts/validate-favor-cards.mjs</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/claudewild/Documents/GIT/deck_builder && node scripts/validate-favor-cards.mjs && npx tsc --noEmit 2>&1 | head -10</summary>
+
+```bash
+cd /Users/claudewild/Documents/GIT/deck_builder && node scripts/validate-favor-cards.mjs && npx tsc --noEmit 2>&1 | head -10
+```
+
+```
+=== Favor card validation ===
+
+OK  Bread &amp; Circuses (qty 1) → play: gain_coins
+OK  Favor of Mars (qty 1) → play: draw_cards
+OK  Gladiator's Boast (qty 1) → play: draw_cards
+OK  Patron's Donation (qty 1) → play: gain_coins
+PENDING  Slave Revolt → play: optional destroy (pending)
+PENDING  Military Tribute → play: gain_card (pending)
+PENDING  Senate Decree → play: gain_card (pending)
+PENDING  Ludus Recruitment → play: gain_card (pending)
+OK  Hidden Stash (qty 1) → play: gain_coins + draw
+PENDING  Oracle's Warning → play: look/reorder deck (pending)
+OK  Veteran's Advice (qty 1) → play: draw + discard prompt
+PENDING  Spoils of Victory → play: destroy opponent hand pick (pending)
+OK  Imperial Tax (qty 1) → play: force_opponent_discard all
+PENDING  Arena Wager → play: consult_augur (pending)
+OK  Merchant Caravan (qty 2) → play: gain_coins
+OK  Triumphal Parade (qty 1) → play: gain_gratia
+OK  Temple Blessing (qty 2) → play: gain_gratia + draw
+PENDING  Black Market Deal → play: gain_card + discard (partial)
+PENDING  Gladiator's Funeral → play: destroy then gain (pending)
+PENDING  Crowd Frenzy → play: deck-top swap (pending)
+
+20 favor types, 23 cards in deck
+0 error(s), 10 pending engine handler(s)
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+Verified all 20 favor cards — `node scripts/validate-favor-cards.mjs` passes (23 cards in deck).
+
+### JSON fixes (were wrong)
+
+| Card | Was | Fixed to |
+|------|-----|----------|
+| **Triumphal Parade** | `gain_vp: 1` | `gain_gratia: 1` |
+| **Temple Blessing** | `choose_one` (Gratia OR draw) | `gain_gratia: 1` + `draw_cards: 1` (both) |
+| **Gladiator's Funeral** | destroy only | + `gain_card` from market/epic at cost+2 |
+| **Crowd Frenzy** | `destroy_opponent_deck_top` | `destroy_each_player_deck_top` + `replace_from_market_matching_cost` |
+| **Spoils of Victory** | `destroy_opponent_card: true` | `destroy_opponent_hand_card: { each_opponent: true }` |
+| **Faction tributes** | missing `source` | added `source: "market"` |
+| **Slave Revolt** | mandatory destroy | `optional: true` |
+| **Imperial Tax** | extra `target` field | removed (engine uses `force_opponent_discard: 1` for all opponents) |
+
+### Engine added
+**`gain_gratia`** on play — Triumphal Parade & Temple Blessing now grant Gratia to discard.
+
+### Works on play today (10 types / 13 cards)
+Coins, draw, draw+discard, Imperial Tax (all-opponent discard), Hidden Stash, Triumphal Parade, Temple Blessing, Veteran's Advice, Merchant Caravan, Bread & Circuses, etc.
+
+### JSON correct, engine still pending (10 types)
+Slave Revolt, Military/Senate/Ludus tribute, Oracle's Warning, Spoils of Victory, Arena Wager, Black Market Deal (discard works, gain doesn't), Gladiator's Funeral, Crowd Frenzy
+
+All 20 images present under `src/assets/images/favor/`. Specs live in `scripts/favor-effect-specs.mjs` — re-run validation after edits.
+
+---
+
+_**User**_
+
+Umm, I tried a 3 players game, the other players were able to join the lobby, but when the game started, only the host entered the game.
+
+---
+
+_**Agent (composer-2.5)**_
+
+Investigating the multiplayer lobby → game start flow to find why only the host enters.
+
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="semantic_search_full">
+<details>
+<summary>Tool use: **semantic_search_full**</summary>
+
+
+Parameters:
+
+```json
+{
+  "explanation": "",
+  "includePattern": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "query": "How does multiplayer game start when host starts game from lobby?",
+  "topK": 10
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="semantic_search_full"><details>
+<summary>Tool use: **semantic_search_full**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "lobby|START_GAME|player_key|Multiplayer"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Users/claudewild/Documents/GIT/deck_builder/src",
+  "pattern": "lobby|START_GAME|player_key|Multiplayer",
+  "topFiles": [
+    {
+      "matchCount": 6,
+      "uri": "src/screens/LobbyScreen.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/lib/supabase.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/LandingScreen.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/screens/AppShell.tsx"
+    },
+    {
+      "matchCount": 36,
+      "uri": "src/network/MultiplayerProvider.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "src/network/index.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "src/components/DebugPanel.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/store/useGameStore.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/types/gameTypes.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/components/GameLogPanel.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/screens/GameScreen.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "src/network/MultiplayerClient.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src/screens/PostGameScreen.tsx"
+    },
+    {
+      "matchCount": 7,
+      "uri": "src/game/GameEngine.ts"
+    },
+    {
+      "matchCount": 39,
+      "uri": "src/network/GameSyncService.ts"
+    }
+  ],
+  "totalFiles": 15,
+  "totalMatches": 118
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/network/MultiplayerProvider.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/network/GameSyncService.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/network/MultiplayerClient.ts</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The bug is in `setupGameChannel`. When the game becomes active, it only emits state if `row.state` exists. This prevents the other players from entering the game.
+
+The channel listener only emits lobby updates while the status is `lobby`. When the host starts the game, the database should push the new `active` status and state to all clients via Postgres change notifications. I am now checking whether that notification path is actually working.
+
+I checked whether `persistState` sets the status to `active` and whether `syncPhase` transitions non-hosts to the `game` phase. The phase resolution logic appears correct. The real cause of the bug is still unclear.
+
+I found the bug in `resolvePhase`. The function checks `state?.status === 'lobby'` before checking `state?.status === 'active'`. Because the state object is missing, the first condition is false and the second condition is never reached. This causes non-host clients to remain stuck in the lobby phase even after the game starts.
+
+The stale lobby reference is the actual culprit. Non-host clients receive the active game state through realtime, but their lobby object still carries status 'lobby'. Because `resolvePhase` checks `lobby?.status === 'lobby'` before `state?.status === 'active'`, the function returns 'lobby' and keeps the client in the lobby phase.</details></think>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/AppShell.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/claudewild/Documents/GIT/deck_builder/src/screens/LobbyScreen.tsx</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (composer-2.5)**_
+
+<think><details><summary>Thought Process</summary>
+The bug is confirmed. `resolvePhase` checks the lobby status before verifying the game state is active.</details></think>
