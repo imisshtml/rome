@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,22 @@ import {
 } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { getCardDefinition } from '../game/CardDefinitions';
+import {
+  eventHandChoiceDestroys,
+  GALLERY_EVENT_DISPLAY_MS,
+} from '../game/EventResolver';
 import { CardFace } from './CardFace';
 
 interface GalleryEventModalProps {
   event: CardInstance | null;
   visible: boolean;
   pendingDiscardPlayerIds: string[];
+  pendingOptionalPlayerIds?: string[];
   localPlayerId: string;
   localHand: CardInstance[];
   onResolve: () => void;
   onDiscardCard: (card: CardInstance) => void;
+  onSkipOptional?: () => void;
 }
 
 const CARD_W = 96;
@@ -28,20 +34,66 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
   event,
   visible,
   pendingDiscardPlayerIds,
+  pendingOptionalPlayerIds = [],
   localPlayerId,
   localHand,
   onResolve,
   onDiscardCard,
+  onSkipOptional,
 }) => {
+  const [continueReady, setContinueReady] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !event) {
+      setContinueReady(false);
+      return;
+    }
+
+    const mustRespond =
+      pendingDiscardPlayerIds.includes(localPlayerId) ||
+      pendingOptionalPlayerIds.includes(localPlayerId);
+
+    if (mustRespond) {
+      setContinueReady(false);
+      return;
+    }
+
+    setContinueReady(false);
+    const timer = setTimeout(
+      () => setContinueReady(true),
+      GALLERY_EVENT_DISPLAY_MS
+    );
+    return () => clearTimeout(timer);
+  }, [
+    visible,
+    event?.instanceId,
+    localPlayerId,
+    pendingDiscardPlayerIds,
+    pendingOptionalPlayerIds,
+  ]);
+
   if (!event) return null;
 
   const definition = event.definition ?? getCardDefinition(event.definitionId);
-  const mustDiscard = pendingDiscardPlayerIds.includes(localPlayerId);
-  const waitingOnDiscards = pendingDiscardPlayerIds.length > 0;
-  const canContinue = !waitingOnDiscards;
+  const mustRequiredDiscard = pendingDiscardPlayerIds.includes(localPlayerId);
+  const mustOptionalDiscard = pendingOptionalPlayerIds.includes(localPlayerId);
+  const waitingOnDiscards =
+    pendingDiscardPlayerIds.length > 0 || pendingOptionalPlayerIds.length > 0;
+  const canContinue = !waitingOnDiscards && continueReady;
+  const destroys = eventHandChoiceDestroys(event);
+  const optionalCoinReward =
+    typeof event.definition?.effectLegacy?.optional_discard_for_coins ===
+    'number'
+      ? event.definition.effectLegacy.optional_discard_for_coins
+      : 2;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={canContinue ? onResolve : undefined}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={canContinue ? onResolve : undefined}
+    >
       <View style={styles.backdrop}>
         <View style={styles.panel}>
           <Text style={styles.title}>Gallery Event</Text>
@@ -58,9 +110,13 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
             <Text style={styles.effectText}>{definition.text}</Text>
           ) : null}
 
-          {mustDiscard ? (
+          {mustRequiredDiscard ? (
             <>
-              <Text style={styles.prompt}>Choose a card to discard</Text>
+              <Text style={styles.prompt}>
+                {destroys
+                  ? 'Choose a card to destroy from your hand'
+                  : 'Choose a card to discard'}
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -85,11 +141,55 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
                 ))}
               </ScrollView>
             </>
+          ) : mustOptionalDiscard ? (
+            <>
+              <Text style={styles.prompt}>
+                Optionally discard a card to gain {optionalCoinReward} Coin
+                {optionalCoinReward === 1 ? '' : 's'}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.handRow}
+              >
+                {localHand.map((card) => (
+                  <Pressable
+                    key={card.instanceId}
+                    onPress={() => onDiscardCard(card)}
+                    style={styles.handCardBtn}
+                  >
+                    <CardFace
+                      definition={
+                        card.definition ?? getCardDefinition(card.definitionId)
+                      }
+                      faceUp={card.faceUp}
+                      width={CARD_W}
+                      height={CARD_H}
+                      chosenFaction={card.chosenFaction}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+              {onSkipOptional ? (
+                <Pressable style={styles.skipBtn} onPress={onSkipOptional}>
+                  <Text style={styles.skipBtnText}>Skip</Text>
+                </Pressable>
+              ) : null}
+            </>
           ) : waitingOnDiscards ? (
             <Text style={styles.hint}>
-              Waiting for {pendingDiscardPlayerIds.length} player
-              {pendingDiscardPlayerIds.length === 1 ? '' : 's'} to discard…
+              Waiting for{' '}
+              {pendingDiscardPlayerIds.length + pendingOptionalPlayerIds.length}{' '}
+              player
+              {pendingDiscardPlayerIds.length +
+                pendingOptionalPlayerIds.length ===
+              1
+                ? ''
+                : 's'}{' '}
+              to respond…
             </Text>
+          ) : !continueReady ? (
+            <Text style={styles.hint}>Review the event…</Text>
           ) : (
             <Text style={styles.hint}>Effect resolved for all players.</Text>
           )}
@@ -165,6 +265,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  skipBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  skipBtnText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '700',
+    fontSize: 13,
   },
   hint: {
     color: 'rgba(255,255,255,0.45)',

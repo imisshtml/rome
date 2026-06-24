@@ -6,6 +6,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  FACTION_EFFECT_OVERRIDES,
+  TIMING_FIXES,
+} from './faction-effect-overrides.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
@@ -18,6 +22,10 @@ function wordToNum(word) {
   const n = parseInt(word, 10);
   if (!Number.isNaN(n)) return n;
   return WORD_NUM[word.toLowerCase()] ?? null;
+}
+
+function normalizeEffectText(text) {
+  return text.replace(/\bMarket\b/gi, 'gallery');
 }
 
 function parseCoins(text) {
@@ -66,6 +74,9 @@ function parseDiscardCards(text) {
 }
 
 function parseDestroyFromHandDiscard(text) {
+  // Destroy-on-gain is handled separately (on_gain); skip here.
+  if (/when gained.*destroy/i.test(text)) return null;
+
   // When card is an OR choice, only treat destroy in the primary clause as on-play
   const destroyText =
     /\s+OR\s+/i.test(text) ? text.split(/\s+OR\s+/i)[0] : text;
@@ -96,23 +107,26 @@ function parseDestroyFromHandDiscard(text) {
 }
 
 function parseDestroyGallery(text) {
-  const upTo = text.match(
+  const normalized = normalizeEffectText(text);
+  const upTo = normalized.match(
     /(?:destroy|discard) up to\s+(\d+)\s+cards? in the gallery/i
   );
   if (upTo) return parseInt(upTo[1], 10);
 
   if (
-    /destroy a card in the gallery/i.test(text) ||
-    /destroy a card from the gallery/i.test(text) ||
-    /destroy a card in the gallery and replace/i.test(text) ||
-    (/destroy a card in the gallery/i.test(text) &&
-      /then destroy a card in the gallery/i.test(text))
+    /destroy a card in the gallery/i.test(normalized) ||
+    /destroy a card from the gallery/i.test(normalized) ||
+    /destroy a card in the gallery and replace/i.test(normalized) ||
+    /destroy a card in the gallery, replace/i.test(normalized) ||
+    /destroy a card in the gallery and gain/i.test(normalized)
   ) {
     return 1;
   }
 
-  if (/then destroy a card in the gallery/i.test(text)) return 1;
-  if (/draw 1 card, then destroy a card in the gallery/i.test(text)) return 1;
+  if (/then destroy a card in the gallery/i.test(normalized)) return 1;
+  if (/draw 1 card, then destroy a card in the gallery/i.test(normalized)) {
+    return 1;
+  }
 
   return null;
 }
@@ -129,7 +143,30 @@ function parseLookAtTop(text) {
 }
 
 function parseGainCard(text) {
-  const galleryCost = text.match(
+  const normalized = normalizeEffectText(text);
+
+  const fromDestroyed = text.match(
+    /gain a card from the Destroyed Pile costing\s+(\d+) or less/i
+  );
+  if (fromDestroyed) {
+    return {
+      max_cost: parseInt(fromDestroyed[1], 10),
+      source: 'destroyed_pile',
+    };
+  }
+
+  const factionFromMarket = normalized.match(
+    /gain a Faction card from the gallery costing\s+(\d+) or less/i
+  );
+  if (factionFromMarket) {
+    return {
+      max_cost: parseInt(factionFromMarket[1], 10),
+      source: 'market',
+      type: 'faction',
+    };
+  }
+
+  const galleryCost = normalized.match(
     /gain a(?:n)?\s+(?:(\w+)\s+)?card(?:s)?(?: from the gallery)? costing\s+(\d+) or less/i
   );
   if (galleryCost) {
@@ -142,39 +179,54 @@ function parseGainCard(text) {
     return payload;
   }
 
-  const freeGallery = text.match(
+  const freeGallery = normalized.match(
     /gain a card costing\s+(\d+) or less from the gallery for free/i
   );
   if (freeGallery) {
-    return { max_cost: parseInt(freeGallery[1], 10), source: 'gallery' };
+    return { max_cost: parseInt(freeGallery[1], 10), source: 'market' };
   }
 
-  const senateGain = text.match(
+  const senateGain = normalized.match(
     /gain a card from the gallery costing\s+(\d+) or less/i
   );
   if (senateGain) {
     return {
       max_cost: parseInt(senateGain[1], 10),
-      source: 'gallery',
+      source: 'market',
     };
+  }
+
+  const epicGain = normalized.match(
+    /gain a card of cost\s+(\d+) or less/i
+  );
+  if (epicGain) {
+    return { max_cost: parseInt(epicGain[1], 10), source: 'market' };
+  }
+
+  const marketGain = normalized.match(
+    /gain a card from the gallery costing\s+(\d+) or less/i
+  );
+  if (marketGain) {
+    return { max_cost: parseInt(marketGain[1], 10), source: 'market' };
   }
 
   const conditionalGain = text.match(
     /gain a card costing up to 1 more than the destroyed card/i
   );
   if (conditionalGain) {
-    return { source: 'gallery', dynamic: 'destroyed_cost_plus_1' };
+    return { source: 'market', dynamic: 'destroyed_cost_plus_1' };
   }
 
   return null;
 }
 
 function parseGainItem(text) {
-  const m = text.match(
-    /gain an item(?: card)? costing\s+(\d+) or less(?: from the gallery)?/i
+  const normalized = normalizeEffectText(text);
+  const m = normalized.match(
+    /gain an item(?: card)?(?: from the gallery)? costing\s+(\d+) or less/i
   );
   if (m) {
-    return { max_cost: parseInt(m[1], 10), source: 'gallery', type: 'item' };
+    return { max_cost: parseInt(m[1], 10), source: 'market', type: 'item' };
   }
   return null;
 }
@@ -195,6 +247,20 @@ function parseEffects(card) {
   const text = card.effect_text ?? '';
   const keywords = card.effect_keywords ?? [];
   const effects = {};
+
+  if (
+    card.id === 'ALL-002' ||
+    /choose a faction \[Legion, Ludus, Senate\]/i.test(text)
+  ) {
+    effects.choose_faction_on_play = true;
+  }
+
+  if (/other players must discard\s+(\d+)/i.test(text)) {
+    effects.force_opponent_discard = parseInt(
+      text.match(/other players must discard\s+(\d+)/i)[1],
+      10
+    );
+  }
 
   const coins = parseCoins(text);
   if (coins != null) effects.gain_coins = coins;
@@ -250,7 +316,10 @@ function parseEffects(card) {
   const gainItem = parseGainItem(text);
   if (gainItem) effects.gain_item = gainItem;
 
-  if (/copy the effect of/i.test(text) || keywords.includes('copy')) {
+  if (
+    /copy the effect(?:s)? of/i.test(text) &&
+    !FACTION_EFFECT_OVERRIDES[card.id]
+  ) {
     effects.copy_card = true;
   }
 
@@ -283,8 +352,11 @@ function parseEffects(card) {
     effects.force_opponent_discard = 1;
   }
 
-  if (/gain \+(\d+) vp/i.test(text)) {
-    effects.gain_vp = parseInt(text.match(/gain \+(\d+) vp/i)[1], 10);
+  const bonusVp = text.match(
+    /(?:if you defeat arena this turn, )?gain \+(\d+) victory points/i
+  );
+  if (bonusVp) {
+    effects.gain_vp = parseInt(bonusVp[1], 10);
   }
 
   if (/flip up to\s+(\d+) cards in the gallery face down/i.test(text)) {
@@ -363,32 +435,10 @@ function parseEffects(card) {
   return Object.keys(effects).length ? effects : undefined;
 }
 
-/** Cards whose effects need hand-tuned structured data. */
-const MANUAL_OVERRIDES = {
-  'LEG-017': {
-    gain_imperial_favor: 1,
-    gain_card: { type: 'imperial_favor', source: 'favor_discard' },
-  },
-  'LEG-025': {
-    gain_coins: 2,
-    gain_card: { source: 'main_deck', position: 'top', play: true },
-  },
-  'LUD-008': { gain_coins: 2 },
-  'EPI-001': { gain_coins: 5 },
-  'EPI-004': { gain_coins: 3, gain_vp: 2 },
-  'EPI-006': { gain_coins: 4 },
-  'EPI-010': { look_at_top_cards: 4, reorder_top_cards: true, draw_cards: 1 },
-  'SEN-014': { gain_coins: 1 },
-  'SEN-011': {
-    gain_coins: 2,
-    gain_item: { max_cost: 4, source: 'gallery', type: 'item' },
-  },
-};
-
 function mergeManual(card, effects) {
-  const manual = MANUAL_OVERRIDES[card.id];
+  const manual = FACTION_EFFECT_OVERRIDES[card.id];
   if (!manual) return effects;
-  return { ...(effects ?? {}), ...manual };
+  return manual;
 }
 
 const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -411,8 +461,13 @@ for (const card of data.cards) {
     continue;
   }
 
-  const effects = mergeManual(card, parseEffects(card));
-  if (effects) {
+  if (TIMING_FIXES[card.id]) {
+    card.timing = TIMING_FIXES[card.id];
+  }
+
+  const parsed = parseEffects(card);
+  const effects = mergeManual(card, parsed);
+  if (effects && Object.keys(effects).length > 0) {
     card.effects = effects;
     updated++;
   } else {

@@ -3,7 +3,7 @@
     "id": "favor_bread_circuses",
     "name": "Bread & Circuses",
     "image": "favor_bread_circus.jpg",
-    "deck_qty": 3,
+    "deck_qty": 1,
     "effect_text": "Gain 2 Coins.",
     "effects": {
       "gain_coins": 2
@@ -13,17 +13,17 @@
     "id": "favor_mars",
     "name": "Favor of Mars",
     "image": "favor_mars.jpg",
-    "deck_qty": 2,
-    "effect_text": "Gain 1 Imperial Favor.",
+    "deck_qty": 1,
+    "effect_text": "Draw 3 cards.",
     "effects": {
-      "gain_imperial_favor": 1
+      "draw_cards": 3
     }
   },
   {
     "id": "favor_boast",
     "name": "Gladiator's Boast",
     "image": "favor_boast.jpg",
-    "deck_qty": 3,
+    "deck_qty": 1,
     "effect_text": "Draw 1 card.",
     "effects": {
       "draw_cards": 1
@@ -33,7 +33,7 @@
     "id": "favor_patrons_donation",
     "name": "Patron's Donation",
     "image": "favor_spoils.jpg",
-    "deck_qty": 2,
+    "deck_qty": 1,
     "effect_text": "Gain 3 Coins.",
     "effects": {
       "gain_coins": 3
@@ -43,9 +43,10 @@
     "id": "favor_slave_revolt",
     "name": "Slave Revolt",
     "image": "favor_revolt.jpg",
-    "deck_qty": 2,
-    "effect_text": "Destroy a card from your hand or discard pile.",
+    "deck_qty": 1,
+    "effect_text": "You may destroy a card from your hand or discard pile.",
     "effects": {
+      "optional": true,
       "destroy_cards": 1,
       "destroy_from": ["hand", "discard"]
     }
@@ -54,12 +55,13 @@
     "id": "favor_military_tribute",
     "name": "Military Tribute",
     "image": "favor_legion_tribute.jpg",
-    "deck_qty": 2,
-    "effect_text": "Gain a Legion card costing 4 or less.",
+    "deck_qty": 1,
+    "effect_text": "Gain a Legion card costing 5 or less.",
     "effects": {
       "gain_card": {
         "faction": "legion",
-        "max_cost": 4
+        "max_cost": 5,
+        "source": "market"
       }
     }
   },
@@ -67,12 +69,13 @@
     "id": "favor_senate_decree",
     "name": "Senate Decree",
     "image": "favor_senate_control.jpg",
-    "deck_qty": 2,
-    "effect_text": "Gain a Senate card costing 4 or less.",
+    "deck_qty": 1,
+    "effect_text": "Gain a Senate card costing 5 or less.",
     "effects": {
       "gain_card": {
         "faction": "senate",
-        "max_cost": 4
+        "max_cost": 5,
+        "source": "market"
       }
     }
   },
@@ -80,12 +83,13 @@
     "id": "favor_ludus_recruitment",
     "name": "Ludus Recruitment",
     "image": "favor_ludus_recruits.jpg",
-    "deck_qty": 2,
-    "effect_text": "Gain a Ludus card costing 4 or less.",
+    "deck_qty": 1,
+    "effect_text": "Gain a Ludus card costing 5 or less.",
     "effects": {
       "gain_card": {
         "faction": "ludus",
-        "max_cost": 4
+        "max_cost": 5,
+        "source": "market"
       }
     }
   },
@@ -93,7 +97,7 @@
     "id": "favor_hidden_stash",
     "name": "Hidden Stash",
     "image": "favor_hidden_stash.jpg",
-    "deck_qty": 2,
+    "deck_qty": 1,
     "effect_text": "Gain 2 Coins and draw 1 card.",
     "effects": {
       "gain_coins": 2,
@@ -104,7 +108,7 @@
     "id": "favor_oracles_warning",
     "name": "Oracle's Warning",
     "image": "favor_oracle.jpg",
-    "deck_qty": 2,
+    "deck_qty": 1,
     "effect_text": "Look at the top 3 cards of your deck and reorder them.",
     "effects": {
       "look_at_top_cards": 3,
@@ -115,7 +119,7 @@
     "id": "favor_veterans_advice",
     "name": "Veteran's Advice",
     "image": "favor_advice.jpg",
-    "deck_qty": 2,
+    "deck_qty": 1,
     "effect_text": "Draw 2 cards, then discard 1 card.",
     "effects": {
       "draw_cards": 2,
@@ -126,11 +130,12 @@
     "id": "favor_spoils_of_victory",
     "name": "Spoils of Victory",
     "image": "favor_spoils_of_war.jpg",
-    "deck_qty": 2,
-    "effect_text": "Gain 1 Imperial Favor and 1 Coin.",
+    "deck_qty": 1,
+    "effect_text": "Look at each opponent's hand and choose a card to destroy.",
     "effects": {
-      "gain_imperial_favor": 1,
-      "gain_coins": 1
+      "destroy_opponent_hand_card": {
+        "each_opponent": true
+      }
     }
   },
   {
@@ -140,8 +145,7 @@
     "deck_qty": 1,
     "effect_text": "All opponents discard a card.",
     "effects": {
-      "force_opponent_discard": 1,
-      "target": "all_opponents"
+      "force_opponent_discard": 1
     }
   },
   {
@@ -169,9 +173,9 @@
     "name": "Triumphal Parade",
     "image": "favor_parade.jpg",
     "deck_qty": 1,
-    "effect_text": "Gain 1 Victory Point.",
+    "effect_text": "Gain 1 Gratia.",
     "effects": {
-      "gain_vp": 1
+      "gain_gratia": 1
     }
   },
   {
@@ -179,16 +183,10 @@
     "name": "Temple Blessing",
     "image": "favor_temple_blessing.jpg",
     "deck_qty": 2,
-    "effect_text": "Gain 1 Imperial Favor or draw 1 card.",
+    "effect_text": "Gain 1 Gratia and Draw 1 Card.",
     "effects": {
-      "choose_one": [
-        {
-          "gain_imperial_favor": 1
-        },
-        {
-          "draw_cards": 1
-        }
-      ]
+      "gain_gratia": 1,
+      "draw_cards": 1
     }
   },
   {
@@ -199,7 +197,8 @@
     "effect_text": "Gain a card costing 5 or less, then discard a card.",
     "effects": {
       "gain_card": {
-        "max_cost": 5
+        "max_cost": 5,
+        "source": "market"
       },
       "discard_cards": 1
     }
@@ -209,10 +208,14 @@
     "name": "Gladiator's Funeral",
     "image": "favor_pyre.jpg",
     "deck_qty": 1,
-    "effect_text": "Destroy a card from your hand or discard.",
+    "effect_text": "Destroy 1 of your cards in play or from hand, Gain a card from the Market or Epics costing up to 2 more.",
     "effects": {
       "destroy_cards": 1,
-      "destroy_from": ["hand", "discard"]
+      "destroy_from": ["hand", "play_area"],
+      "gain_card": {
+        "source": "market_or_epic",
+        "dynamic": "destroyed_cost_plus_2"
+      }
     }
   },
   {
@@ -220,9 +223,10 @@
     "name": "Crowd Frenzy",
     "image": "favor_crowd.jpg",
     "deck_qty": 1,
-    "effect_text": "Your next Arena challenge gains +2 Valor.",
+    "effect_text": "Destroy the top card of each players deck. You pick a new card costing the same as the destroyed card for each player, if one is available.",
     "effects": {
-      "arena_bonus_valor": 2
+      "destroy_each_player_deck_top": true,
+      "replace_from_market_matching_cost": true
     }
   }
 ]

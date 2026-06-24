@@ -156,11 +156,11 @@
       "effect_keywords": [
         "faction"
       ],
+      "rules_notes": "Each player starts with 3 Spy cards in their deck.",
+      "status": "prototype",
       "effects": {
         "choose_faction_on_play": true
-      },
-      "rules_notes": "Each player starts with 3 Spy cards in their deck.",
-      "status": "prototype"
+      }
     },
     {
       "id": "LEG-001",
@@ -197,20 +197,29 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 2,
-      "valor": 1,
+      "cost": 4,
+      "valor": 3,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Consult the Augur.",
+      "effect_text": "+2 Coins. When gained, you may destroy up to 2 cards from your hand and/or discard.",
       "effect_keywords": [
-        "augury"
+        "coins",
+        "destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "consult_augur": true
+        "gain_coins": 2,
+        "on_gain": {
+          "destroy_cards": 2,
+          "destroy_from": [
+            "hand",
+            "discard"
+          ],
+          "optional": true
+        }
       }
     },
     {
@@ -228,20 +237,25 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+1 Coins. You may destroy a card from your hand or discard. OR destroy this to gain an Imperial Favor.",
+      "effect_text": "+1 Coin OR destroy to Draw 1 card",
       "effect_keywords": [
         "coins",
         "destroy",
-        "favor"
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 1,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
+        "or_effects": [
+          {
+            "destroy_cards": 1,
+            "destroy_from": [
+              "hand",
+              "discard"
+            ],
+            "draw_cards": 1
+          }
         ]
       }
     },
@@ -254,22 +268,26 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 3,
-      "valor": 2,
+      "cost": 2,
+      "valor": 1,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+1 Coins. Consult the Augur.",
+      "effect_text": "+1 Coins. Destroy a card from your hand or discard.",
       "effect_keywords": [
         "coins",
-        "augury"
+        "destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 1,
-        "consult_augur": true
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
       }
     },
     {
@@ -287,7 +305,7 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Destroy a card from your hand or discard.",
+      "effect_text": "+2 Coins. You may destroy a card from your hand or discard.",
       "effect_keywords": [
         "coins",
         "destroy"
@@ -306,35 +324,8 @@
     {
       "id": "LEG-006",
       "slug": "auxiliary-cohort",
-      "name": "Auxiliary Cohort",
+      "name": "Cohorts",
       "image": "legion_cohorts.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Legion",
-      "banding_bonus": "Draw 1 card",
-      "cost": 3,
-      "valor": 2,
-      "victory_points": 1,
-      "victory_formula": null,
-      "deck_qty": 2,
-      "timing": "main",
-      "effect_text": "+2 Coins. This card may count as Ludus or Senate this turn.",
-      "effect_keywords": [
-        "coins",
-        "wild_faction"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2,
-        "counts_as_faction": "Ludus|Senate"
-      }
-    },
-    {
-      "id": "LEG-007",
-      "slug": "banner",
-      "name": "Banner",
-      "image": "legion_banner.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Legion",
@@ -345,14 +336,52 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Gain an Imperial Favor.",
+      "effect_text": "Draw 2 Cards OR Sabotage: Draw 2 Cards and give -2 Valor.",
       "effect_keywords": [
-        "favor"
+        "draw",
+        "sabotage"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_imperial_favor": 1
+        "draw_cards": 2,
+        "or_effects": [
+          {
+            "draw_cards": 2,
+            "arena_bonus_valor": -2
+          }
+        ]
+      }
+    },
+    {
+      "id": "LEG-007",
+      "slug": "banner",
+      "name": "War Banner",
+      "image": "legion_banner.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Legion",
+      "banding_bonus": "Draw 1 card",
+      "cost": 6,
+      "valor": 4,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Destroy a card from your hand or discard to gain +3 Coins.",
+      "effect_keywords": [
+        "coins",
+        "destroy"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "destroy_cards": 1,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
       }
     },
     {
@@ -364,23 +393,23 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 4,
-      "valor": 3,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Look at the top 2 cards of your deck. Keep one on top and put the other on bottom.",
+      "effect_text": "+1 Coin. Draw 3 cards, then discard 1 card from your hand.",
       "effect_keywords": [
         "coins",
-        "deck_filter"
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "look_at_top_cards": 2,
-        "reorder_top_cards": true
+        "gain_coins": 1,
+        "draw_cards": 3,
+        "discard_cards": 1
       }
     },
     {
@@ -393,23 +422,22 @@
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
       "cost": 4,
-      "valor": 1,
+      "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Gain a card from the Gallery costing 4 or less. Then destroy a card in the Gallery and replace it.",
+      "effect_text": "+2 Coins. Put a card from your discard pile into your hand.",
       "effect_keywords": [
-        "gain",
-        "gallery_destroy"
+        "coins",
+        "hand"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "destroy_gallery_cards": 1,
-        "gain_card": {
-          "max_cost": 4,
-          "source": "gallery"
+        "gain_coins": 2,
+        "return_card_to_hand": {
+          "source": "discard"
         }
       }
     },
@@ -422,45 +450,60 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 4,
-      "valor": 3,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 0,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Copy the effect of another card in play costing 5 or less.",
+      "effect_text": "+2 Coins. This card is worth 1 VP for each Legion card in your deck.",
       "effect_keywords": [
-        "copy"
+        "coins",
+        "victory_points"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "copy_card": true
+        "gain_coins": 2,
+        "passive": {
+          "deck_vp_per_faction": {
+            "faction": "Legion",
+            "per": 1
+          }
+        }
       }
     },
     {
       "id": "LEG-011",
       "slug": "drill-formation",
-      "name": "Drill Formation",
+      "name": "Drills",
       "image": "legion_drills.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 4,
+      "cost": 3,
       "valor": 2,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Gain the faction bonus of Ludus, Senate, or Legion this turn.",
+      "effect_text": "+2 Coins. If you played a Ludus and Senate card this turn, Draw 1 Card.",
       "effect_keywords": [
-        "faction_bonus"
+        "coins",
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_banding_bonus": "choose_faction"
+        "gain_coins": 2,
+        "conditional": {
+          "if_played_factions": [
+            "Ludus",
+            "Senate"
+          ],
+          "draw_cards": 1
+        }
       }
     },
     {
@@ -472,21 +515,24 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 4,
-      "valor": 3,
-      "victory_points": null,
-      "victory_formula": "1 VP per Legion card in deck",
+      "cost": 3,
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. This card is worth 1 VP for each Legion card in your deck.",
+      "effect_text": "Gain a Faction card from the Market costing 4 or less.",
       "effect_keywords": [
-        "coins",
-        "scaling_vp"
+        "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_card": {
+          "max_cost": 4,
+          "source": "market",
+          "type": "faction"
+        }
       }
     },
     {
@@ -498,28 +544,20 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 4,
-      "valor": 2,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 1,
+      "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Consult the Augur, then you may destroy a card from your hand or discard.",
+      "effect_text": "Other players must discard 2 cards.",
       "effect_keywords": [
-        "coins",
-        "augury",
-        "destroy"
+        "discard"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "consult_augur": true,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "force_opponent_discard": 2
       }
     },
     {
@@ -532,21 +570,19 @@
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
       "cost": 4,
-      "valor": 1,
+      "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Destroy a card from the Gallery and replace it.",
+      "effect_text": "Draw 2 cards",
       "effect_keywords": [
-        "coins",
-        "gallery_destroy"
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 1
+        "draw_cards": 2
       }
     },
     {
@@ -558,22 +594,24 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 5,
-      "valor": 2,
+      "cost": 6,
+      "valor": 1,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Gain an Imperial Favor.",
+      "effect_text": "+4 Coins. Sabotage: If challenge Fails, a challenger is destroyed.",
       "effect_keywords": [
         "coins",
-        "favor"
+        "sabotage"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "gain_imperial_favor": 1
+        "gain_coins": 4,
+        "passive": {
+          "sabotage_on_fail_destroy_challenger": true
+        }
       }
     },
     {
@@ -585,22 +623,22 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 5,
+      "cost": 4,
       "valor": 2,
-      "victory_points": 2,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Consult the Augur.",
+      "effect_text": "+1 Coin. Gain the faction bonus of Ludus, Senate, or Legion this turn.",
       "effect_keywords": [
         "coins",
-        "augury"
+        "faction_bonus"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "consult_augur": true
+        "gain_coins": 1,
+        "gain_banding_bonus": "choose_faction"
       }
     },
     {
@@ -616,21 +654,17 @@
       "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Take an Imperial Favor from the Favor discard pile of your choice.",
+      "effect_text": "You may add a 4th participant in the Arena Challenge this turn.",
       "effect_keywords": [
-        "favor",
+        "arena_challenge",
         "recursion"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_imperial_favor": 1,
-        "gain_card": {
-          "type": "imperial_favor",
-          "source": "favor_discard"
-        }
+        "allow_fourth_arena_participant": true
       }
     },
     {
@@ -642,21 +676,22 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 5,
-      "valor": 2,
-      "victory_points": 2,
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Copy the effect of any Gallery card costing 6 or less.",
+      "effect_text": "+1 Coins. Draw 1 card.",
       "effect_keywords": [
-        "copy",
-        "gallery"
+        "coins",
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "copy_card": true
+        "gain_coins": 1,
+        "draw_cards": 1
       }
     },
     {
@@ -668,27 +703,29 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 5,
-      "valor": 1,
-      "victory_points": 2,
+      "cost": 4,
+      "valor": 0,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "on_gain",
-      "effect_text": "+2 Coins. When gained, you may destroy up to 2 cards from your hand and/or discard.",
+      "effect_text": "Draw 1 card. Then gain a Faction card costing 5 or less from the Market for free.",
       "effect_keywords": [
-        "coins",
+        "draw",
         "on_gain",
-        "destroy"
+        "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_cards": 2,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "on_gain": {
+          "draw_cards": 1,
+          "gain_card": {
+            "max_cost": 5,
+            "source": "market",
+            "type": "faction"
+          }
+        }
       }
     },
     {
@@ -704,22 +741,19 @@
       "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Put a Legion card from your discard pile on top of your deck.",
+      "effect_text": "+2 Coins. While in play, sabotage cards negative value is reduced by 1.",
       "effect_keywords": [
         "coins",
-        "recursion",
-        "topdeck"
+        "sabotage_valor"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "place_card_on_deck": {
-          "source": "discard",
-          "faction": "legion",
-          "position": "top"
+        "passive": {
+          "reduce_sabotage_valor": 1
         }
       }
     },
@@ -732,28 +766,22 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 6,
-      "valor": 3,
+      "cost": 8,
+      "valor": 4,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Consult the Augur. 1-3: +2 Coins. 4-9: +3 Coins. 10-12: +4 Coins. You may destroy a card from your hand or discard.",
+      "effect_text": "+3 Coins. Factions cost 1 less this turn.",
       "effect_keywords": [
-        "augury",
-        "coins",
-        "destroy"
+        "faction_cost",
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "consult_augur": true,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "gain_coins": 3,
+        "discount_faction_cost": 1
       }
     },
     {
@@ -765,22 +793,25 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 6,
+      "cost": 7,
       "valor": 4,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. Gain an Imperial Favor.",
+      "effect_text": "+2 Coins. Draw and play the top card of the Market deck. Destroy it at end of turn.",
       "effect_keywords": [
         "coins",
-        "favor"
+        "market",
+        "temporary_play"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3,
-        "gain_imperial_favor": 1
+        "gain_coins": 2,
+        "play_market_top": {
+          "destroy_at_end_of_turn": true
+        }
       }
     },
     {
@@ -798,14 +829,27 @@
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Copy the effect of any card in play.",
+      "effect_text": "+3 Coins. You may destroy a card from your hand or discard. If you do, gain a card costing up to 1 more than the destroyed card.",
       "effect_keywords": [
-        "copy"
+        "coins",
+        "destroy",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "copy_card": true
+        "gain_coins": 3,
+        "optional": {
+          "destroy_cards": 1,
+          "destroy_from": [
+            "hand",
+            "discard"
+          ],
+          "then_gain_card": {
+            "source": "market",
+            "dynamic": "destroyed_cost_plus_1"
+          }
+        }
       }
     },
     {
@@ -848,26 +892,26 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 7,
-      "valor": 4,
+      "cost": 5,
+      "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Draw and play the top card of the Main deck. Destroy it at end of turn.",
+      "effect_text": "+2 Coins. Put a Legion card from your discard pile on top of your deck.",
       "effect_keywords": [
         "coins",
-        "main_deck",
-        "temporary_play"
+        "topdeck",
+        "recursion"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "gain_card": {
-          "source": "main_deck",
-          "position": "top",
-          "play": true
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "legion",
+          "position": "top"
         }
       }
     },
@@ -880,27 +924,26 @@
       "deck_source": "gallery",
       "faction": "Legion",
       "banding_bonus": "Draw 1 card",
-      "cost": 7,
-      "valor": 4,
-      "victory_points": 2,
+      "cost": 4,
+      "valor": 3,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Draw and play the top card of the Main deck. Destroy it at end of turn.",
+      "effect_text": "Gain a card from the Market costing 4 or less. Then destroy a card in the Market and replace it.",
       "effect_keywords": [
         "coins",
-        "main_deck",
+        "market",
         "temporary_play"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
         "gain_card": {
-          "source": "main_deck",
-          "position": "top",
-          "play": true
-        }
+          "max_cost": 4,
+          "source": "market"
+        },
+        "destroy_gallery_cards": 1
       }
     },
     {
@@ -912,20 +955,21 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 2,
+      "cost": 5,
       "valor": 1,
-      "victory_points": 1,
+      "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins.",
+      "effect_text": "+2 Coins. The next card you gain this turn goes into your hand.",
       "effect_keywords": [
         "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_coins": 2,
+        "next_card_to_hand": true
       }
     },
     {
@@ -957,28 +1001,28 @@
     {
       "id": "SEN-003",
       "slug": "intel-network",
-      "name": "Intel Network",
+      "name": "Senate Intel",
       "image": "senate_intel.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 3,
+      "cost": 2,
       "valor": 1,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Look at the top 2 cards of any deck. Keep 1 on top and place 1 on bottom.",
+      "effect_text": "+1 Coins. Look at the top 2 cards of any deck. Keep 1 on top and place 1 on bottom.",
       "effect_keywords": [
         "coins",
-        "deck_filter",
-        "opponent"
+        "deck_control",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
+        "gain_coins": 1,
         "look_at_top_cards": 2
       }
     },
@@ -992,26 +1036,22 @@
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
       "cost": 3,
-      "valor": 1,
+      "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. If you already played 2 Senate cards this turn, you may destroy a card from your hand or discard.",
+      "effect_text": "+2 Coins. Look at the top 3 cards of any deck. Keep 1 on top, place the other 2 on the bottom.",
       "effect_keywords": [
         "coins",
-        "destroy",
-        "faction_bonus"
+        "deck_control",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "look_at_top_cards": 3
       }
     },
     {
@@ -1027,18 +1067,22 @@
       "valor": 0,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins OR destroy a card from your hand or discard.",
+      "effect_text": "Gain an Item card from the Market costing 4 or less.",
       "effect_keywords": [
-        "coins",
-        "destroy",
-        "choice"
+        "gain",
+        "market",
+        "item"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_item": {
+          "max_cost": 4,
+          "source": "market",
+          "type": "item"
+        }
       }
     },
     {
@@ -1054,18 +1098,18 @@
       "valor": 1,
       "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Gain a card from the Gallery costing 4 or less.",
+      "effect_text": "Copy the effect of another card in play costing 5 or less.",
       "effect_keywords": [
         "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_card": {
-          "max_cost": 4,
-          "source": "gallery"
+        "copy_card": {
+          "source": "in_play",
+          "max_cost": 5
         }
       }
     },
@@ -1078,24 +1122,27 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 3,
-      "valor": 1,
-      "victory_points": 1,
+      "cost": 8,
+      "valor": 0,
+      "victory_points": 3,
       "victory_formula": null,
-      "deck_qty": 2,
-      "timing": "arena_response",
-      "effect_text": "+2 Coins OR discard this during an Arena attempt to apply -1 Valor as Sabotage.",
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coins. Pick an opponent, reveal a random card from their hand and play it. Destroy it at end of turn.",
       "effect_keywords": [
         "coins",
-        "arena",
-        "sabotage",
+        "opponent",
+        "random_card",
+        "destroy",
         "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "arena_bonus_valor": -1
+        "play_opponent_random": {
+          "destroy_at_end_of_turn": true
+        }
       }
     },
     {
@@ -1107,22 +1154,29 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 3,
-      "valor": 1,
-      "victory_points": 1,
+      "cost": 6,
+      "valor": 2,
+      "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. You may destroy a card in the Gallery and replace it.",
+      "effect_text": "+4 Coins OR when Arena is defeated this round, the victor gains Gratia equal to the Victory Points of the Arena Challenge. Arena Challenge is discarded. This may be played as a Sabotage or Support, though it counts as neither.",
       "effect_keywords": [
         "coins",
-        "gallery_destroy"
+        "arena",
+        "sabotage",
+        "support",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 1
+        "gain_coins": 4,
+        "or_effects": [
+          {
+            "arena_decree_on_defeat": true
+          }
+        ]
       }
     },
     {
@@ -1134,26 +1188,22 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 4,
+      "cost": 6,
       "valor": 1,
-      "victory_points": 1,
+      "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. You may destroy a card from your hand or discard.",
+      "effect_text": "While in play, you do not need to participate in the Arena.",
       "effect_keywords": [
-        "coins",
-        "destroy"
+        "arena"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "passive": {
+          "skip_arena_participation": true
+        }
       }
     },
     {
@@ -1161,123 +1211,6 @@
       "slug": "proclamation",
       "name": "Proclamation",
       "image": "senate_proclamation.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Senate",
-      "banding_bonus": "Gain +2 Coins",
-      "cost": 4,
-      "valor": 1,
-      "victory_points": 1,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins. You may place a destroyed card onto the Main deck.",
-      "effect_keywords": [
-        "coins",
-        "destroyed_pile",
-        "main_deck"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2
-      }
-    },
-    {
-      "id": "SEN-011",
-      "slug": "patron",
-      "name": "Patron",
-      "image": "senate_patron.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Senate",
-      "banding_bonus": "Gain +2 Coins",
-      "cost": 4,
-      "valor": 1,
-      "victory_points": 1,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins OR gain an Item card costing 4 or less from the Gallery.",
-      "effect_keywords": [
-        "coins",
-        "gain",
-        "item",
-        "choice"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2,
-        "gain_card": {
-          "max_cost": 4,
-          "source": "gallery"
-        },
-        "gain_item": {
-          "max_cost": 4,
-          "source": "gallery",
-          "type": "item"
-        }
-      }
-    },
-    {
-      "id": "SEN-012",
-      "slug": "vote-of-censure",
-      "name": "Vote of Censure",
-      "image": "senate_vote.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Senate",
-      "banding_bonus": "Gain +2 Coins",
-      "cost": 4,
-      "valor": 1,
-      "victory_points": 1,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins. You may destroy a card in the Gallery and replace it.",
-      "effect_keywords": [
-        "coins",
-        "gallery_destroy"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 1
-      }
-    },
-    {
-      "id": "SEN-013",
-      "slug": "principate",
-      "name": "Principate",
-      "image": "senate_principate.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Senate",
-      "banding_bonus": "Gain +2 Coins",
-      "cost": 4,
-      "valor": 1,
-      "victory_points": null,
-      "victory_formula": "1 VP per Senate card in deck",
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins. This card is worth 1 VP for each Senate card in your deck.",
-      "effect_keywords": [
-        "coins",
-        "scaling_vp"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2
-      }
-    },
-    {
-      "id": "SEN-014",
-      "slug": "orator",
-      "name": "Orator",
-      "image": "senate_orator.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Senate",
@@ -1297,7 +1230,139 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 1
+        "gain_coins": 1,
+        "conditional": {
+          "if_played_faction": "Senate",
+          "gain_coins": 3
+        }
+      }
+    },
+    {
+      "id": "SEN-011",
+      "slug": "patron",
+      "name": "Patron",
+      "image": "senate_patron.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coins. You may place a destroyed card onto the Market deck.",
+      "effect_keywords": [
+        "coins",
+        "destroyed_pile",
+        "market_deck",
+        "choice"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "optional": {
+          "place_destroyed_on_market": true
+        }
+      }
+    },
+    {
+      "id": "SEN-012",
+      "slug": "vote-of-censure",
+      "name": "Sententia",
+      "image": "senate_vote.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 4,
+      "valor": 0,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coins. Flip up to 2 cards in the Market face down until your next turn.",
+      "effect_keywords": [
+        "coins",
+        "market_control",
+        "choice"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "flip_market_face_down": {
+          "count": 2,
+          "until": "next_turn"
+        }
+      }
+    },
+    {
+      "id": "SEN-013",
+      "slug": "principate",
+      "name": "Principate",
+      "image": "senate_principate.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 3,
+      "valor": 0,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coins. If you played a Legion and Ludus card this turn, gain +2 Coins.",
+      "effect_keywords": [
+        "coins",
+        "legion",
+        "ludus"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "conditional": {
+          "if_played_factions": [
+            "Legion",
+            "Ludus"
+          ],
+          "gain_coins": 2
+        }
+      }
+    },
+    {
+      "id": "SEN-014",
+      "slug": "orator",
+      "name": "Orator",
+      "image": "senate_orator.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 3,
+      "valor": 1,
+      "victory_points": 1,
+      "victory_formula": null,
+      "deck_qty": 2,
+      "timing": "main",
+      "effect_text": "+2 Coins OR Sabotage -3 Valor.",
+      "effect_keywords": [
+        "coins",
+        "sabotage",
+        "choice"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "or_effects": [
+          {
+            "arena_bonus_valor": -3
+          }
+        ]
       }
     },
     {
@@ -1309,22 +1374,32 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 5,
-      "valor": 2,
-      "victory_points": 2,
+      "cost": 2,
+      "valor": 1,
+      "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. The next card you gain this turn goes into your hand.",
+      "effect_text": "+1 Coin OR destroy for +2 Coins",
       "effect_keywords": [
         "coins",
-        "gain_to_hand"
+        "destroy",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "next_card_to_hand": true
+        "gain_coins": 1,
+        "or_effects": [
+          {
+            "destroy_cards": 1,
+            "destroy_from": [
+              "hand",
+              "discard"
+            ],
+            "gain_coins": 2
+          }
+        ]
       }
     },
     {
@@ -1342,22 +1417,28 @@
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Shuffle up to 2 cards costing 4 or less from your discard pile into your deck.",
+      "effect_text": "+2 Coins. You may put a Senate card from your discard pile on top of your deck.",
       "effect_keywords": [
         "coins",
-        "recursion",
-        "shuffle"
+        "discard_pile",
+        "topdeck",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_coins": 2,
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "senate",
+          "position": "top"
+        }
       }
     },
     {
       "id": "SEN-017",
       "slug": "noblewoman-of-influence",
-      "name": "Noblewoman of Influence",
+      "name": "Noblewoman",
       "image": "senate_noblewoman.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
@@ -1367,9 +1448,9 @@
       "valor": 1,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Put an Item from your discard pile into your hand.",
+      "effect_text": "Gain 2 Gratia from Arena Challenge victory this turn.",
       "effect_keywords": [
         "coins",
         "item",
@@ -1378,11 +1459,7 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "return_card_to_hand": {
-          "type": "item",
-          "source": "discard"
-        }
+        "gain_gratia_on_arena_victory": 2
       }
     },
     {
@@ -1394,24 +1471,30 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 5,
+      "cost": 4,
       "valor": 1,
-      "victory_points": 2,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
-      "timing": "arena_response",
-      "effect_text": "+2 Coins OR during an Arena attempt, play this as Sabotage: -2 Valor.",
+      "timing": "main",
+      "effect_text": "+2 Coins OR gain an Item card costing 4 or less from the Gallery.",
       "effect_keywords": [
         "coins",
-        "arena",
-        "sabotage",
-        "choice"
+        "item"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "arena_bonus_valor": -2
+        "or_effects": [
+          {
+            "gain_item": {
+              "max_cost": 4,
+              "source": "market",
+              "type": "item"
+            }
+          }
+        ]
       }
     },
     {
@@ -1426,23 +1509,24 @@
       "cost": 5,
       "valor": 1,
       "victory_points": 2,
-      "victory_formula": null,
+      "victory_formula": "1 VP per Senate card in deck",
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. You may put a Senate card from your discard pile on top of your deck.",
+      "effect_text": "+2 Coins. This card is worth 1 VP for each Senate card in your deck.",
       "effect_keywords": [
         "coins",
-        "recursion",
+        "scaling_vp",
         "topdeck"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "place_card_on_deck": {
-          "source": "discard",
-          "faction": "senate",
-          "position": "top"
+        "passive": {
+          "deck_vp_per_faction": {
+            "faction": "Senate",
+            "per": 1
+          }
         }
       }
     },
@@ -1455,9 +1539,9 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 5,
+      "cost": 4,
       "valor": 1,
-      "victory_points": 2,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
@@ -1480,20 +1564,26 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 6,
-      "valor": 2,
-      "victory_points": 2,
+      "cost": 4,
+      "valor": 1,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+4 Coins.",
+      "effect_text": "+2 Coins. Then gain an Item card costing 5 or less from the Market for free.",
       "effect_keywords": [
-        "coins"
+        "coins",
+        "item"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 4
+        "gain_coins": 2,
+        "gain_item": {
+          "max_cost": 5,
+          "source": "market",
+          "type": "item"
+        }
       }
     },
     {
@@ -1505,26 +1595,25 @@
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
-      "cost": 6,
+      "cost": 5,
       "valor": 1,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Destroy a card from your hand or discard to gain +3 Coins.",
+      "effect_text": "+2 Coins. Destroy a card in hand, gain Coin equal to it's cost.",
       "effect_keywords": [
         "coins",
-        "destroy"
+        "destroy",
+        "gain_coin"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "gain_coins": 2,
+        "destroy_hand_for_coins": {
+          "source": "hand"
+        }
       }
     },
     {
@@ -1532,6 +1621,36 @@
       "slug": "manipulator",
       "name": "Manipulator",
       "image": "senate_manipulator.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 5,
+      "valor": 1,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "All players discard their hands and redraw the same number of Cards -1. You draw 2 additional cards.",
+      "effect_keywords": [
+        "discard",
+        "draw"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "mass_hand_redraw": {
+          "all_players": true,
+          "draw_delta": -1
+        },
+        "draw_cards": 2
+      }
+    },
+    {
+      "id": "SEN-024",
+      "slug": "high-consul",
+      "name": "High Consul",
+      "image": "senate_high_consul.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Senate",
@@ -1545,7 +1664,8 @@
       "effect_text": "+2 Coins. Look at an opponent's hand and force them to discard 1 card.",
       "effect_keywords": [
         "coins",
-        "opponent_discard"
+        "opponent",
+        "discard"
       ],
       "rules_notes": "",
       "status": "prototype",
@@ -1556,16 +1676,43 @@
       }
     },
     {
-      "id": "SEN-024",
-      "slug": "high-consul",
-      "name": "High Consul",
-      "image": "senate_high_consul.jpg",
+      "id": "SEN-025",
+      "slug": "voice-of-rome",
+      "name": "Voice of Rome",
+      "image": "senate_voice.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Senate",
       "banding_bonus": "Gain +2 Coins",
       "cost": 7,
-      "valor": 2,
+      "valor": 0,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+3 Coins. Items cost 2 less this turn.",
+      "effect_keywords": [
+        "coins",
+        "item_cost"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 3,
+        "discount_item_cost": 2
+      }
+    },
+    {
+      "id": "SEN-026",
+      "slug": "voice-of-rome",
+      "name": "Damnatio",
+      "image": "senate_voice.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Senate",
+      "banding_bonus": "Gain +2 Coins",
+      "cost": 7,
+      "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
@@ -1583,33 +1730,6 @@
       }
     },
     {
-      "id": "SEN-025",
-      "slug": "voice-of-rome",
-      "name": "Voice of Rome",
-      "image": "senate_voice.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Senate",
-      "banding_bonus": "Gain +2 Coins",
-      "cost": 8,
-      "valor": 2,
-      "victory_points": 3,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+4 Coins. Reveal the top card of each player's deck. For each revealed card, discard it or return it.",
-      "effect_keywords": [
-        "coins",
-        "deck_control",
-        "opponent"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 4
-      }
-    },
-    {
       "id": "LUD-001",
       "slug": "secutor",
       "name": "Secutor",
@@ -1618,26 +1738,29 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 2,
-      "valor": 2,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 4,
+      "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+1 Coins. You may destroy a card from your hand or discard.",
+      "effect_text": "+2 Coins. You may place a Ludus card from your discard pile on top of your deck.",
       "effect_keywords": [
         "coins",
-        "destroy"
+        "topdeck",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 1,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "gain_coins": 2,
+        "optional": {
+          "place_card_on_deck": {
+            "source": "discard",
+            "faction": "ludus",
+            "position": "top"
+          }
+        }
       }
     },
     {
@@ -1649,21 +1772,22 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 2,
+      "cost": 3,
       "valor": 2,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Draw 1 card, then destroy a card in the Gallery and replace it.",
+      "effect_text": "+2 Coins. Destroy a card in the Gallery, replace it immediately.",
       "effect_keywords": [
-        "draw",
+        "coins",
+        "destroy",
         "gallery_destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 1,
+        "gain_coins": 2,
         "destroy_gallery_cards": 1
       }
     },
@@ -1676,21 +1800,27 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 3,
+      "cost": 6,
       "valor": 3,
-      "victory_points": 1,
+      "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Reveal the top card of your deck. You may discard it.",
+      "effect_text": "+2 Coins. You may put a Ludus card from your discard pile on top of your deck.",
       "effect_keywords": [
         "coins",
-        "deck_filter"
+        "topdeck",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_coins": 2,
+        "place_card_on_deck": {
+          "source": "discard",
+          "faction": "ludus",
+          "position": "top"
+        }
       }
     },
     {
@@ -1708,17 +1838,22 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Look at the top 2 cards of your deck. Put one on top and one on bottom.",
+      "effect_text": "+2 Coins OR Support +3 Valor",
       "effect_keywords": [
         "coins",
-        "deck_filter"
+        "valor",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "look_at_top_cards": 2,
-        "reorder_top_cards": true
+        "or_effects": [
+          {
+            "gain_valor": 3,
+            "arena_support": true
+          }
+        ]
       }
     },
     {
@@ -1730,22 +1865,23 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 3,
-      "valor": 2,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 4,
+      "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Draw 2 cards, then discard 1 card from your hand.",
+      "effect_text": "+2 Coins. Destroy up to 3 cards in the Gallery and replace them.",
       "effect_keywords": [
-        "draw",
-        "discard"
+        "coins",
+        "destroy",
+        "gallery_destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 2,
-        "discard_cards": 1
+        "gain_coins": 2,
+        "destroy_gallery_cards": 3
       }
     },
     {
@@ -1763,16 +1899,25 @@
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins OR destroy a card from your hand or discard.",
+      "effect_text": "+2 Coins. If you played a Senate and Legion card this turn, gain a Favor.",
       "effect_keywords": [
         "coins",
-        "destroy",
+        "favor",
+        "senate_card",
+        "legion_card",
         "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_coins": 2,
+        "conditional": {
+          "if_played_factions": [
+            "Senate",
+            "Legion"
+          ],
+          "gain_favor": 1
+        }
       }
     },
     {
@@ -1784,22 +1929,33 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 4,
-      "valor": 4,
+      "cost": 2,
+      "valor": 2,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+2 Coins. Destroy a card in the Gallery and replace it.",
+      "effect_text": "+1 Coin OR destroy for a Favor",
       "effect_keywords": [
         "coins",
-        "gallery_destroy"
+        "destroy",
+        "favor",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 1
+        "gain_coins": 1,
+        "or_effects": [
+          {
+            "destroy_cards": 1,
+            "destroy_from": [
+              "hand",
+              "discard"
+            ],
+            "gain_favor": 1
+          }
+        ]
       }
     },
     {
@@ -1811,23 +1967,23 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 4,
-      "valor": 4,
-      "victory_points": 1,
+      "cost": 5,
+      "valor": 2,
+      "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 2,
+      "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins OR if this is the first card you played this turn, discard your hand and draw 5 cards.",
+      "effect_text": "Gain a Favor. Gain +1 Valor per challenger in the Arena.",
       "effect_keywords": [
-        "coins",
-        "draw",
-        "discard",
+        "favor",
+        "arena_challenger",
         "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_favor": 1,
+        "gain_valor_per_arena_challenger": 1
       }
     },
     {
@@ -1839,22 +1995,34 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 4,
+      "cost": 6,
       "valor": 4,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "+1 Coins. Draw 1 card.",
+      "effect_text": "+2 Coins. Sabotage: -4 Valor. Support: +3 Support.",
       "effect_keywords": [
         "coins",
-        "draw"
+        "valor",
+        "sabotage",
+        "support",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 1,
-        "draw_cards": 1
+        "gain_coins": 2,
+        "or_effects": [
+          {
+            "arena_bonus_valor": -4,
+            "arena_sabotage": true
+          },
+          {
+            "gain_valor": 3,
+            "arena_support": true
+          }
+        ]
       }
     },
     {
@@ -1866,22 +2034,24 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 4,
+      "cost": 3,
       "valor": 2,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. You may destroy a card in the Gallery and replace it.",
+      "effect_text": "Gain a card from Destroyed Pile costing 4 or less.",
       "effect_keywords": [
-        "coins",
-        "gallery_destroy"
+        "destroyed_pile",
+        "choice"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 1
+        "gain_card": {
+          "max_cost": 4,
+          "source": "destroyed_pile"
+        }
       }
     },
     {
@@ -1893,20 +2063,24 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 5,
-      "valor": 5,
-      "victory_points": 2,
+      "cost": 2,
+      "valor": 2,
+      "victory_points": 1,
       "victory_formula": null,
-      "deck_qty": 1,
+      "deck_qty": 2,
       "timing": "main",
-      "effect_text": "Draw 2 cards.",
+      "effect_text": "+1 Coins. Destroy a card in the Market, replace it at end of your turn.",
       "effect_keywords": [
-        "draw"
+        "coins",
+        "destroy",
+        "gallery_destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 2
+        "gain_coins": 1,
+        "destroy_gallery_cards": 1,
+        "replace_gallery_at": "end_of_turn"
       }
     },
     {
@@ -1918,22 +2092,24 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 5,
-      "valor": 5,
+      "cost": 4,
+      "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. You may place a Ludus card from your discard pile on top of your deck.",
+      "effect_text": "+1 Coins. Gain a Favor. Gain +2 Valor in Beast Arena Challenges.",
       "effect_keywords": [
         "coins",
-        "recursion",
-        "topdeck"
+        "favor",
+        "beast_arena_challenge"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "gain_coins": 1,
+        "gain_favor": 1,
+        "beast_arena_valor_bonus": 2
       }
     },
     {
@@ -1945,22 +2121,27 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 5,
+      "cost": 4,
       "valor": 2,
-      "victory_points": 2,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Destroy up to 3 cards in the Gallery and replace them.",
+      "effect_text": "Draw 3 Favors, select 1 to gain, discard the other 2.",
       "effect_keywords": [
-        "coins",
+        "favor",
+        "draw",
+        "discard",
         "gallery_destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "destroy_gallery_cards": 3
+        "reveal_favors": {
+          "count": 3,
+          "pick": 1,
+          "discard_rest": 2
+        }
       }
     },
     {
@@ -1973,29 +2154,24 @@
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
       "cost": 5,
-      "valor": 2,
+      "valor": 1,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Draw 1 card. Then gain an Item card costing 5 or less from the Gallery for free.",
+      "effect_text": "Gain a Favor. Then gain a card from the Destroyed Pile costing 5 or less..",
       "effect_keywords": [
-        "draw",
+        "favor",
         "gain",
-        "item"
+        "destroyed_pile"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 1,
+        "gain_favor": 1,
         "gain_card": {
           "max_cost": 5,
-          "source": "gallery"
-        },
-        "gain_item": {
-          "max_cost": 5,
-          "source": "gallery",
-          "type": "item"
+          "source": "destroyed_pile"
         }
       }
     },
@@ -2008,22 +2184,31 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 6,
+      "cost": 4,
       "valor": 4,
-      "victory_points": 2,
+      "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Draw 3 cards, then discard 1 card from your hand.",
+      "effect_text": "+2 Coins OR if this is the first card you played this turn, discard your hand and draw 5 cards.",
       "effect_keywords": [
+        "coins",
         "draw",
+        "discard",
+        "first_card_played",
         "discard"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 3,
-        "discard_cards": 1
+        "gain_coins": 2,
+        "or_effects": [
+          {
+            "if_first_card_played": true,
+            "discard_hand": true,
+            "draw_cards": 5
+          }
+        ]
       }
     },
     {
@@ -2035,8 +2220,72 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
+      "cost": 7,
+      "valor": 5,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Opponents only gain 1 coin from each card they play on their next round. You cannot purchase Cards this round.",
+      "effect_keywords": [
+        "coins",
+        "discount_opponent_coins"
+      ],
+      "rules_notes": "This effect is cumulative with other effects that reduce opponent coins.",
+      "status": "prototype",
+      "effects": {
+        "passive": {
+          "opponent_coin_cap_per_card": 1,
+          "duration": "opponent_next_turn"
+        },
+        "self_restrictions": {
+          "cannot_purchase_cards": true
+        }
+      }
+    },
+    {
+      "id": "LUD-017",
+      "slug": "spectators",
+      "name": "Spectators",
+      "image": "ludus_spectators.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Ludus",
+      "banding_bonus": "Gain 1 Favor card",
       "cost": 6,
-      "valor": 2,
+      "valor": 0,
+      "victory_points": 0,
+      "victory_formula": "1 VP per Ludus card in deck",
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "+2 Coins. This card is worth 1 VP for each Ludus card in your deck.",
+      "effect_keywords": [
+        "coins",
+        "vp_scaling"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 2,
+        "passive": {
+          "deck_vp_per_faction": {
+            "faction": "Ludus",
+            "per": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "LUD-018",
+      "slug": "victory-celebration",
+      "name": "Victory",
+      "image": "ludus_victory.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Ludus",
+      "banding_bonus": "Gain 1 Favor card",
+      "cost": 7,
+      "valor": 0,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
@@ -2054,60 +2303,6 @@
       }
     },
     {
-      "id": "LUD-017",
-      "slug": "spectators",
-      "name": "Spectators",
-      "image": "ludus_spectators.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Ludus",
-      "banding_bonus": "Gain 1 Favor card",
-      "cost": 4,
-      "valor": 1,
-      "victory_points": 1,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins. Flip up to 2 cards in the Gallery face down. They cannot be targeted or purchased until your next turn.",
-      "effect_keywords": [
-        "coins",
-        "gallery_control"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 2,
-        "protect_gallery_cards": 2
-      }
-    },
-    {
-      "id": "LUD-018",
-      "slug": "victory-celebration",
-      "name": "Victory Celebration",
-      "image": "ludus_victory.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Ludus",
-      "banding_bonus": "Gain 1 Favor card",
-      "cost": 6,
-      "valor": 3,
-      "victory_points": 2,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "on_gain",
-      "effect_text": "+3 Coins. When gained, shuffle up to 2 cards from your discard pile into your deck.",
-      "effect_keywords": [
-        "coins",
-        "on_gain",
-        "shuffle"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 3
-      }
-    },
-    {
       "id": "LUD-019",
       "slug": "veteran",
       "name": "Veteran",
@@ -2116,23 +2311,24 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 7,
-      "valor": 5,
+      "cost": 5,
+      "valor": 3,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Draw 1 card. You may discard the drawn card to draw a replacement.",
+      "effect_text": "Copy the effect of any Market card costing 6 or less.",
       "effect_keywords": [
-        "coins",
-        "draw",
-        "deck_filter"
+        "copy",
+        "market"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "draw_cards": 1
+        "copy_card": {
+          "source": "market",
+          "max_cost": 6
+        }
       }
     },
     {
@@ -2148,21 +2344,17 @@
       "valor": 4,
       "victory_points": 2,
       "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+2 Coins. Put a Ludus card from your discard pile into your hand.",
+      "deck_qty": 2,
+      "timing": "arena_response",
+      "effect_text": "During an Arena attempt, you may play this to cancel 1 Sabotage. This may be played after the Sabotage attempt.",
       "effect_keywords": [
-        "coins",
-        "recursion"
+        "sabotage",
+        "arena_response"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "return_card_to_hand": {
-          "source": "discard",
-          "faction": "ludus"
-        }
+        "cancel_sabotage": 1
       }
     },
     {
@@ -2174,22 +2366,21 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 5,
+      "cost": 6,
       "valor": 5,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Gain a card costing 5 or less from the Gallery for free.",
+      "effect_text": "While in play, you cannot be sabotaged in Arena challenges.",
       "effect_keywords": [
-        "gain"
+        "sabotage"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_card": {
-          "max_cost": 5,
-          "source": "gallery"
+        "passive": {
+          "sabotage_immune": true
         }
       }
     },
@@ -2202,20 +2393,27 @@
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
-      "cost": 6,
-      "valor": 5,
+      "cost": 7,
+      "valor": 4,
       "victory_points": 2,
       "victory_formula": null,
       "deck_qty": 1,
-      "timing": "arena_response",
-      "effect_text": "During an Arena attempt, you may play this to cancel 1 Sabotage.",
+      "timing": "main",
+      "effect_text": "+4 Coins. Reveal the top card of each player's deck. For each revealed card, destroy it or return it.",
       "effect_keywords": [
-        "arena",
-        "support",
-        "cancel_sabotage"
+        "coins",
+        "reveal",
+        "destroy",
+        "return"
       ],
       "rules_notes": "",
-      "status": "prototype"
+      "status": "prototype",
+      "effects": {
+        "gain_coins": 4,
+        "reveal_all_player_deck_tops": {
+          "destroy_or_return": true
+        }
+      }
     },
     {
       "id": "LUD-023",
@@ -2227,43 +2425,7 @@
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
       "cost": 8,
-      "valor": 4,
-      "victory_points": 3,
-      "victory_formula": null,
-      "deck_qty": 1,
-      "timing": "main",
-      "effect_text": "+3 Coins. You may destroy a card from your hand or discard. If you do, gain a card costing up to 1 more than the destroyed card.",
-      "effect_keywords": [
-        "coins",
-        "destroy",
-        "gain"
-      ],
-      "rules_notes": "",
-      "status": "prototype",
-      "effects": {
-        "gain_coins": 3,
-        "gain_card": {
-          "source": "gallery",
-          "dynamic": "destroyed_cost_plus_1"
-        },
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
-      }
-    },
-    {
-      "id": "LUD-024",
-      "slug": "magnus",
-      "name": "Magnus",
-      "image": "ludus_magnus.jpg",
-      "card_type": "faction",
-      "deck_source": "gallery",
-      "faction": "Ludus",
-      "banding_bonus": "Gain 1 Favor card",
-      "cost": 8,
-      "valor": 4,
+      "valor": 2,
       "victory_points": 3,
       "victory_formula": null,
       "deck_qty": 1,
@@ -2276,33 +2438,65 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3
+        "gain_coins": 3,
+        "may_purchase_from_destroyed_pile": true
+      }
+    },
+    {
+      "id": "LUD-024",
+      "slug": "magnus",
+      "name": "Ludus Magnus",
+      "image": "ludus_magnus.jpg",
+      "card_type": "faction",
+      "deck_source": "gallery",
+      "faction": "Ludus",
+      "banding_bonus": "Gain 1 Favor card",
+      "cost": 7,
+      "valor": 0,
+      "victory_points": 2,
+      "victory_formula": null,
+      "deck_qty": 1,
+      "timing": "main",
+      "effect_text": "Gain a card costing 5 or less from the Market for free.",
+      "effect_keywords": [
+        "gain",
+        "market"
+      ],
+      "rules_notes": "",
+      "status": "prototype",
+      "effects": {
+        "gain_card": {
+          "max_cost": 5,
+          "source": "gallery"
+        }
       }
     },
     {
       "id": "LUD-025",
       "slug": "legendary-gladiator",
-      "name": "Legendary Gladiator",
+      "name": "Legendary",
       "image": "ludus_legendary.jpg",
       "card_type": "faction",
       "deck_source": "gallery",
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
       "cost": 4,
-      "valor": 3,
-      "victory_points": null,
-      "victory_formula": "1 VP per Ludus card in deck",
+      "valor": 2,
+      "victory_points": 1,
+      "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. This card is worth 1 VP for each Ludus card in your deck.",
+      "effect_text": "Pick a Favor that has been discarded and play it again. Remove it from the game after.",
       "effect_keywords": [
-        "coins",
-        "scaling_vp"
+        "favor",
+        "play_again"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2
+        "replay_favor_from_discard": {
+          "remove_from_game": true
+        }
       }
     },
     {
@@ -2340,22 +2534,32 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 9,
-      "valor": 2,
+      "cost": 12,
+      "valor": 0,
       "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+5 Coins. Each player with fewer than 3 Crowd Disfavor draws 1 card.",
+      "effect_text": "+3 Coins OR +2 Coins per Clerk, Fresh Recruit, or Novice in play. ",
       "effect_keywords": [
-        "coins",
-        "draw",
-        "global"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 5
+        "gain_coins": 3,
+        "or_effects": [
+          {
+            "gain_coins_per_matching_in_play": {
+              "names": [
+                "Clerk",
+                "Fresh Recruit",
+                "Novicii"
+              ],
+              "per": 2
+            }
+          }
+        ]
       }
     },
     {
@@ -2367,22 +2571,20 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 7,
-      "valor": 1,
-      "victory_points": 3,
+      "cost": 10,
+      "valor": 0,
+      "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. The next card you gain this turn goes into your hand.",
+      "effect_text": "+5 Coin.",
       "effect_keywords": [
-        "coins",
-        "gain_to_hand"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3,
-        "next_card_to_hand": true
+        "gain_coins": 5
       }
     },
     {
@@ -2394,22 +2596,20 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 10,
-      "valor": 3,
-      "victory_points": 5,
+      "cost": 13,
+      "valor": 0,
+      "victory_points": 6,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+4 Coins. Gain the faction bonus of Ludus, Senate, or Legion this turn.",
+      "effect_text": "Select an Opponent, Gain the Lowest cost card in their hand (they lose the card).",
       "effect_keywords": [
-        "coins",
-        "faction_bonus"
+        "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 4,
-        "gain_banding_bonus": "choose_faction"
+        "steal_cheapest_from_opponent_hand": true
       }
     },
     {
@@ -2421,13 +2621,13 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 9,
-      "valor": 3,
+      "cost": 11,
+      "valor": 0,
       "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. If you defeat the Arena this turn, gain +2 VP.",
+      "effect_text": "+3 Coins. If you defeat Arena this turn, gain +2 Victory Points.",
       "effect_keywords": [
         "coins",
         "arena",
@@ -2437,7 +2637,10 @@
       "status": "prototype",
       "effects": {
         "gain_coins": 3,
-        "gain_vp": 2
+        "conditional": {
+          "if_arena_defeated_this_turn": true,
+          "gain_vp": 2
+        }
       }
     },
     {
@@ -2449,23 +2652,26 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
+      "cost": 9,
       "valor": 6,
       "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. During an Arena attempt, this contributes +2 additional Valor.",
+      "effect_text": "+2 Coins. You may Destroy up to 2 cards from your hand and/or discard pile.",
       "effect_keywords": [
         "coins",
-        "arena",
-        "valor"
+        "destroy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "arena_bonus_valor": 2
+        "destroy_cards": 2,
+        "destroy_from": [
+          "hand",
+          "discard"
+        ]
       }
     },
     {
@@ -2477,21 +2683,26 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 10,
-      "valor": 2,
+      "cost": 11,
+      "valor": 0,
       "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+4 Coins. You may buy an additional card this turn.",
+      "effect_text": "+3 Coins. When gained, put on top of deck.",
       "effect_keywords": [
         "coins",
-        "extra_buy"
+        "topdeck"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 4
+        "gain_coins": 3,
+        "on_gain": {
+          "place_card_on_deck": {
+            "position": "top"
+          }
+        }
       }
     },
     {
@@ -2503,13 +2714,13 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
-      "valor": 6,
+      "cost": 10,
+      "valor": 4,
       "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Draw 2 cards. If you have a Crowd Disfavor in your discard pile, you may destroy one.",
+      "effect_text": "Draw 2 Cards. You may Destroy up to 2 Disfavor in Hand and/or Discard. For each destroyed, draw a card.",
       "effect_keywords": [
         "draw",
         "disfavor_removal"
@@ -2517,7 +2728,17 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 2
+        "draw_cards": 2,
+        "optional": {
+          "destroy_disfavor": {
+            "max": 2,
+            "zones": [
+              "hand",
+              "discard"
+            ]
+          },
+          "draw_per_destroyed": 1
+        }
       }
     },
     {
@@ -2529,22 +2750,25 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
+      "cost": 11,
       "valor": 4,
-      "victory_points": 4,
+      "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. Gain an Imperial Favor.",
+      "effect_text": "+2 Coins. Put a non-Epic card from your discard into your hand.",
       "effect_keywords": [
         "coins",
-        "favor"
+        "return_card_to_hand"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3,
-        "gain_imperial_favor": 1
+        "gain_coins": 2,
+        "return_card_to_hand": {
+          "source": "discard",
+          "exclude_type": "epic"
+        }
       }
     },
     {
@@ -2556,27 +2780,20 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 9,
-      "valor": 1,
-      "victory_points": 5,
+      "cost": 10,
+      "valor": 0,
+      "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+5 Coins. You may gain an Item costing 5 or less from the Gallery.",
+      "effect_text": "Draw 3 Cards",
       "effect_keywords": [
-        "coins",
-        "gain",
-        "item"
+        "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 5,
-        "gain_item": {
-          "max_cost": 5,
-          "source": "gallery",
-          "type": "item"
-        }
+        "draw_cards": 3
       }
     },
     {
@@ -2588,23 +2805,21 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 7,
+      "cost": 10,
       "valor": 0,
       "victory_points": 3,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Look at the top 4 cards of your deck. Put them back in any order, then draw 1 card.",
+      "effect_text": "+4 Coins. Gain a Faction Bonus of your choice",
       "effect_keywords": [
-        "deck_filter",
         "draw"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 1,
-        "look_at_top_cards": 4,
-        "reorder_top_cards": true
+        "gain_coins": 4,
+        "gain_banding_bonus": "choose_faction"
       }
     },
     {
@@ -2616,26 +2831,22 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 10,
-      "valor": 7,
-      "victory_points": 5,
+      "cost": 13,
+      "valor": 5,
+      "victory_points": 6,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Draw 2 cards. You may destroy a Crowd Disfavor from your hand or discard.",
+      "effect_text": "+4 Coins. Destroy a card in the Market and gain +5 Coins.",
       "effect_keywords": [
-        "draw",
-        "disfavor_removal"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "draw_cards": 2,
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "gain_coins": 4,
+        "destroy_gallery_cards": 1,
+        "then_gain_coins": 5
       }
     },
     {
@@ -2647,23 +2858,23 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
+      "cost": 9,
       "valor": 4,
       "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. Put a card from your discard pile into your hand.",
+      "effect_text": "+2 Coins. Gain a card of cost 6 or less.",
       "effect_keywords": [
-        "coins",
-        "recursion"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3,
-        "return_card_to_hand": {
-          "source": "discard"
+        "gain_coins": 2,
+        "gain_card": {
+          "max_cost": 6,
+          "source": "market"
         }
       }
     },
@@ -2676,13 +2887,13 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
-      "valor": 5,
-      "victory_points": 4,
+      "cost": 11,
+      "valor": 4,
+      "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. Cancel 1 Sabotage played against your Arena attempt this turn.",
+      "effect_text": "+3 Coin. You may destroy a card in hand and then Draw a Card.",
       "effect_keywords": [
         "coins",
         "arena",
@@ -2691,7 +2902,14 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 3
+        "gain_coins": 3,
+        "optional": {
+          "destroy_cards": 1,
+          "destroy_from": [
+            "hand"
+          ],
+          "draw_cards": 1
+        }
       }
     },
     {
@@ -2703,22 +2921,25 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
-      "valor": 4,
-      "victory_points": 4,
+      "cost": 12,
+      "valor": 0,
+      "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+3 Coins. Destroy a card in the Gallery and replace it. You may buy the replacement this turn.",
+      "effect_text": "+3 Coins, Gain a card from the Market costing 6 or less.",
       "effect_keywords": [
         "coins",
-        "gallery_destroy"
+        "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
         "gain_coins": 3,
-        "destroy_gallery_cards": 1
+        "gain_card": {
+          "max_cost": 6,
+          "source": "market"
+        }
       }
     },
     {
@@ -2730,22 +2951,21 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 9,
-      "valor": 2,
-      "victory_points": 5,
+      "cost": 10,
+      "valor": 0,
+      "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. All Epics cost 1 less this turn.",
+      "effect_text": "+4 Coins, the next card gained goes to your hand.",
       "effect_keywords": [
-        "coins",
-        "epic_discount"
+        "coins"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "discount_epics": 1
+        "gain_coins": 4,
+        "next_card_to_hand": true
       }
     },
     {
@@ -2757,29 +2977,24 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 7,
-      "valor": 1,
-      "victory_points": 3,
+      "cost": 10,
+      "valor": 0,
+      "victory_points": 4,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Gain 1 Flavor card. You may destroy a card from your hand or discard.",
+      "effect_text": "Reveal 5 Favors, select 2 to gain, discard the remaining 3",
       "effect_keywords": [
-        "flavor",
-        "destroy"
+        "favor"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_card": {
-          "type": "favor",
-          "source": "flavor_deck"
-        },
-        "destroy_cards": 1,
-        "destroy_from": [
-          "hand",
-          "discard"
-        ]
+        "reveal_favors": {
+          "count": 5,
+          "pick": 2,
+          "discard_rest": 3
+        }
       }
     },
     {
@@ -2791,26 +3006,21 @@
       "deck_source": "epic",
       "faction": null,
       "banding_bonus": null,
-      "cost": 8,
-      "valor": 5,
-      "victory_points": 4,
+      "cost": 12,
+      "valor": 4,
+      "victory_points": 5,
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins. Put a Ludus, Legion, or Senate card from your discard pile on top of your deck.",
+      "effect_text": "Copy the effects of a Card in the Market or in the Epic Tier",
       "effect_keywords": [
-        "coins",
-        "recursion",
-        "topdeck"
+        "copy"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 2,
-        "place_card_on_deck": {
-          "source": "discard",
-          "faction": "any_faction",
-          "position": "top"
+        "copy_card": {
+          "source": "market_or_epic_tier"
         }
       }
     },
@@ -2838,7 +3048,10 @@
       "status": "prototype",
       "effects": {
         "gain_coins": 4,
-        "copy_card": true
+        "copy_card": {
+          "source": "in_play",
+          "exclude_type": "epic"
+        }
       }
     }
   ]

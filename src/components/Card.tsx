@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { ViewStyle, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { ViewStyle, Platform, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,7 @@ import {
 } from 'react-native-gesture-handler';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
 import { getCardDefinition } from '../game/CardDefinitions';
-import { useDraggedCard, useHoverPreviewCard } from '../store/useGameStore';
+import { useDraggedCard, useHoverPreview } from '../store/useGameStore';
 import CardFace from './CardFace';
 
 export type CardSizeMode = 'full' | 'short' | 'square' | 'landscape';
@@ -32,7 +32,7 @@ export interface CardProps {
   /** @deprecated use sizeMode="short" */
   compact?: boolean;
   sizeMode?: CardSizeMode;
-  /** Show enlarged preview in right sidebar on web hover */
+  /** Show enlarged preview beside card on web hover */
   hoverPreview?: boolean;
 }
 
@@ -65,7 +65,8 @@ export const Card: React.FC<CardProps> = ({
   const opacityOverride = useSharedValue(1);
 
   const [draggedCard, setDraggedCard] = useDraggedCard();
-  const [, setHoverPreviewCard] = useHoverPreviewCard();
+  const [, setHoverPreview] = useHoverPreview();
+  const hoverAnchorRef = useRef<View>(null);
   const isThisDragged = draggedCard?.instanceId === card.instanceId;
 
   useEffect(() => {
@@ -73,10 +74,10 @@ export const Card: React.FC<CardProps> = ({
   }, [isThisDragged, opacityOverride]);
 
   const handleDragStart = useCallback(() => {
-    setHoverPreviewCard(null);
+    setHoverPreview(null);
     setDraggedCard(card);
     onDragStart?.(card);
-  }, [card, onDragStart, setDraggedCard, setHoverPreviewCard]);
+  }, [card, onDragStart, setDraggedCard, setHoverPreview]);
 
   const handleDragEnd = useCallback(
     (x: number, y: number) => {
@@ -88,13 +89,15 @@ export const Card: React.FC<CardProps> = ({
 
   const showSidebarPreview = useCallback(() => {
     if (hoverPreview && card.faceUp) {
-      setHoverPreviewCard(card);
+      hoverAnchorRef.current?.measureInWindow((x, y, width, height) => {
+        setHoverPreview({ card, anchor: { x, y, width, height } });
+      });
     }
-  }, [card, hoverPreview, setHoverPreviewCard]);
+  }, [card, hoverPreview, setHoverPreview]);
 
   const hideSidebarPreview = useCallback(() => {
-    setHoverPreviewCard(null);
-  }, [setHoverPreviewCard]);
+    setHoverPreview(null);
+  }, [setHoverPreview]);
 
   const panGesture = Gesture.Pan()
     .enabled(draggable && !disabled)
@@ -172,6 +175,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <GestureDetector gesture={composed}>
       <Animated.View
+        ref={hoverAnchorRef}
         {...hoverProps}
         style={[
           {

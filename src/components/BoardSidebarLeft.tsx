@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, LayoutRectangle } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
-import { CROWD_DISFAVOR } from '../game/CardDefinitions';
+import { CROWD_DISFAVOR, GRATIA_SUPPLY } from '../game/CardDefinitions';
 import CardStack from './CardStack';
+import GratiaSupplyCard from './GratiaSupplyCard';
 import TutorialTarget from './TutorialTarget';
 
 const DISFAVOR_SUPPLY_FACE: CardInstance = {
@@ -10,6 +11,15 @@ const DISFAVOR_SUPPLY_FACE: CardInstance = {
   definitionId: CROWD_DISFAVOR.id,
   definition: CROWD_DISFAVOR,
   location: 'DISFAVOR_DECK',
+  ownerId: 'market',
+  faceUp: true,
+};
+
+const GRATIA_SUPPLY_FACE: CardInstance = {
+  instanceId: 'gratia_supply_face',
+  definitionId: GRATIA_SUPPLY.id,
+  definition: GRATIA_SUPPLY,
+  location: 'ARENA',
   ownerId: 'market',
   faceUp: true,
 };
@@ -30,6 +40,7 @@ interface BoardSidebarLeftProps {
   playerDiscard: CardInstance[];
   onDiscardPress?: () => void;
   onDiscardLayout?: (layout: LayoutRectangle) => void;
+  onSupplyPreview?: (card: CardInstance) => void;
 }
 
 const SUPPLY_STACKS = [
@@ -67,6 +78,7 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
   playerDiscard,
   onDiscardPress,
   onDiscardLayout,
+  onSupplyPreview,
 }) => {
   const discardRef = useRef<View>(null);
 
@@ -107,6 +119,8 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
         showTopCardFace={stack.key === 'disfavor'}
         showCount={'showCount' in stack ? stack.showCount : true}
         cardBackOverlay={stack.cardBackOverlay}
+        hoverPreview={stack.key === 'disfavor'}
+        onPreview={stack.key === 'disfavor' ? onSupplyPreview : undefined}
       />
     );
     if (stack.key === 'favor') {
@@ -157,6 +171,13 @@ export const BoardSidebarLeft: React.FC<BoardSidebarLeftProps> = ({
   return (
     <View style={[styles.sidebar, { width, gap: stackGap }]}>
       {SUPPLY_STACKS.map(renderSupplyStack)}
+      <GratiaSupplyCard
+        width={stackW}
+        height={stackH}
+        previewCard={GRATIA_SUPPLY_FACE}
+        hoverPreview
+        onPreview={onSupplyPreview}
+      />
       <TutorialTarget targetKey="tutorial_deck_discard">
         <View style={[styles.playerRow, { gap: playerStackGap }]}>
           {PLAYER_STACKS.map(renderPlayerStack)}

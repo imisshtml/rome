@@ -130,6 +130,10 @@ function fromArenaCard(raw: RawArenaCard): CardDefinition {
     valorRequired: valorGain,
     rewardVp,
     tier,
+    effectTextLoss: raw.effect_text_loss?.trim() || undefined,
+    ...(raw.effects
+      ? { effects: mergeCardEffects(raw.effects as Partial<CardEffects>) }
+      : {}),
   });
 }
 
@@ -195,6 +199,31 @@ export const CROWD_DISFAVOR: CardDefinition = buildDefinition('crowd_disfavor', 
   image: 'disfavor.jpg',
 });
 
+/** Gratia — gained via events; +1 Coin on play, 1 VP. Not sold in the market. */
+export const GRATIA_SUPPLY: CardDefinition = buildDefinition('gratia_supply', {
+  name: 'Gratia',
+  cost: 0,
+  valor: 0,
+  victoryPoints: 1,
+  type: 'Basic',
+  faction: 'Ludus',
+  text: '+1 Coin',
+  image: 'gratia.jpg',
+  effects: mergeCardEffects({ gain_coins: 1 }),
+});
+
+export function isGratiaSupplyDefinition(
+  cardOrId: CardInstance | CardDefinition | string
+): boolean {
+  const id =
+    typeof cardOrId === 'string'
+      ? cardOrId
+      : 'definitionId' in cardOrId
+        ? cardOrId.definitionId
+        : cardOrId.id;
+  return id === GRATIA_SUPPLY.id;
+}
+
 const factionDefinitions = factionsPack.cards.map(fromFactionCard);
 const arenaDefinitions = arenaPack.cards.map(fromArenaCard);
 const eventDefinitions = eventsPack.cards.map(fromEventCard);
@@ -203,6 +232,7 @@ const favorDefinitions = favorPack.map(fromFavorCard);
 export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
   [BASIC_CHARITY.id]: BASIC_CHARITY,
   [CROWD_DISFAVOR.id]: CROWD_DISFAVOR,
+  [GRATIA_SUPPLY.id]: GRATIA_SUPPLY,
 };
 
 for (const def of [

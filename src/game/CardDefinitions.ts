@@ -1,6 +1,7 @@
 export {
   CARD_DEFINITIONS,
   CROWD_DISFAVOR,
+  GRATIA_SUPPLY,
   GALLERY_CARD_IDS,
   ARENA_CARD_IDS,
   EPIC_CARD_IDS,
@@ -13,6 +14,7 @@ export {
   getStartingDeckEntries,
   getOpeningGamesArenaDefinitionId,
   isOpeningGamesArenaDefinition,
+  isGratiaSupplyDefinition,
   isGalleryEventCard,
   isFavorDefinitionId,
   isNonDeckablePlayerCard,

@@ -25,6 +25,7 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
       'DECLINE_BANDING_BONUS',
       'RESOLVE_GALLERY_EVENT',
       'EVENT_DISCARD_CARD',
+      'EVENT_SKIP_GALLERY_CHOICE',
       'FORCE_OPPONENT_DISCARD',
       'DECLINE_ARENA',
       'END_PHASE',
@@ -33,7 +34,7 @@ export const TURN_PHASE_CONFIG: Record<GamePhase, TurnPhaseConfig> = {
   CLEANUP: {
     phase: 'CLEANUP',
     autoActions: [],
-    allowedActions: ['END_PHASE', 'RESOLVE_GALLERY_EVENT', 'EVENT_DISCARD_CARD'],
+    allowedActions: ['END_PHASE', 'RESOLVE_GALLERY_EVENT', 'EVENT_DISCARD_CARD', 'EVENT_SKIP_GALLERY_CHOICE'],
   },
 };
 

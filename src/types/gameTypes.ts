@@ -1,4 +1,5 @@
 import { CardInstance, CardLocation, Faction } from './cardTypes';
+import type { ArenaLossSpec } from '../utils/arenaLossUtils';
 
 export type GamePhase = 'PREGAME' | 'MAIN' | 'CLEANUP';
 
@@ -22,7 +23,9 @@ export type GameActionType =
   | 'DECLINE_BANDING_BONUS'
   | 'RESOLVE_GALLERY_EVENT'
   | 'EVENT_DISCARD_CARD'
-  | 'FORCE_OPPONENT_DISCARD';
+  | 'EVENT_SKIP_GALLERY_CHOICE'
+  | 'FORCE_OPPONENT_DISCARD'
+  | 'RESOLVE_ARENA_LOSS';
 
 export type BandingFaction = 'Ludus' | 'Legion' | 'Senate';
 
@@ -70,6 +73,26 @@ export interface ArenaChallengeResult {
   challengerId: string;
 }
 
+export type PendingArenaLossPhase =
+  | 'primus_choice'
+  | 'primus_fighter_pick'
+  | 'destroy_fighter_pick';
+
+export interface PendingArenaLoss {
+  playerId: string;
+  loss: ArenaLossSpec;
+  /** Snapshot of fighters committed to this challenge. */
+  committedFighters: CardInstance[];
+  phase: PendingArenaLossPhase;
+  /** Fighters tied for strongest (Primus destroy path). */
+  primusCandidates?: CardInstance[];
+  /** Primus: player chose disfavor instead of destroying a fighter. */
+  appliedDisfavor?: boolean;
+  /** Instance ids destroyed as part of this loss resolution. */
+  destroyedFighterIds?: string[];
+  remainingDestroyPicks?: number;
+}
+
 export interface GameAction {
   type: GameActionType;
   playerId: string;
@@ -84,6 +107,7 @@ export interface GameAction {
     cardName?: string;
     definitionId?: string;
     effectSummary?: string;
+    arenaLossChoice?: 'disfavor' | 'destroy_fighter';
   };
   timestamp: number;
 }
@@ -102,6 +126,8 @@ export interface PlayerState {
   discard: CardInstance[];
   playArea: CardInstance[];
   itemsInPlay: CardInstance[];
+  /** Draw fewer cards at end of turn (Champion of Gaul loss). */
+  drawPenalty?: number;
 }
 
 export interface GameState {
@@ -128,6 +154,8 @@ export interface GameState {
   gallerySupply?: CardInstance[];
   /** Face-down supply for epic row refills */
   epicSupply?: CardInstance[];
+  /** Global destroyed card pile (gallery + player destroys). */
+  destroyedPile?: CardInstance[];
   flavorDeck: CardInstance[];
   disfavorDeck: CardInstance[];
   turnPlayerId: string;
@@ -150,12 +178,19 @@ export interface GameState {
   pendingGalleryEvent?: CardInstance | null;
   /** Players who must pick a hand card to discard (Plague Spreads) */
   pendingEventDiscards?: string[];
+  /** Each player may discard for coins (Barbarian Incursion) */
+  pendingEventOptionalDiscards?: {
+    coinReward: number;
+    pendingPlayerIds: string[];
+  } | null;
   /** Active player must discard N cards from hand (e.g. Gladiatrix) */
   pendingHandDiscard?: {
     playerId: string;
     remaining: number;
     sourceCardName?: string;
   } | null;
+  /** Challenger must resolve arena defeat penalty (fighter destroy / Primus choice). */
+  pendingArenaLoss?: PendingArenaLoss | null;
   /** Active player chooses cards for opponents to discard (e.g. Manipulator) */
   pendingForcedOpponentDiscards?: PendingForcedOpponentDiscards | null;
   /** Turn pass paused until gallery refill + events finish */
@@ -171,8 +206,10 @@ export interface GameState {
   turnArenaExempt?: boolean;
   /** Arena defeated this turn — replace card at end of turn */
   pendingArenaReplacement?: boolean;
-  /** Max purchasable card cost until next turn (Grain Shortage) */
+  /** Max purchasable card cost (Grain Shortage). */
   purchaseCostCap?: number | null;
+  /** Clears purchaseCostCap when this player's turn ends. */
+  purchaseCostCapActiveForPlayerId?: string | null;
   /** Set when status is finished */
   winnerId?: string | null;
 }

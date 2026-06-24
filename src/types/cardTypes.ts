@@ -35,6 +35,8 @@ export interface CardDefinition {
   valorRequired?: number;
   /** VP awarded on successful arena attempt */
   rewardVp?: number;
+  /** Penalty text shown when the arena challenge fails. */
+  effectTextLoss?: string;
   tier?: string;
   /** Structured effect payload from card JSON (`effects` field). */
   effects?: CardEffects;
@@ -67,6 +69,7 @@ export type CardLocation =
   | 'ARENA_DECK'
   | 'RECRUIT'
   | 'RECRUIT_DECK'
+  | 'DESTROYED'
   | 'ITEMS_IN_PLAY';
 
 export const FACTION_COLORS: Record<Faction, string> = {

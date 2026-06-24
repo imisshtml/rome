@@ -179,10 +179,16 @@ export class MultiplayerGameClient {
   private getAIDelayMs(state: GameState): number {
     const last = state.actionLog[state.actionLog.length - 1];
     if (last?.type === 'BUY_CARD') return 2000;
-    if (last?.type === 'RESOLVE_GALLERY_EVENT') return 1500;
+    if (last?.type === 'RESOLVE_GALLERY_EVENT') return 5000;
     if (last?.type === 'EVENT_DISCARD_CARD') return 800;
-    if (state.pendingGalleryEvent) return 1500;
+    if (last?.type === 'EVENT_SKIP_GALLERY_CHOICE') return 800;
+    if (state.pendingGalleryEvent) return 5000;
     if ((state.pendingEventDiscards?.length ?? 0) > 0) return 800;
+    if (
+      (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
+    ) {
+      return 800;
+    }
     if (state.turnActionHighlight?.kind === 'buy') return 2000;
     return 600;
   }

@@ -1,6 +1,7 @@
 import { atom, useAtom, useAtomValue, useSetAtom, getDefaultStore } from 'jotai';
 import { GameState, GameAction } from '../types/gameTypes';
 import { CardInstance } from '../types/cardTypes';
+import { HoverPreviewAnchor } from '../utils/hoverPreviewLayout';
 import {
   createInitialGameState,
   createLobbyGameState,
@@ -45,7 +46,12 @@ const multiplayerMetaAtom = atom<{
 const debugVisibleAtom = atom(false);
 const draggedCardAtom = atom<CardInstance | null>(null);
 const hoveredZoneAtom = atom<string | null>(null);
-const hoverPreviewCardAtom = atom<CardInstance | null>(null);
+export interface HoverPreviewState {
+  card: CardInstance;
+  anchor: HoverPreviewAnchor;
+}
+
+const hoverPreviewAtom = atom<HoverPreviewState | null>(null);
 
 let remoteDispatch: ((action: GameAction) => Promise<GameState>) | null = null;
 let readGameState: (() => GameState) | null = null;
@@ -186,8 +192,12 @@ export function useHoveredZone() {
   return useAtom(hoveredZoneAtom);
 }
 
+export function useHoverPreview() {
+  return useAtom(hoverPreviewAtom);
+}
+
 export function useHoverPreviewCard() {
-  return useAtom(hoverPreviewCardAtom);
+  return useAtom(hoverPreviewAtom);
 }
 
 export {
@@ -195,7 +205,7 @@ export {
   debugVisibleAtom,
   draggedCardAtom,
   hoveredZoneAtom,
-  hoverPreviewCardAtom,
+  hoverPreviewAtom,
   localPlayerKeyAtom,
   multiplayerMetaAtom,
 };

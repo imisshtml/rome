@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useMultiplayer } from '../network/MultiplayerProvider';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
 import { homeBackground } from '../assets/images';
 import { FullBleedBackground } from '../components/FullBleedBackground';
+import RulesModal from '../components/RulesModal';
 
 export const LobbyScreen: React.FC = () => {
   const {
@@ -47,6 +48,7 @@ export const LobbyScreen: React.FC = () => {
   });
 
   const canStart = session?.isHost && humans.length >= 1;
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   return (
     <FullBleedBackground source={homeBackground} style={styles.root}>
@@ -56,9 +58,14 @@ export const LobbyScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <Pressable style={styles.backBtn} onPress={leaveToLanding}>
-          <Text style={styles.backText}>← Leave</Text>
-        </Pressable>
+        <View style={styles.topRow}>
+          <Pressable style={styles.backBtn} onPress={leaveToLanding}>
+            <Text style={styles.backText}>← Leave</Text>
+          </Pressable>
+          <Pressable style={styles.rulesBtn} onPress={() => setRulesOpen(true)}>
+            <Text style={styles.rulesBtnText}>Rules</Text>
+          </Pressable>
+        </View>
 
         <Text style={styles.title}>Game Lobby</Text>
         <Text style={styles.subtitle}>Share this code with other players</Text>
@@ -131,6 +138,7 @@ export const LobbyScreen: React.FC = () => {
           </Pressable>
         ) : null}
       </ScrollView>
+      <RulesModal visible={rulesOpen} onClose={() => setRulesOpen(false)} />
     </FullBleedBackground>
   );
 };
@@ -152,8 +160,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   backBtn: {
-    alignSelf: 'flex-start',
+    marginBottom: 0,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
+  },
+  rulesBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  rulesBtnText: {
+    color: 'rgba(241,196,15,0.85)',
+    fontSize: 12,
+    fontWeight: '700',
   },
   backText: {
     color: 'rgba(255,255,255,0.5)',

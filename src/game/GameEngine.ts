@@ -15,10 +15,21 @@ import {
   splitPlayerDeckCycleCards,
 } from '../utils/deckCycleUtils';
 import { pickForcedDiscardCard } from '../utils/forcedDiscardUtils';
+import { addToDestroyedPile } from '../utils/destroyedPileUtils';
 import {
   isOpeningGamesArena,
   mustEnterArenaBeforeEndTurn,
 } from '../utils/arenaUtils';
+import {
+  applyAutomaticArenaLoss,
+  arenaLossNeedsPrompt,
+  beginPendingArenaLoss,
+  destroyFighterFromDiscard,
+  getFighterStrength,
+  giveDisfavorToPlayer,
+  getPrimusDestroyCandidates,
+  parseArenaLossSpec,
+} from '../utils/arenaLossUtils';
 import {
   BANDING_BONUS_LABEL,
   BandingFaction,
@@ -27,13 +38,16 @@ import {
   pickAICardToPlayFirst,
 } from '../utils/bandingUtils';
 import {
+  awardOptionalEventDiscardCoins,
   beginGalleryEventResolution,
   drawGallerySupplyCard,
+  eventHandChoiceDestroys,
   galleryRefillPaused,
   GALLERY_ROW_SIZE,
 } from './EventResolver';
 import {
   CROWD_DISFAVOR,
+  GRATIA_SUPPLY,
   getCardDefinition,
   getGalleryPoolEntries,
   getRecruitPoolEntries,
@@ -297,7 +311,9 @@ function applyCardPlayEffects(
 ): GameState {
   let next = state;
   let coinGain = 0;
-  const effects = card.definition.effects;
+  const effects = card.definition.effects as
+    | (typeof card.definition.effects & { gain_gratia?: number })
+    | undefined;
   if (effects) {
     coinGain = effects.gain_coins ?? 0;
     const drawForEffects = (player: PlayerState, drawCount: number) => {
@@ -312,6 +328,19 @@ function applyCardPlayEffects(
       effects,
       drawForEffects
     );
+
+    const gratiaGain = effects.gain_gratia ?? 0;
+    if (gratiaGain > 0) {
+      let player = { ...next.players[playerIdx], discard: [...next.players[playerIdx].discard] };
+      for (let i = 0; i < gratiaGain; i++) {
+        player.discard.push(
+          createCardInstance(GRATIA_SUPPLY.id, 'DISCARD', player.id, true)
+        );
+      }
+      const players = [...next.players];
+      players[playerIdx] = player;
+      next = { ...next, players };
+    }
   } else {
     coinGain = getLegacyCoinGain(card);
     const valor = card.definition.valor ?? 0;
@@ -493,6 +522,7 @@ function activateGameFromPregame(state: GameState): GameState {
     pendingGalleryEvent: null,
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
+    pendingArenaLoss: null,
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
     purchaseCostCap: null,
@@ -595,11 +625,50 @@ function resolveArenaChallenge(state: GameState): GameState {
     players[idx] = discardCardToPlayer(players[idx], card);
   }
 
+  let lossSideEffects: Partial<GameState> = {};
   if (success) {
     challenger.victoryPoints += rewardVp;
   } else {
-    const disfavor = createCardInstance(CROWD_DISFAVOR.id, 'DISCARD', challenger.id, true);
-    challenger = discardCardToPlayer(challenger, disfavor);
+    const lossSpec = parseArenaLossSpec(state.arenaCard);
+    const committedFighters = state.arenaCommitZone.map((c) => ({ ...c }));
+
+    if (arenaLossNeedsPrompt(lossSpec)) {
+      players[challengerIdx] = challenger;
+      return {
+        ...state,
+        players,
+        turnArenaResolved: true,
+        turnValor: state.turnValor,
+        arenaCommitZone: [],
+        arenaChallenge: null,
+        pendingArenaLoss: beginPendingArenaLoss(
+          state,
+          challenge.challengerId,
+          lossSpec,
+          committedFighters
+        ),
+        lastArenaResult: {
+          success,
+          totalValor,
+          requiredValor,
+          valorGain,
+          rewardVp,
+          challengerId: challenge.challengerId,
+        },
+      };
+    }
+
+    const autoApplied = applyAutomaticArenaLoss(
+      { ...state, players },
+      challengerIdx,
+      lossSpec
+    );
+    players = autoApplied.players;
+    challenger = players[challengerIdx];
+    lossSideEffects = {
+      disfavorDeck: autoApplied.disfavorDeck,
+      destroyedPile: autoApplied.destroyedPile,
+    };
   }
 
   players[challengerIdx] = challenger;
@@ -617,6 +686,7 @@ function resolveArenaChallenge(state: GameState): GameState {
 
   return {
     ...state,
+    ...lossSideEffects,
     players,
     arenaCard,
     arenaDeck,
@@ -726,11 +796,23 @@ export function rehydrateGameState(state: GameState): GameState {
       ? rehydrateCard(state.pendingGalleryEvent)
       : null,
     pendingEventDiscards: state.pendingEventDiscards ?? [],
+    pendingEventOptionalDiscards: state.pendingEventOptionalDiscards ?? null,
     pendingHandDiscard: state.pendingHandDiscard ?? null,
     pendingForcedOpponentDiscards: state.pendingForcedOpponentDiscards ?? null,
+    pendingArenaLoss: state.pendingArenaLoss
+      ? {
+          ...state.pendingArenaLoss,
+          committedFighters: rehydrateCards(state.pendingArenaLoss.committedFighters ?? []),
+          primusCandidates: state.pendingArenaLoss.primusCandidates
+            ? rehydrateCards(state.pendingArenaLoss.primusCandidates)
+            : undefined,
+        }
+      : null,
     deferredTurnEnd: state.deferredTurnEnd ?? null,
     pendingArenaReplacement: state.pendingArenaReplacement ?? false,
     purchaseCostCap: state.purchaseCostCap ?? null,
+    purchaseCostCapActiveForPlayerId:
+      state.purchaseCostCapActiveForPlayerId ?? null,
     arenaOpen: state.arenaOpen ?? false,
     turnArenaResolved: state.turnArenaResolved ?? false,
     turnArenaExempt: state.turnArenaExempt ?? false,
@@ -760,6 +842,11 @@ export function rehydrateGameState(state: GameState): GameState {
       (state.disfavorDeck ?? []).length > 0
         ? rehydrateCards(state.disfavorDeck).map((c) => ({ ...c, faceUp: true }))
         : [createCardInstance(CROWD_DISFAVOR.id, 'DISFAVOR_DECK', 'market', true)],
+    destroyedPile: rehydrateCards(state.destroyedPile ?? []).map((c) => ({
+      ...c,
+      location: 'DESTROYED' as const,
+      faceUp: true,
+    })),
     winnerId: state.winnerId ?? null,
   };
 }
@@ -793,21 +880,42 @@ export function validateGameAction(
   if (state.status === 'finished') return 'Game is finished';
   if (state.status === 'lobby') return 'Game has not started';
 
-  if (state.pendingGalleryEvent || (state.pendingEventDiscards?.length ?? 0) > 0) {
+  if (
+    state.pendingGalleryEvent ||
+    (state.pendingEventDiscards?.length ?? 0) > 0 ||
+    (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
+  ) {
     if (action.type === 'RESOLVE_GALLERY_EVENT') {
       if ((state.pendingEventDiscards?.length ?? 0) > 0) {
-        return 'All players must discard first';
+        return 'All players must respond first';
+      }
+      if ((state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0) {
+        return 'All players must respond first';
       }
       return null;
     }
     if (action.type === 'EVENT_DISCARD_CARD') {
-      if (!state.pendingEventDiscards?.includes(action.playerId)) {
-        return 'Not waiting for your event discard';
-      }
-      if (!action.payload?.cardInstanceId) return 'Select a card to discard';
+      const optionalIds =
+        state.pendingEventOptionalDiscards?.pendingPlayerIds ?? [];
+      const requiredIds = state.pendingEventDiscards ?? [];
+      const waiting =
+        optionalIds.includes(action.playerId) ||
+        requiredIds.includes(action.playerId);
+      if (!waiting) return 'Not waiting for your event response';
+      if (!action.payload?.cardInstanceId) return 'Select a card from hand';
       const p = state.players.find((pl) => pl.id === action.playerId);
       if (!p?.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
         return 'Card not in hand';
+      }
+      return null;
+    }
+    if (action.type === 'EVENT_SKIP_GALLERY_CHOICE') {
+      if (
+        !state.pendingEventOptionalDiscards?.pendingPlayerIds.includes(
+          action.playerId
+        )
+      ) {
+        return 'Not waiting for your event response';
       }
       return null;
     }
@@ -873,6 +981,46 @@ export function validateGameAction(
 
   if (state.arenaChallenge) {
     return 'Arena challenge in progress';
+  }
+
+  if (state.pendingArenaLoss) {
+    if (action.type !== 'RESOLVE_ARENA_LOSS') {
+      return 'Resolve arena defeat penalty first';
+    }
+    if (state.pendingArenaLoss.playerId !== action.playerId) {
+      return 'Not your arena defeat to resolve';
+    }
+    const pending = state.pendingArenaLoss;
+    const choice = action.payload?.arenaLossChoice;
+    const cardId = action.payload?.cardInstanceId;
+
+    if (pending.phase === 'primus_choice') {
+      if (choice !== 'disfavor' && choice !== 'destroy_fighter') {
+        return 'Choose Disfavor or destroy your strongest fighter';
+      }
+      return null;
+    }
+
+    if (
+      pending.phase === 'destroy_fighter_pick' ||
+      pending.phase === 'primus_fighter_pick'
+    ) {
+      if (!cardId) return 'Select a fighter to destroy';
+      const allowed = new Set(
+        (pending.phase === 'primus_fighter_pick'
+          ? pending.primusCandidates
+          : pending.committedFighters
+        )?.map((c) => c.instanceId) ?? []
+      );
+      if (!allowed.has(cardId)) return 'Invalid fighter selection';
+      const player = state.players.find((p) => p.id === action.playerId);
+      if (!player?.discard.some((c) => c.instanceId === cardId)) {
+        return 'Fighter not in your discard pile';
+      }
+      return null;
+    }
+
+    return 'Invalid arena loss phase';
   }
 
   if (state.turnPlayerId !== action.playerId) {
@@ -961,6 +1109,7 @@ export function validateGameAction(
     }
     case 'RESOLVE_GALLERY_EVENT':
     case 'EVENT_DISCARD_CARD':
+    case 'EVENT_SKIP_GALLERY_CHOICE':
     case 'FORCE_OPPONENT_DISCARD':
       return null;
     case 'DRAW_CARD':
@@ -1317,14 +1466,18 @@ export function createPregameState(
     turnActionHighlight: null,
     pendingGalleryEvent: null,
     pendingEventDiscards: [],
+    pendingEventOptionalDiscards: null,
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
+    pendingArenaLoss: null,
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
     purchaseCostCap: null,
+    purchaseCostCapActiveForPlayerId: null,
     arenaOpen: false,
     turnArenaResolved: false,
     turnArenaExempt: false,
+    destroyedPile: [],
   };
 }
 
@@ -1379,11 +1532,14 @@ export function createLobbyGameState(
     turnActionHighlight: null,
     pendingGalleryEvent: null,
     pendingEventDiscards: [],
+    pendingEventOptionalDiscards: null,
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
+    pendingArenaLoss: null,
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
     purchaseCostCap: null,
+    destroyedPile: [],
   };
 }
 
@@ -1522,6 +1678,78 @@ export function processGameAction(
         action.payload.cardInstanceId
       );
       next = advanceForcedOpponentDiscards(next);
+      return next;
+    }
+
+    case 'RESOLVE_ARENA_LOSS': {
+      const pending = next.pendingArenaLoss;
+      if (!pending || action.playerId !== pending.playerId) return next;
+
+      const playerIdx = next.players.findIndex((p) => p.id === pending.playerId);
+      if (playerIdx === -1) return next;
+
+      const choice = action.payload?.arenaLossChoice;
+      const cardId = action.payload?.cardInstanceId;
+
+      if (pending.phase === 'primus_choice') {
+        if (choice === 'disfavor') {
+          const result = giveDisfavorToPlayer(
+            next,
+            next.players[playerIdx],
+            pending.loss.disfavorCount ?? 5
+          );
+          const players = [...next.players];
+          players[playerIdx] = result.player;
+          return { ...result.state, players, pendingArenaLoss: null };
+        }
+
+        if (choice === 'destroy_fighter') {
+          const candidates =
+            pending.primusCandidates ??
+            getPrimusDestroyCandidates(pending.committedFighters);
+          if (candidates.length > 1) {
+            return {
+              ...next,
+              pendingArenaLoss: {
+                ...pending,
+                phase: 'primus_fighter_pick',
+                primusCandidates: candidates,
+              },
+            };
+          }
+          const targetId = candidates[0]?.instanceId;
+          if (!targetId) {
+            return { ...next, pendingArenaLoss: null };
+          }
+          return {
+            ...destroyFighterFromDiscard(next, playerIdx, targetId),
+            pendingArenaLoss: null,
+          };
+        }
+        return next;
+      }
+
+      if (
+        (pending.phase === 'destroy_fighter_pick' ||
+          pending.phase === 'primus_fighter_pick') &&
+        cardId
+      ) {
+        let resolved = destroyFighterFromDiscard(next, playerIdx, cardId);
+        const remaining = (pending.remainingDestroyPicks ?? 1) - 1;
+        if (pending.phase === 'destroy_fighter_pick' && remaining > 0) {
+          resolved = {
+            ...resolved,
+            pendingArenaLoss: {
+              ...pending,
+              remainingDestroyPicks: remaining,
+            },
+          };
+        } else {
+          resolved = { ...resolved, pendingArenaLoss: null };
+        }
+        return resolved;
+      }
+
       return next;
     }
 
@@ -1745,28 +1973,83 @@ export function processGameAction(
     case 'RESOLVE_GALLERY_EVENT': {
       if (!next.pendingGalleryEvent) return next;
       if ((next.pendingEventDiscards?.length ?? 0) > 0) return next;
+      if (
+        (next.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
+      ) {
+        return next;
+      }
 
       next.pendingGalleryEvent = null;
       next = processGalleryRefill(next);
       return next;
     }
 
+    case 'EVENT_SKIP_GALLERY_CHOICE': {
+      const optional = next.pendingEventOptionalDiscards;
+      if (!optional?.pendingPlayerIds.includes(action.playerId)) return next;
+
+      next.pendingEventOptionalDiscards = {
+        ...optional,
+        pendingPlayerIds: optional.pendingPlayerIds.filter(
+          (id) => id !== action.playerId
+        ),
+      };
+      if (next.pendingEventOptionalDiscards.pendingPlayerIds.length > 0) {
+        return next;
+      }
+      return finishGalleryEventPlayerResponses(next);
+    }
+
     case 'EVENT_DISCARD_CARD': {
       if (!player || !action.payload?.cardInstanceId) return next;
-      if (!next.pendingEventDiscards?.includes(action.playerId)) return next;
+
+      const optional = next.pendingEventOptionalDiscards;
+      const isOptional = optional?.pendingPlayerIds.includes(action.playerId);
+      const isRequired = next.pendingEventDiscards?.includes(action.playerId);
+      if (!isOptional && !isRequired) return next;
 
       const handIdx = player.hand.findIndex(
         (c) => c.instanceId === action.payload!.cardInstanceId
       );
       if (handIdx === -1) return next;
 
-      const card = {
-        ...player.hand[handIdx],
-        location: 'DISCARD' as const,
-        faceUp: true,
-      };
+      const removed = player.hand[handIdx];
       player.hand = player.hand.filter((_, i) => i !== handIdx);
-      player.discard = [...player.discard, card];
+
+      const destroys =
+        isRequired &&
+        !!next.pendingGalleryEvent &&
+        eventHandChoiceDestroys(next.pendingGalleryEvent);
+
+      if (!destroys) {
+        player.discard = [
+          ...player.discard,
+          { ...removed, location: 'DISCARD' as const, faceUp: true },
+        ];
+      } else {
+        next = addToDestroyedPile(next, [{ ...removed, ownerId: player.id }]);
+      }
+
+      if (isOptional && optional) {
+        next = awardOptionalEventDiscardCoins(
+          next,
+          action.playerId,
+          optional.coinReward
+        );
+        next.pendingEventOptionalDiscards = {
+          ...optional,
+          pendingPlayerIds: optional.pendingPlayerIds.filter(
+            (id) => id !== action.playerId
+          ),
+        };
+        next.players = [...next.players];
+        next.players[playerIdx] = player;
+
+        if (next.pendingEventOptionalDiscards.pendingPlayerIds.length > 0) {
+          return next;
+        }
+        return finishGalleryEventPlayerResponses(next);
+      }
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
@@ -1778,10 +2061,7 @@ export function processGameAction(
         return next;
       }
 
-      next.pendingGalleryEvent = null;
-      next.pendingEventDiscards = [];
-      next = processGalleryRefill(next);
-      return next;
+      return finishGalleryEventPlayerResponses(next);
     }
 
     case 'ATTEMPT_ARENA': {
@@ -1842,6 +2122,16 @@ function removePurchasedGalleryCards(state: GameState): GameState {
   };
 }
 
+function finishGalleryEventPlayerResponses(state: GameState): GameState {
+  let next: GameState = {
+    ...state,
+    pendingGalleryEvent: null,
+    pendingEventDiscards: [],
+    pendingEventOptionalDiscards: null,
+  };
+  return processGalleryRefill(next);
+}
+
 /** Refill gallery one card at a time; pause on events until resolved. */
 function processGalleryRefill(state: GameState): GameState {
   let next = removePurchasedGalleryCards(state);
@@ -1865,7 +2155,8 @@ function processGalleryRefill(state: GameState): GameState {
         next,
         flippedEvent,
         drawForEvent,
-        gainFlavorCard
+        gainFlavorCard,
+        createCardInstance
       );
       if (eventFavorReturns.length > 0) {
         next = {
@@ -1919,19 +2210,29 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     turnActionHighlight: null,
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
+    pendingArenaLoss: null,
     deferredTurnEnd: null,
-    purchaseCostCap: null,
+    purchaseCostCap: state.purchaseCostCap ?? null,
+    purchaseCostCapActiveForPlayerId:
+      state.purchaseCostCapActiveForPlayerId ?? null,
     turnArenaResolved: false,
     turnArenaExempt: false,
   };
 
   const nextPlayer = next.players[nextPlayerIdx];
+  let turnCoins = 0;
+  let updatedPlayer = { ...nextPlayer, carryCoins: 0 };
   const carry = nextPlayer.carryCoins ?? 0;
   if (carry > 0) {
-    next.turnCoins = carry;
-    next.players = [...next.players];
-    next.players[nextPlayerIdx] = { ...nextPlayer, carryCoins: 0 };
+    turnCoins = carry;
   }
+  if (updatedPlayer.imperialTaxPending) {
+    turnCoins = Math.max(0, turnCoins - 1);
+    updatedPlayer = { ...updatedPlayer, imperialTaxPending: false };
+  }
+  next.turnCoins = turnCoins;
+  next.players = [...next.players];
+  next.players[nextPlayerIdx] = updatedPlayer;
 
   return finishGameIfNeeded(next);
 }
@@ -1948,14 +2249,26 @@ function endTurnAndPass(
 ): GameState {
   let next: GameState = { ...state, phase: 'CLEANUP' };
 
+  if (
+    player &&
+    next.purchaseCostCapActiveForPlayerId === player.id
+  ) {
+    next = {
+      ...next,
+      purchaseCostCap: null,
+      purchaseCostCapActiveForPlayerId: null,
+    };
+  }
+
   if (player) {
     const cleaned = cleanupTurnPlayer(player);
-    const drawn = drawCardsIntoState(
-      next,
-      cleaned.player,
-      STARTING_HAND_SIZE
+    const drawCount = Math.max(
+      0,
+      STARTING_HAND_SIZE - (cleaned.player.drawPenalty ?? 0)
     );
+    const drawn = drawCardsIntoState(next, cleaned.player, drawCount);
     let withDraw = clearExpiredImperialTax(drawn.player);
+    withDraw = { ...withDraw, drawPenalty: 0 };
     next = drawn.state;
     next.players = [...next.players];
     next.players[playerIdx] = withDraw;
@@ -2015,6 +2328,32 @@ function findAIBuyTarget(state: GameState): CardInstance | null {
 }
 
 export function getNextAIAction(state: GameState): GameAction | null {
+  if (
+    (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
+  ) {
+    const playerId = state.pendingEventOptionalDiscards!.pendingPlayerIds[0];
+    const player = state.players.find((p) => p.id === playerId);
+    if (player?.isAI && player.hand.length > 0) {
+      const card = player.hand.reduce((worst, c) =>
+        (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
+      );
+      return {
+        type: 'EVENT_DISCARD_CARD',
+        playerId: player.id,
+        payload: { cardInstanceId: card.instanceId },
+        timestamp: Date.now(),
+      };
+    }
+    if (player?.isAI) {
+      return {
+        type: 'EVENT_SKIP_GALLERY_CHOICE',
+        playerId: player.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
   if ((state.pendingEventDiscards?.length ?? 0) > 0) {
     const playerId = state.pendingEventDiscards![0];
     const player = state.players.find((p) => p.id === playerId);
@@ -2061,6 +2400,67 @@ export function getNextAIAction(state: GameState): GameAction | null {
           timestamp: Date.now(),
         };
       }
+    }
+    return null;
+  }
+
+  if (state.pendingArenaLoss) {
+    const pending = state.pendingArenaLoss;
+    const player = state.players.find((p) => p.id === pending.playerId);
+    if (!player?.isAI) return null;
+
+    if (pending.phase === 'primus_choice') {
+      const candidates =
+        pending.primusCandidates ??
+        getPrimusDestroyCandidates(pending.committedFighters);
+      const weakestCommitted = pending.committedFighters.reduce((worst, fighter) =>
+        getFighterStrength(fighter) < getFighterStrength(worst) ? fighter : worst
+      );
+      const destroyTarget = candidates[0];
+      const destroyIsPainful =
+        destroyTarget &&
+        getFighterStrength(destroyTarget) >= getFighterStrength(weakestCommitted) + 2;
+
+      if (destroyIsPainful) {
+        return {
+          type: 'RESOLVE_ARENA_LOSS',
+          playerId: player.id,
+          payload: { arenaLossChoice: 'disfavor' },
+          timestamp: Date.now(),
+        };
+      }
+
+      if (candidates.length > 1) {
+        return {
+          type: 'RESOLVE_ARENA_LOSS',
+          playerId: player.id,
+          payload: { arenaLossChoice: 'destroy_fighter' },
+          timestamp: Date.now(),
+        };
+      }
+
+      return {
+        type: 'RESOLVE_ARENA_LOSS',
+        playerId: player.id,
+        payload: { arenaLossChoice: 'destroy_fighter' },
+        timestamp: Date.now(),
+      };
+    }
+
+    const pool =
+      pending.phase === 'primus_fighter_pick'
+        ? pending.primusCandidates ?? []
+        : pending.committedFighters;
+    const pick = pool.reduce((worst, fighter) =>
+      getFighterStrength(fighter) < getFighterStrength(worst) ? fighter : worst
+    );
+    if (pick) {
+      return {
+        type: 'RESOLVE_ARENA_LOSS',
+        playerId: player.id,
+        payload: { cardInstanceId: pick.instanceId },
+        timestamp: Date.now(),
+      };
     }
     return null;
   }

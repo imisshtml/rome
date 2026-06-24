@@ -16,6 +16,7 @@ import { isSupabaseConfigured } from '../lib/env';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
 import { gameLogo, homeBackground } from '../assets/images';
 import { FullBleedBackground } from '../components/FullBleedBackground';
+import RulesModal from '../components/RulesModal';
 
 export const LandingScreen: React.FC = () => {
   const {
@@ -29,6 +30,7 @@ export const LandingScreen: React.FC = () => {
   const [nickname, setNickname] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const name = nickname.trim() || 'Gladiator';
   const canSubmit = !loading && name.length > 0;
@@ -129,8 +131,13 @@ export const LandingScreen: React.FC = () => {
           >
             <Text style={styles.ghostBtnText}>Practice vs AI (offline)</Text>
           </Pressable>
+
+          <Pressable style={styles.rulesBtn} onPress={() => setRulesOpen(true)}>
+            <Text style={styles.rulesBtnText}>Rules of the Game</Text>
+          </Pressable>
         </View>
       </ScrollView>
+      <RulesModal visible={rulesOpen} onClose={() => setRulesOpen(false)} />
     </KeyboardAvoidingView>
     </FullBleedBackground>
   );
@@ -263,6 +270,18 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     fontSize: 13,
     fontWeight: '600',
+  },
+  rulesBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  rulesBtnText: {
+    color: 'rgba(241,196,15,0.85)',
+    fontSize: 13,
+    fontWeight: '700',
   },
   btnDisabled: {
     opacity: 0.45,

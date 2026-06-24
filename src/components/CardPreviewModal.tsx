@@ -8,9 +8,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
-import { getCardDefinition } from '../game/CardDefinitions';
-import { getEnlargedPreviewSize } from '../utils/cardDisplayUtils';
+import { getCardDefinition, isGratiaSupplyDefinition } from '../game/CardDefinitions';
+import { getClickPreviewSize } from '../utils/cardDisplayUtils';
 import CardFace from './CardFace';
+import GratiaSupplyCard from './GratiaSupplyCard';
 
 /** Stat badges on click preview — smaller than board cards at the same ratio. */
 const ZOOM_BADGE_SCALE = 0.78;
@@ -34,17 +35,29 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
   purchaseBlockedReason,
   onPurchase,
 }) => {
-  const { width: screenW } = useWindowDimensions();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   if (!card) return null;
 
   const definition = card.definition ?? getCardDefinition(card.definitionId);
-  const modalMaxW = Math.min(336, screenW * 0.84);
-  const { width: cardW, height: cardH } = getEnlargedPreviewSize(
+  const { width: cardW, height: cardH } = getClickPreviewSize(
     screenW,
     definition,
-    modalMaxW
+    screenH
   );
   const cost = definition.cost ?? 0;
+
+  const cardPreview = isGratiaSupplyDefinition(card) ? (
+    <GratiaSupplyCard width={cardW} height={cardH} />
+  ) : (
+    <CardFace
+      definition={definition}
+      faceUp={card.faceUp}
+      width={cardW}
+      height={cardH}
+      badgeScale={ZOOM_BADGE_SCALE}
+      chosenFaction={card.chosenFaction}
+    />
+  );
 
   return (
     <Modal
@@ -55,14 +68,7 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.centered} onPress={(e) => e.stopPropagation()}>
-          <CardFace
-            definition={definition}
-            faceUp={card.faceUp}
-            width={cardW}
-            height={cardH}
-            badgeScale={ZOOM_BADGE_SCALE}
-            chosenFaction={card.chosenFaction}
-          />
+          {cardPreview}
 
           {showPurchase ? (
             canPurchase && onPurchase ? (

@@ -23,13 +23,13 @@
       "image": "arena_leopard.jpg",
       "arena_type": "beast",
       "tier": "easy",
-      "valor_required": 5,
+      "valor_required": 7,
       "reward_vp": 3,
       "effect_text_win": "Gain 3 Victory Points",
-      "effect_text_loss": "Gain 1 Disfavor",
+      "effect_text_loss": "Destroy 1 of your fighters.",
       "effects": {
         "gain_vp": 3,
-        "gain_crowd_disfavor": 1
+        "destroy_fighter_on_loss": 1
       }
     },
     {
@@ -41,10 +41,10 @@
       "valor_required": 6,
       "reward_vp": 3,
       "effect_text_win": "Gain 3 Victory Points",
-      "effect_text_loss": "Gain 1 Disfavor",
+      "effect_text_loss": "Destroy 1 of your fighters.",
       "effects": {
         "gain_vp": 3,
-        "gain_crowd_disfavor": 1
+        "destroy_fighter_on_loss": 1
       }
     },
     {
@@ -53,13 +53,13 @@
       "image": "arena_hounds.jpg",
       "arena_type": "beast",
       "tier": "easy",
-      "valor_required": 5,
+      "valor_required": 6,
       "reward_vp": 3,
       "effect_text_win": "Gain 3 Victory Points",
-      "effect_text_loss": "Gain 1 Disfavor",
+      "effect_text_loss": "Destroy 1 of your fighters.",
       "effects": {
         "gain_vp": 3,
-        "gain_crowd_disfavor": 1
+        "destroy_fighter_on_loss": 1
       }
     },
     {
@@ -68,13 +68,13 @@
       "image": "arena_lion.jpg",
       "arena_type": "beast",
       "tier": "medium",
-      "valor_required": 7,
-      "reward_vp": 3,
-      "effect_text_win": "Gain 3 Victory Points",
-      "effect_text_loss": "Gain 2 Disfavor",
+      "valor_required": 8,
+      "reward_vp": 4,
+      "effect_text_win": "Gain 4 Victory Points",
+      "effect_text_loss": "Destroy 1 of your fighters.",
       "effects": {
-        "gain_vp": 3,
-        "gain_crowd_disfavor": 2
+        "gain_vp": 4,
+        "destroy_fighter_on_loss": 1
       }
     },
     {
@@ -83,12 +83,12 @@
       "image": "arena_bull.jpg",
       "arena_type": "beast",
       "tier": "hard",
-      "valor_required": 8,
-      "reward_vp": 4,
-      "effect_text_win": "Gain 4 Victory Points",
+      "valor_required": 5,
+      "reward_vp": 3,
+      "effect_text_win": "Gain 3 Victory Points",
       "effect_text_loss": "Gain 2 Disfavor",
       "effects": {
-        "gain_vp": 4,
+        "gain_vp": 3,
         "gain_crowd_disfavor": 2
       }
     },
@@ -98,13 +98,14 @@
       "image": "arena_gaul.jpg",
       "arena_type": "gladiator",
       "tier": "medium",
-      "valor_required": 8,
-      "reward_vp": 4,
-      "effect_text_win": "Gain 4 Victory Points",
-      "effect_text_loss": "Gain 2 Disfavor",
+      "valor_required": 10,
+      "reward_vp": 5,
+      "effect_text_win": "Gain 5 Victory Points",
+      "effect_text_loss": "Gain 3 Disfavor. Draw 1 Less Card at end of turn.",
       "effects": {
-        "gain_vp": 4,
-        "gain_crowd_disfavor": 2
+        "gain_vp": 5,
+        "gain_crowd_disfavor": 3,
+        "draw_less_on_loss": 1
       }
     },
     {
@@ -128,13 +129,14 @@
       "image": "arena_primus.jpg",
       "arena_type": "gladiator",
       "tier": "epic",
-      "valor_required": 11,
-      "reward_vp": 5,
-      "effect_text_win": "Gain 5 Victory Points",
-      "effect_text_loss": "Gain 2 Disfavor",
+      "valor_required": 15,
+      "reward_vp": 7,
+      "effect_text_win": "Gain 7 Victory Points",
+      "effect_text_loss": "Gain 5 Disfavor OR Destroy your strongest fighter (Valor + Cost)",
       "effects": {
-        "gain_vp": 5,
-        "gain_crowd_disfavor": 2
+        "gain_vp": 7,
+        "primus_loss_choice": true,
+        "gain_crowd_disfavor": 5
       }
     },
     {
@@ -146,10 +148,10 @@
       "valor_required": 12,
       "reward_vp": 6,
       "effect_text_win": "Gain 6 Victory Points",
-      "effect_text_loss": "Gain 3 Disfavor",
+      "effect_text_loss": "Gain 4 Disfavor",
       "effects": {
         "gain_vp": 6,
-        "gain_crowd_disfavor": 3
+        "gain_crowd_disfavor": 4
       }
     },
     {
@@ -158,13 +160,13 @@
       "image": "arena_fire.jpg",
       "arena_type": "hazard",
       "tier": "medium",
-      "valor_required": 6,
+      "valor_required": 7,
       "reward_vp": 3,
       "effect_text_win": "Gain 3 Victory Points",
-      "effect_text_loss": "Gain 1 Disfavor",
+      "effect_text_loss": "Destroy the top card of your deck.",
       "effects": {
         "gain_vp": 3,
-        "gain_crowd_disfavor": 1
+        "destroy_deck_top_on_loss": 1
       }
     },
     {
@@ -188,13 +190,13 @@
       "image": "arena_naval_battle.jpg",
       "arena_type": "spectacle",
       "tier": "epic",
-      "valor_required": 12,
+      "valor_required": 13,
       "reward_vp": 6,
       "effect_text_win": "Gain 6 Victory Points",
-      "effect_text_loss": "Gain 3 Disfavor",
+      "effect_text_loss": "Destroy 1 of your fighters.",
       "effects": {
         "gain_vp": 6,
-        "gain_crowd_disfavor": 3
+        "destroy_fighter_on_loss": 1
       }
     }
   ]

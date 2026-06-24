@@ -14,7 +14,6 @@ import {
   useDispatchAction,
   useDraggedCard,
   useHoveredZone,
-  useHoverPreviewCard,
   useLocalPlayer,
   useIsLocalTurn,
 } from '../store/useGameStore';
@@ -37,11 +36,15 @@ import GallerySectionHeader, {
   GALLERY_BOTTOM_COLUMN_FLEX,
 } from './GallerySectionHeader';
 import CardPreviewModal from './CardPreviewModal';
+import CardHoverPreviewOverlay from './CardHoverPreview';
 import DiscardModal from './DiscardModal';
+import DestroyedModal from './DestroyedModal';
+import DestroyedPileButton from './DestroyedPileButton';
 import ArenaChallengeModal, { ArenaModalStep } from './ArenaChallengeModal';
 import FactionChoiceModal from './FactionChoiceModal';
 import BandingBonusModal from './BandingBonusModal';
 import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
+import ArenaLossModal from './ArenaLossModal';
 import GalleryEventModal from './GalleryEventModal';
 import PregameMarketView from './PregameMarketView';
 import TutorialOverlay from './TutorialOverlay';
@@ -51,7 +54,11 @@ import { useTutorial } from '../context/TutorialContext';
 import { getValorInPlay } from '../utils/combatStatsUtils';
 import { requiresFactionChoiceOnPlay, isCharityCard } from '../utils/cardFactionUtils';
 import { Faction } from '../types/cardTypes';
-import { getCardDefinition } from '../game/CardDefinitions';
+import {
+  getCardDefinition,
+  isGratiaSupplyDefinition,
+  isPurchasableMarketCard,
+} from '../game/CardDefinitions';
 import { FullBleedBackground } from './FullBleedBackground';
 import { gameBackground } from '../assets/images';
 
@@ -63,7 +70,9 @@ function isBuyableMarketCard(
   card: CardInstance | null,
   galleryPurchasedBy?: Record<string, string>
 ): boolean {
-  if (card == null || !MARKET_LOCATIONS.includes(card.location)) return false;
+  if (card == null || isGratiaSupplyDefinition(card)) return false;
+  if (!MARKET_LOCATIONS.includes(card.location)) return false;
+  if (!isPurchasableMarketCard(card)) return false;
   if (card.location === 'GALLERY' && galleryPurchasedBy?.[card.instanceId]) {
     return false;
   }
@@ -80,11 +89,11 @@ export const GameTable: React.FC = () => {
   const dispatch = useDispatchAction();
   const [draggedCard, setDraggedCard] = useDraggedCard();
   const [, setHoveredZone] = useHoveredZone();
-  const [hoverPreviewCard] = useHoverPreviewCard();
   const isPregame = state.phase === 'PREGAME' && state.status === 'active';
   const layout = useBoardLayout(!isPregame);
   const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
   const [discardPlayer, setDiscardPlayer] = useState<PlayerState | null>(null);
+  const [destroyedModalOpen, setDestroyedModalOpen] = useState(false);
   const [arenaModalOpen, setArenaModalOpen] = useState(false);
   const [arenaModalStep, setArenaModalStep] = useState<ArenaModalStep>('prompt');
   const [factionChoiceCard, setFactionChoiceCard] = useState<CardInstance | null>(null);
@@ -176,10 +185,17 @@ export const GameTable: React.FC = () => {
 
   useEffect(() => {
     if (state.lastArenaResult && !state.arenaChallenge) {
+      if (
+        state.pendingArenaLoss &&
+        state.pendingArenaLoss.playerId === localPlayer?.id
+      ) {
+        setArenaModalOpen(false);
+        return;
+      }
       setArenaModalOpen(true);
       setArenaModalStep('result');
     }
-  }, [state.lastArenaResult, state.arenaChallenge]);
+  }, [state.lastArenaResult, state.arenaChallenge, state.pendingArenaLoss, localPlayer?.id]);
 
   useEffect(() => {
     if (state.arenaChallenge && !pendingArenaResponse && arenaModalStep !== 'result') {
@@ -192,6 +208,7 @@ export const GameTable: React.FC = () => {
 
   const coinsInPlay = isMainActive && isLocalTurn ? state.turnCoins : 0;
   const victoryPoints = localPlayer ? getPlayerTotalVp(localPlayer) : 0;
+  const destroyedCount = state.destroyedPile?.length ?? 0;
 
   const dispatchAction = useCallback(
     (type: GameAction['type'], payload?: GameAction['payload']) => {
@@ -245,8 +262,22 @@ export const GameTable: React.FC = () => {
   const handleResolveGalleryEvent = useCallback(() => {
     if (!localPlayer || !state.pendingGalleryEvent) return;
     if ((state.pendingEventDiscards?.length ?? 0) > 0) return;
+    if ((state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0) {
+      return;
+    }
     dispatchAction('RESOLVE_GALLERY_EVENT');
-  }, [dispatchAction, localPlayer, state.pendingGalleryEvent, state.pendingEventDiscards]);
+  }, [
+    dispatchAction,
+    localPlayer,
+    state.pendingGalleryEvent,
+    state.pendingEventDiscards,
+    state.pendingEventOptionalDiscards,
+  ]);
+
+  const handleSkipGalleryOptional = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('EVENT_SKIP_GALLERY_CHOICE');
+  }, [dispatchAction, localPlayer]);
 
   const handleEventDiscardCard = useCallback(
     (card: CardInstance) => {
@@ -271,6 +302,11 @@ export const GameTable: React.FC = () => {
       ? state.pendingForcedOpponentDiscards
       : null;
 
+  const pendingArenaLoss =
+    state.pendingArenaLoss?.playerId === localPlayer?.id
+      ? state.pendingArenaLoss
+      : null;
+
   const forcedDiscardTarget = pendingForcedDiscard
     ? state.players.find((p) => p.id === pendingForcedDiscard.targetPlayerId) ?? null
     : null;
@@ -281,6 +317,7 @@ export const GameTable: React.FC = () => {
     !pendingBandingBonus &&
     !pendingHandDiscard &&
     !pendingForcedDiscard &&
+    !pendingArenaLoss &&
     charityInHand.length > 1;
 
   const handlePlayAllCharity = useCallback(async () => {
@@ -317,6 +354,21 @@ export const GameTable: React.FC = () => {
       dispatchAction('FORCE_OPPONENT_DISCARD', { cardInstanceId: card.instanceId });
     },
     [dispatchAction, localPlayer, pendingForcedDiscard]
+  );
+
+  const handleArenaLossDisfavor = useCallback(() => {
+    dispatchAction('RESOLVE_ARENA_LOSS', { arenaLossChoice: 'disfavor' });
+  }, [dispatchAction]);
+
+  const handleArenaLossDestroyStrongest = useCallback(() => {
+    dispatchAction('RESOLVE_ARENA_LOSS', { arenaLossChoice: 'destroy_fighter' });
+  }, [dispatchAction]);
+
+  const handleArenaLossDestroyFighter = useCallback(
+    (card: CardInstance) => {
+      dispatchAction('RESOLVE_ARENA_LOSS', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction]
   );
 
   const handleHandCardPress = useCallback(
@@ -429,12 +481,7 @@ export const GameTable: React.FC = () => {
     if (!previewCard || !isBuyableMarketCard(previewCard, state.galleryPurchasedBy)) return undefined;
     if (!canInteract) return 'Not your turn';
     if (pendingBandingBonus) return 'Resolve banding bonus first';
-    if (pendingHandDiscard) {
-      return `Discard ${pendingHandDiscard.remaining} card(s) from hand`;
-    }
-    if (pendingForcedDiscard) {
-      return 'Choose a card for your opponent to discard';
-    }
+    if (pendingHandDiscard || pendingForcedDiscard || pendingArenaLoss) return undefined;
     const cost = previewCard.definition?.cost ?? 0;
     if (state.turnCoins < cost) {
       return `Need ${cost} coins (${state.turnCoins} available)`;
@@ -449,6 +496,7 @@ export const GameTable: React.FC = () => {
     !pendingBandingBonus &&
     !pendingHandDiscard &&
     !pendingForcedDiscard &&
+    !pendingArenaLoss &&
     state.turnCoins >= (previewCard.definition?.cost ?? 0);
 
   const handleLogCardPreview = useCallback((card: CardInstance) => {
@@ -633,6 +681,7 @@ export const GameTable: React.FC = () => {
           playerDiscard={localPlayer?.discard ?? []}
           onDiscardPress={handleLocalDiscardPress}
           onDiscardLayout={handleZoneLayout('discard')}
+          onSupplyPreview={handleCardPreview}
         />
 
         <View style={[styles.centerColumn, { width: layout.centerW }]}>
@@ -668,6 +717,10 @@ export const GameTable: React.FC = () => {
             >
               <View style={styles.galleryContent}>
                 <View style={styles.galleryMarketSection}>
+                  <DestroyedPileButton
+                    count={destroyedCount}
+                    onPress={() => setDestroyedModalOpen(true)}
+                  />
                   <View style={[styles.galleryRow, { gap: layout.galleryCardGap }]}>
                     {state.galleryCards.map((card) => (
                       <GalleryCard
@@ -732,6 +785,7 @@ export const GameTable: React.FC = () => {
                             width={layout.arenaCardW}
                             height={layout.arenaCardH}
                             sizeMode="landscape"
+                            hoverPreview
                             onPress={handleArenaPress}
                             onLongPress={handleCardPreview}
                           />
@@ -863,7 +917,6 @@ export const GameTable: React.FC = () => {
           width={layout.sidebarW}
           actionLog={state.actionLog}
           players={state.players}
-          hoverPreviewCard={hoverPreviewCard}
           isPregame={isPregame}
           coinsInPlay={coinsInPlay}
           valorInPlay={valorInPlay}
@@ -899,11 +952,18 @@ export const GameTable: React.FC = () => {
           )
       )}
 
+      <CardHoverPreviewOverlay />
+
       <CardPreviewModal
         card={previewCard}
         visible={previewCard !== null}
         onClose={() => setPreviewCard(null)}
-        showPurchase={isBuyableMarketCard(previewCard, state.galleryPurchasedBy)}
+        showPurchase={
+          isBuyableMarketCard(previewCard, state.galleryPurchasedBy) &&
+          !pendingHandDiscard &&
+          !pendingForcedDiscard &&
+          !pendingArenaLoss
+        }
         canPurchase={previewCanPurchase}
         purchaseBlockedReason={previewPurchaseBlockedReason}
         onPurchase={handlePreviewPurchase}
@@ -914,6 +974,15 @@ export const GameTable: React.FC = () => {
         onClose={() => setDiscardPlayer(null)}
         onCardPress={(card) => {
           setDiscardPlayer(null);
+          setPreviewCard(card);
+        }}
+      />
+      <DestroyedModal
+        cards={state.destroyedPile ?? []}
+        visible={destroyedModalOpen}
+        onClose={() => setDestroyedModalOpen(false)}
+        onCardPress={(card) => {
+          setDestroyedModalOpen(false);
           setPreviewCard(card);
         }}
       />
@@ -935,14 +1004,26 @@ export const GameTable: React.FC = () => {
         visible={pendingForcedDiscard !== null}
         onChoose={handleForcedOpponentDiscard}
       />
+      <ArenaLossModal
+        pending={pendingArenaLoss}
+        arenaName={state.arenaCard?.definition.name}
+        visible={pendingArenaLoss !== null}
+        onChooseDisfavor={handleArenaLossDisfavor}
+        onChooseDestroyStrongest={handleArenaLossDestroyStrongest}
+        onDestroyFighter={handleArenaLossDestroyFighter}
+      />
       <GalleryEventModal
         event={state.pendingGalleryEvent ?? null}
         visible={state.pendingGalleryEvent != null}
         pendingDiscardPlayerIds={state.pendingEventDiscards ?? []}
+        pendingOptionalPlayerIds={
+          state.pendingEventOptionalDiscards?.pendingPlayerIds ?? []
+        }
         localPlayerId={localPlayer?.id ?? ''}
         localHand={localPlayer?.hand ?? []}
         onResolve={handleResolveGalleryEvent}
         onDiscardCard={handleEventDiscardCard}
+        onSkipOptional={handleSkipGalleryOptional}
       />
       <ArenaChallengeModal
         visible={arenaModalOpen}
@@ -1030,6 +1111,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   galleryMarketSection: {
+    position: 'relative',
     width: '100%',
     alignItems: 'center',
     gap: 4,

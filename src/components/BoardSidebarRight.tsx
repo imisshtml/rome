@@ -9,7 +9,6 @@ import {
 import { CardInstance } from '../types/cardTypes';
 import { GameAction, GamePhase, PHASE_LABELS, PlayerState } from '../types/gameTypes';
 import { costIcon, valorIcon, victoryIcon, turnButtonBg } from '../assets/images';
-import CardHoverPreview from './CardHoverPreview';
 import GameLogPanel from './GameLogPanel';
 import TutorialTarget from './TutorialTarget';
 
@@ -34,7 +33,6 @@ interface BoardSidebarRightProps {
   width: number;
   actionLog: GameAction[];
   players: PlayerState[];
-  hoverPreviewCard: CardInstance | null;
   isPregame: boolean;
   coinsInPlay: number;
   valorInPlay: number;
@@ -60,7 +58,6 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   width,
   actionLog,
   players,
-  hoverPreviewCard,
   isPregame,
   coinsInPlay,
   valorInPlay,
@@ -93,7 +90,6 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
       </TutorialTarget>
 
       <View style={styles.lowerSection}>
-        <CardHoverPreview card={hoverPreviewCard} width={width} />
         <View style={styles.bottomBlock}>
         <Text style={styles.phaseNote}>
           {isPregame

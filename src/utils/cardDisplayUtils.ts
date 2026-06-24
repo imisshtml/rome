@@ -20,6 +20,98 @@ export function isLandscapeCard(definition: CardDefinition): boolean {
   return definition.faction === 'Arena' || definition.valorRequired != null;
 }
 
+/** Extra hover zoom for landscape arena cards vs other cards. */
+export const ARENA_HOVER_PREVIEW_SCALE = 1.25;
+
+export function getClickPreviewMaxWidth(viewportWidth: number): number {
+  return Math.min(336, viewportWidth * 0.84);
+}
+
+export function getClickPreviewSize(
+  viewportWidth: number,
+  definition: CardDefinition,
+  viewportHeight?: number
+): { width: number; height: number } {
+  const maxW = getClickPreviewMaxWidth(viewportWidth);
+  let { width, height } = getEnlargedPreviewSize(viewportWidth, definition, maxW);
+
+  if (viewportHeight != null) {
+    const margin = 16;
+    const maxH = viewportHeight - margin * 2;
+    if (height > maxH) {
+      const landscape = isLandscapeCard(definition);
+      height = maxH;
+      width = landscape
+        ? Math.round(height * CARD_LANDSCAPE_RATIO)
+        : Math.round(height / CARD_PORTRAIT_RATIO);
+    }
+  }
+
+  return { width, height };
+}
+
+/** Hover zoom — same target size as click modal, with a floor vs the source card. */
+export function getHoverPreviewSize(
+  viewportWidth: number,
+  viewportHeight: number,
+  definition: CardDefinition,
+  anchor?: { width: number; height: number }
+): { width: number; height: number } {
+  const landscape = isLandscapeCard(definition);
+  const margin = 16;
+  const maxW = viewportWidth - margin * 2;
+  const maxH = viewportHeight - margin * 2;
+
+  let { width, height } = getClickPreviewSize(
+    viewportWidth,
+    definition,
+    viewportHeight
+  );
+
+  if (landscape) {
+    width = Math.round(width * ARENA_HOVER_PREVIEW_SCALE);
+    height = Math.round(height * ARENA_HOVER_PREVIEW_SCALE);
+    if (width > maxW) {
+      width = maxW;
+      height = Math.round(width / CARD_LANDSCAPE_RATIO);
+    }
+    if (height > maxH) {
+      height = maxH;
+      width = Math.round(height * CARD_LANDSCAPE_RATIO);
+    }
+  }
+
+  if (!anchor) return { width, height };
+
+  const anchorLong = landscape
+    ? anchor.width
+    : Math.max(anchor.width, anchor.height);
+  const previewLong = landscape ? width : height;
+  const minLong = Math.round(anchorLong * 1.35);
+
+  if (previewLong >= minLong) return { width, height };
+
+  const clickMaxW = getClickPreviewMaxWidth(viewportWidth);
+
+  if (landscape) {
+    width = Math.min(Math.max(width, minLong), maxW);
+    height = Math.round(width / CARD_LANDSCAPE_RATIO);
+    if (height > maxH) {
+      height = maxH;
+      width = Math.round(height * CARD_LANDSCAPE_RATIO);
+    }
+  } else {
+    height = Math.min(
+      Math.max(height, minLong),
+      Math.round(clickMaxW * CARD_PORTRAIT_RATIO),
+      maxH
+    );
+    width = Math.round(height / CARD_PORTRAIT_RATIO);
+  }
+
+  return { width, height };
+}
+
 export function getEnlargedPreviewSize(
   containerWidth: number,
   definition: CardDefinition,

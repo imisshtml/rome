@@ -11,4 +11,6 @@ export const factionIconLegion = require('./icon_legion.png');
 export const factionIconSenate = require('./icon_senate.png');
 export const factionIconEpic = require('./icon_epic.png');
 export const buyIcon = require('./icon_buy.png');
+export const destroyIcon = require('./destroy.png');
+export const gratiaImage = require('./gratia.jpg');
 export { CARD_IMAGES, getCardImage } from './cardImages';

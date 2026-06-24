@@ -18,13 +18,13 @@ export const BOARD_RATIOS = {
 
 const GALLERY_IN_PLAY_SCALE = 2;
 /** Slightly smaller deck stacks in the left sidebar. */
-const SIDEBAR_STACK_SCALE = 0.88;
-/** Full-height supply stacks (Market, Epics, Favors, Disfavor). */
-const FULL_SIDEBAR_STACK_COUNT = 4;
-/** Supply pile size vs layout unit (~20% smaller than prior full stacks). */
-const SUPPLY_STACK_SCALE = 0.8;
+const SIDEBAR_STACK_SCALE = 0.84;
+/** Full-height supply stacks (Market, Epics, Favors, Disfavor, Gratia). */
+const FULL_SIDEBAR_STACK_COUNT = 5;
+/** Supply pile size vs layout unit — shrunk to fit Gratia row. */
+const SUPPLY_STACK_SCALE = 0.66;
 /** Player deck + discard row — slightly larger after supply shrink. */
-const PLAYER_STACK_SCALE = 0.55;
+const PLAYER_STACK_SCALE = 0.46;
 
 export interface BoardLayoutMetrics {
   boardW: number;

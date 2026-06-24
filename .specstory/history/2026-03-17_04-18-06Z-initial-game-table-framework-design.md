@@ -71096,7 +71096,7 @@ Directory: **/Users/claudewild/Documents/GIT/deck_builder** (243 files)
 | `src/lib/env.ts` |
 | `src/assets/images/legion/legion_formation.jpg` |
 | `src/assets/images/legion/legion_pilum.jpg` |
-| `src/assets/images/epics/disfavor.jpg` |
+| `src/assets/images/disfavor.jpg` |
 | `src/assets/images/epics/epic_pompey.jpg` |
 | `src/assets/images/legion/legion_auxilliary.jpg` |
 | `src/assets/images/favor/favor_mars.jpg` |

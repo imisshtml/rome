@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { CardInstance, FACTION_COLORS } from '../types/cardTypes';
 import { getCardDefinition } from '../game/CardDefinitions';
 import { cardBack as cardBackImage } from '../assets/images';
+import { useSidebarPreview } from '../hooks/useSidebarPreview';
 import CardFace from './CardFace';
 
 interface CardStackProps {
@@ -24,6 +25,9 @@ interface CardStackProps {
   cardBackOverlay?: boolean;
   /** Show the top card's face art instead of a solid tile */
   showTopCardFace?: boolean;
+  /** Hover sidebar preview + click to enlarge (face-up sidebar stacks). */
+  hoverPreview?: boolean;
+  onPreview?: (card: CardInstance) => void;
 }
 
 export const CardStack: React.FC<CardStackProps> = ({
@@ -40,6 +44,8 @@ export const CardStack: React.FC<CardStackProps> = ({
   useCardBack = false,
   cardBackOverlay = false,
   showTopCardFace = false,
+  hoverPreview = false,
+  onPreview,
 }) => {
   const topCard = cards[cards.length - 1];
   const bgColor =
@@ -49,12 +55,32 @@ export const CardStack: React.FC<CardStackProps> = ({
       : '#222238');
   const count = cards.length;
   const isEmpty = count === 0;
+  const previewTarget =
+    showTopCardFace && topCard && !isEmpty ? topCard : null;
+  const hoverAnchorRef = useRef<View>(null);
+  const { hoverProps, handlePress: handlePreviewPress } = useSidebarPreview(
+    previewTarget,
+    hoverAnchorRef,
+    {
+      enabled: hoverPreview && !!previewTarget,
+      onPreview,
+    }
+  );
 
   if (sidebarStack) {
     const faceOnly = showTopCardFace && !isEmpty;
+    const handlePress = () => {
+      if (onPreview && previewTarget) {
+        handlePreviewPress();
+        return;
+      }
+      onPress?.();
+    };
     return (
       <Pressable
-        onPress={onPress}
+        ref={hoverAnchorRef}
+        {...hoverProps}
+        onPress={handlePress}
         style={({ pressed }) => [
           styles.sidebarStack,
           useCardBack && styles.sidebarStackCardBack,
@@ -70,7 +96,7 @@ export const CardStack: React.FC<CardStackProps> = ({
                   ? '#1a1a2e'
                   : bgColor,
           },
-          pressed && onPress && styles.pressed,
+          pressed && (onPress || onPreview) && styles.pressed,
         ]}
       >
         {showTopCardFace && topCard && !isEmpty ? (
@@ -102,9 +128,11 @@ export const CardStack: React.FC<CardStackProps> = ({
             <Text style={styles.sidebarCountText}>{count}</Text>
           </View>
         )}
-        <Text style={[styles.sidebarLabel, useCardBack && styles.sidebarLabelOnBack]}>
-          {label}
-        </Text>
+        {!faceOnly && label ? (
+          <Text style={[styles.sidebarLabel, useCardBack && styles.sidebarLabelOnBack]}>
+            {label}
+          </Text>
+        ) : null}
       </Pressable>
     );
   }

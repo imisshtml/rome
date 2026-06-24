@@ -22,7 +22,7 @@ import {
   factionIconSenate,
   factionIconEpic,
 } from '../assets/images';
-import { getCardStatDisplay } from '../utils/cardDisplayUtils';
+import { getCardStatDisplay, isLandscapeCard } from '../utils/cardDisplayUtils';
 import {
   getCardDisplayFaction,
   requiresFactionChoiceOnPlay,
@@ -76,11 +76,14 @@ function effectOverlayLayout(
   width: number,
   badgeSize: number,
   hasFactionIcon: boolean,
-  hasValorBadge: boolean
+  hasValorBadge: boolean,
+  isLandscape = false
 ) {
   const scale = width / BADGE_REF_WIDTH;
-  const gradientHeight = height / 3;
-  const fontSize = Math.max(6, Math.round(height * 0.02));
+  const gradientHeight = isLandscape ? height / 2.4 : height / 3;
+  const fontSize = isLandscape
+    ? Math.max(8, Math.round(width * 0.028))
+    : Math.max(6, Math.round(height * 0.02));
   const badgeGap = Math.max(6, Math.round(badgeSize * 0.22));
   const iconReserve = hasFactionIcon ? badgeSize + badgeGap : 8;
   const textPadding = Math.max(4, Math.round(height * 0.028));
@@ -200,6 +203,7 @@ export const CardFace: React.FC<CardFaceProps> = ({
   );
   const showsSpyFactionPicker =
     requiresFactionChoiceOnPlay(definition) && !chosenFaction && !displayFaction;
+  const landscape = isLandscapeCard(definition);
   const effectLayout = useMemo(
     () =>
       effectOverlayLayout(
@@ -207,9 +211,10 @@ export const CardFace: React.FC<CardFaceProps> = ({
         width,
         layout.size,
         displayFaction != null || showsSpyFactionPicker,
-        stats.valor != null
+        stats.valor != null,
+        landscape
       ),
-    [height, width, layout.size, displayFaction, showsSpyFactionPicker, stats.valor]
+    [height, width, layout.size, displayFaction, showsSpyFactionPicker, stats.valor, landscape]
   );
   const effectText = definition.text?.trim() ?? '';
   const cardImage = faceUp ? getCardImage(definition.image) : null;
