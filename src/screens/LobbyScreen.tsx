@@ -67,6 +67,7 @@ export const LobbyScreen: React.FC = () => {
           </Pressable>
         </View>
 
+        <View style={styles.panel}>
         <Text style={styles.title}>Game Lobby</Text>
         <Text style={styles.subtitle}>Share this code with other players</Text>
 
@@ -137,6 +138,7 @@ export const LobbyScreen: React.FC = () => {
             )}
           </Pressable>
         ) : null}
+        </View>
       </ScrollView>
       <RulesModal visible={rulesOpen} onClose={() => setRulesOpen(false)} />
     </FullBleedBackground>
@@ -154,10 +156,23 @@ const styles = StyleSheet.create({
     padding: 14,
     paddingTop: 12,
     paddingBottom: 16,
-    maxWidth: 400,
+    maxWidth: 420,
     width: '100%',
     alignSelf: 'center',
     flexGrow: 1,
+  },
+  panel: {
+    backgroundColor: 'rgba(8, 8, 16, 0.88)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.42)',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 8,
   },
   backBtn: {
     marginBottom: 0,
@@ -186,22 +201,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 11,
     textAlign: 'center',
     marginTop: 2,
     marginBottom: 10,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   codeBox: {
-    backgroundColor: 'rgba(10,10,18,0.82)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -278,7 +287,7 @@ const styles = StyleSheet.create({
   seatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10,10,18,0.72)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 8,

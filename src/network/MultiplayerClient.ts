@@ -42,6 +42,7 @@ export class MultiplayerGameClient {
   private status: ConnectionStatus = 'disconnected';
   private onStateChange: ((state: GameState) => void) | null = null;
   private onLobbyChange: ((lobby: LobbyInfo) => void) | null = null;
+  private lobbyUnsubscribe: (() => void) | null = null;
   private aiTimer: ReturnType<typeof setTimeout> | null = null;
   private applyingRemote = false;
   private sessionId = randomSessionId();
@@ -60,7 +61,8 @@ export class MultiplayerGameClient {
 
   setLobbyHandler(handler: (lobby: LobbyInfo) => void) {
     this.onLobbyChange = handler;
-    this.sync.subscribeLobby(handler);
+    this.lobbyUnsubscribe?.();
+    this.lobbyUnsubscribe = this.sync.subscribeLobby(handler);
   }
 
   private pushState(state: GameState) {
@@ -180,9 +182,15 @@ export class MultiplayerGameClient {
     const last = state.actionLog[state.actionLog.length - 1];
     if (last?.type === 'BUY_CARD') return 2000;
     if (last?.type === 'RESOLVE_GALLERY_EVENT') return 5000;
+    if (last?.type === 'RESOLVE_FAVOR') return 5000;
     if (last?.type === 'EVENT_DISCARD_CARD') return 800;
     if (last?.type === 'EVENT_SKIP_GALLERY_CHOICE') return 800;
+    if (last?.type === 'ACCEPT_FAVOR' || last?.type === 'DECLINE_FAVOR') return 800;
+    if (last?.type === 'FAVOR_DESTROY_CARD') return 800;
+    if (last?.type === 'DISMISS_ARENA_RESULT') return 800;
     if (state.pendingGalleryEvent) return 5000;
+    if (state.pendingFavorReveal) return 5000;
+    if (state.lastArenaResult) return 4000;
     if ((state.pendingEventDiscards?.length ?? 0) > 0) return 800;
     if (
       (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
@@ -221,6 +229,8 @@ export class MultiplayerGameClient {
 
   disconnect() {
     if (this.aiTimer) clearTimeout(this.aiTimer);
+    this.lobbyUnsubscribe?.();
+    this.lobbyUnsubscribe = null;
     this.sync.disconnect();
     this.session = null;
     this.status = 'disconnected';

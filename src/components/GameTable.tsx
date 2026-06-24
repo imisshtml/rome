@@ -8,7 +8,13 @@ import {
   Platform,
 } from 'react-native';
 import { createPortal } from 'react-dom';
-import Animated, { FadeInRight } from 'react-native-reanimated';
+import Animated, {
+  FadeInRight,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   useGameState,
   useDispatchAction,
@@ -18,6 +24,7 @@ import {
   useIsLocalTurn,
 } from '../store/useGameStore';
 import { getArenaChallengeStats, getArenaChallengeTotalValor, getCurrentPlayer } from '../game/GameEngine';
+import { getArenaMaxCommit } from '../utils/arenaUtils';
 import { getPlayerTotalVp } from '../game/postGame';
 import { CardInstance, CardLocation } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
@@ -46,6 +53,10 @@ import BandingBonusModal from './BandingBonusModal';
 import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
 import ArenaLossModal from './ArenaLossModal';
 import GalleryEventModal from './GalleryEventModal';
+import FavorRevealModal from './FavorRevealModal';
+import CardDestroyPickModal from './CardDestroyPickModal';
+import OrEffectChoiceModal from './OrEffectChoiceModal';
+import AnyDiscardDestroyModal from './AnyDiscardDestroyModal';
 import PregameMarketView from './PregameMarketView';
 import TutorialOverlay from './TutorialOverlay';
 import TutorialTarget from './TutorialTarget';
@@ -139,6 +150,9 @@ export const GameTable: React.FC = () => {
   const isTurnPlayerLocal = turnPlayer?.id === localPlayer?.id;
   const isLocalTurn = useIsLocalTurn();
   const arenaStats = getArenaChallengeStats(state.arenaCard);
+  const arenaMaxCommit = localPlayer
+    ? getArenaMaxCommit(localPlayer)
+    : 3;
 
   const isMainActive = state.status === 'active' && state.phase === 'MAIN';
 
@@ -176,6 +190,44 @@ export const GameTable: React.FC = () => {
     state.arenaChallenge?.pendingResponsePlayerIds.includes(localPlayer?.id ?? '') ?? false;
   const arenaChallengeTotal = getArenaChallengeTotalValor(state);
 
+  const handMarginBottom = useSharedValue(0);
+  const wasLocalTurnRef = useRef(isLocalTurn);
+
+  useEffect(() => {
+    if (!isMainActive) {
+      handMarginBottom.value = 0;
+      wasLocalTurnRef.current = isLocalTurn;
+      return;
+    }
+
+    const hideDepth = layout.handZoneH + 36;
+
+    if (isLocalTurn) {
+      if (!wasLocalTurnRef.current) {
+        handMarginBottom.value = -hideDepth;
+        handMarginBottom.value = withTiming(0, {
+          duration: 440,
+          easing: Easing.out(Easing.bounce),
+        });
+      } else {
+        handMarginBottom.value = 0;
+      }
+    } else if (wasLocalTurnRef.current) {
+      handMarginBottom.value = withTiming(-hideDepth, {
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+      });
+    } else {
+      handMarginBottom.value = -hideDepth;
+    }
+
+    wasLocalTurnRef.current = isLocalTurn;
+  }, [isLocalTurn, isMainActive, layout.handZoneH, handMarginBottom]);
+
+  const handAnimatedStyle = useAnimatedStyle(() => ({
+    marginBottom: handMarginBottom.value,
+  }));
+
   useEffect(() => {
     if (pendingArenaResponse) {
       setArenaModalOpen(true);
@@ -194,8 +246,11 @@ export const GameTable: React.FC = () => {
       }
       setArenaModalOpen(true);
       setArenaModalStep('result');
+    } else if (!state.lastArenaResult && arenaModalStep === 'result') {
+      setArenaModalOpen(false);
+      setArenaModalStep('prompt');
     }
-  }, [state.lastArenaResult, state.arenaChallenge, state.pendingArenaLoss, localPlayer?.id]);
+  }, [state.lastArenaResult, state.arenaChallenge, state.pendingArenaLoss, localPlayer?.id, arenaModalStep]);
 
   useEffect(() => {
     if (state.arenaChallenge && !pendingArenaResponse && arenaModalStep !== 'result') {
@@ -287,6 +342,37 @@ export const GameTable: React.FC = () => {
     [dispatchAction, localPlayer]
   );
 
+  const handleResolveFavor = useCallback(() => {
+    if (!state.pendingFavorReveal || state.pendingFavorDestroyPick) return;
+    dispatchAction('RESOLVE_FAVOR');
+  }, [dispatchAction, state.pendingFavorReveal, state.pendingFavorDestroyPick]);
+
+  const handleAcceptFavor = useCallback(() => {
+    if (!localPlayer || !state.pendingFavorReveal) return;
+    dispatchAction('ACCEPT_FAVOR');
+  }, [dispatchAction, localPlayer, state.pendingFavorReveal]);
+
+  const handleDeclineFavor = useCallback(() => {
+    if (!localPlayer || !state.pendingFavorReveal) return;
+    dispatchAction('DECLINE_FAVOR');
+  }, [dispatchAction, localPlayer, state.pendingFavorReveal]);
+
+  const handleFavorDestroyCard = useCallback(
+    (card: CardInstance, sourceZone: 'hand' | 'discard' | 'play_area') => {
+      if (!localPlayer) return;
+      const zoneMap = {
+        hand: 'HAND',
+        discard: 'DISCARD',
+        play_area: 'PLAY_AREA',
+      } as const;
+      dispatchAction('FAVOR_DESTROY_CARD', {
+        cardInstanceId: card.instanceId,
+        sourceZone: zoneMap[sourceZone],
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
   const pendingBandingBonus =
     state.pendingBandingBonus?.playerId === localPlayer?.id
       ? state.pendingBandingBonus
@@ -295,6 +381,31 @@ export const GameTable: React.FC = () => {
   const pendingHandDiscard =
     state.pendingHandDiscard?.playerId === localPlayer?.id
       ? state.pendingHandDiscard
+      : null;
+
+  const pendingCardDestroyPick =
+    state.pendingCardDestroyPick?.playerId === localPlayer?.id
+      ? state.pendingCardDestroyPick
+      : null;
+
+  const pendingGalleryDestroyPick =
+    state.pendingGalleryDestroyPick?.playerId === localPlayer?.id
+      ? state.pendingGalleryDestroyPick
+      : null;
+
+  const pendingAnyDiscardDestroyPick =
+    state.pendingAnyDiscardDestroyPick?.playerId === localPlayer?.id
+      ? state.pendingAnyDiscardDestroyPick
+      : null;
+
+  const pendingOrEffectChoice =
+    state.pendingOrEffectChoice?.playerId === localPlayer?.id
+      ? state.pendingOrEffectChoice
+      : null;
+
+  const pendingOnGainDestroyPick =
+    state.pendingOnGainDestroyPick?.playerId === localPlayer?.id
+      ? state.pendingOnGainDestroyPick
       : null;
 
   const pendingForcedDiscard =
@@ -312,10 +423,18 @@ export const GameTable: React.FC = () => {
     : null;
 
   const charityInHand = (localPlayer?.hand ?? []).filter(isCharityCard);
+  const destroyPickPending =
+    pendingCardDestroyPick ||
+    pendingGalleryDestroyPick ||
+    pendingAnyDiscardDestroyPick ||
+    pendingOrEffectChoice ||
+    pendingOnGainDestroyPick;
+
   const canPlayAllCharity =
     canInteract &&
     !pendingBandingBonus &&
     !pendingHandDiscard &&
+    !destroyPickPending &&
     !pendingForcedDiscard &&
     !pendingArenaLoss &&
     charityInHand.length > 1;
@@ -377,9 +496,16 @@ export const GameTable: React.FC = () => {
         dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
         return;
       }
+      if (pendingCardDestroyPick?.fromZones.includes('hand')) {
+        dispatchAction('CARD_DESTROY_PICK', {
+          cardInstanceId: card.instanceId,
+          sourceZone: 'HAND',
+        });
+        return;
+      }
       setPreviewCard(card);
     },
-    [dispatchAction, pendingHandDiscard]
+    [dispatchAction, pendingHandDiscard, pendingCardDestroyPick]
   );
 
   const handleCardPreview = useCallback((card: CardInstance) => {
@@ -388,10 +514,93 @@ export const GameTable: React.FC = () => {
 
   const handlePlayAreaCardPress = useCallback(
     (card: CardInstance) => {
+      if (pendingCardDestroyPick?.fromZones.includes('play_area')) {
+        dispatchAction('CARD_DESTROY_PICK', {
+          cardInstanceId: card.instanceId,
+          sourceZone: 'PLAY_AREA',
+        });
+        return;
+      }
       setPreviewCard(card);
     },
-    []
+    [dispatchAction, pendingCardDestroyPick]
   );
+
+  const handleCardDestroyPick = useCallback(
+    (card: CardInstance, sourceZone: 'hand' | 'discard' | 'play_area') => {
+      if (!localPlayer) return;
+      const zoneMap = {
+        hand: 'HAND',
+        discard: 'DISCARD',
+        play_area: 'PLAY_AREA',
+      } as const;
+      dispatchAction('CARD_DESTROY_PICK', {
+        cardInstanceId: card.instanceId,
+        sourceZone: zoneMap[sourceZone],
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipCardDestroy = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('CARD_DESTROY_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const handleGalleryDestroyPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('GALLERY_DESTROY_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleAnyDiscardDestroyPick = useCallback(
+    (targetPlayerId: string, card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('ANY_DISCARD_DESTROY_PICK', {
+        targetPlayerId,
+        cardInstanceId: card.instanceId,
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleChooseOrEffect = useCallback(
+    (branchIndex: number) => {
+      dispatchAction('CHOOSE_OR_EFFECT', { branchIndex });
+    },
+    [dispatchAction]
+  );
+
+  const handleOnGainDestroyPick = useCallback(
+    (card: CardInstance, sourceZone: 'hand' | 'discard') => {
+      if (!localPlayer) return;
+      dispatchAction('ON_GAIN_DESTROY_PICK', {
+        cardInstanceId: card.instanceId,
+        sourceZone: sourceZone === 'hand' ? 'HAND' : 'DISCARD',
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipOnGainDestroy = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('ON_GAIN_DESTROY_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const orBranchLabels =
+    pendingOrEffectChoice?.branches.map((branch) => {
+      const parts: string[] = [];
+      if ((branch.destroy_cards as number) > 0) parts.push('Destroy a card');
+      if ((branch.draw_cards as number) > 0) {
+        parts.push(`Draw ${branch.draw_cards}`);
+      }
+      if ((branch.gain_coins as number) > 0) {
+        parts.push(`+${branch.gain_coins} Coins`);
+      }
+      return parts.join(', ') || 'Alternate effect';
+    }) ?? [];
 
   const handleArenaPress = useCallback(() => {
     if (!canChallengeArena) {
@@ -439,9 +648,12 @@ export const GameTable: React.FC = () => {
   );
 
   const handleCloseArenaModal = useCallback(() => {
+    if (arenaModalStep === 'result' && state.lastArenaResult) {
+      dispatchAction('DISMISS_ARENA_RESULT');
+    }
     setArenaModalOpen(false);
     setArenaModalStep('prompt');
-  }, []);
+  }, [arenaModalStep, state.lastArenaResult, dispatchAction]);
 
   const handleBuyCard = useCallback(
     (card: CardInstance) => {
@@ -453,6 +665,12 @@ export const GameTable: React.FC = () => {
 
   const handleMarketCardPress = useCallback(
     (card: CardInstance) => {
+      if (pendingGalleryDestroyPick) {
+        if (!state.galleryPurchasedBy?.[card.instanceId]) {
+          handleGalleryDestroyPick(card);
+        }
+        return;
+      }
       const now = Date.now();
       const last = lastMarketTapRef.current;
       if (
@@ -468,7 +686,7 @@ export const GameTable: React.FC = () => {
       lastMarketTapRef.current = { id: card.instanceId, at: now };
       setPreviewCard(card);
     },
-    [canInteract, handleBuyCard]
+    [canInteract, handleBuyCard, pendingGalleryDestroyPick, handleGalleryDestroyPick, state.galleryPurchasedBy]
   );
 
   const handlePreviewPurchase = useCallback(() => {
@@ -481,7 +699,7 @@ export const GameTable: React.FC = () => {
     if (!previewCard || !isBuyableMarketCard(previewCard, state.galleryPurchasedBy)) return undefined;
     if (!canInteract) return 'Not your turn';
     if (pendingBandingBonus) return 'Resolve banding bonus first';
-    if (pendingHandDiscard || pendingForcedDiscard || pendingArenaLoss) return undefined;
+    if (pendingHandDiscard || destroyPickPending || pendingForcedDiscard || pendingArenaLoss) return undefined;
     const cost = previewCard.definition?.cost ?? 0;
     if (state.turnCoins < cost) {
       return `Need ${cost} coins (${state.turnCoins} available)`;
@@ -495,6 +713,7 @@ export const GameTable: React.FC = () => {
     canInteract &&
     !pendingBandingBonus &&
     !pendingHandDiscard &&
+    !destroyPickPending &&
     !pendingForcedDiscard &&
     !pendingArenaLoss &&
     state.turnCoins >= (previewCard.definition?.cost ?? 0);
@@ -729,8 +948,9 @@ export const GameTable: React.FC = () => {
                         size={layout.galleryCardSize}
                         purchased={!!state.galleryPurchasedBy?.[card.instanceId]}
                         onPress={handleMarketCardPress}
-                        onLongPress={(c) => isMainActive && handleBuyCard(c)}
-                        disabled={!isMainActive}
+                        onLongPress={(c) => isMainActive && !pendingGalleryDestroyPick && handleBuyCard(c)}
+                        disabled={!isMainActive && !pendingGalleryDestroyPick}
+                        destroyTarget={!!pendingGalleryDestroyPick && !state.galleryPurchasedBy?.[card.instanceId]}
                       />
                     ))}
                   </View>
@@ -875,6 +1095,7 @@ export const GameTable: React.FC = () => {
             </TutorialTarget>
 
             <TutorialTarget targetKey="tutorial_hand">
+            <Animated.View style={[styles.handZoneShell, handAnimatedStyle]}>
             <View style={[styles.handZone, { height: layout.handZoneH }]}>
               {pendingHandDiscard && (
                 <Text style={styles.handDiscardPrompt}>
@@ -907,6 +1128,7 @@ export const GameTable: React.FC = () => {
                 />
               </View>
             </View>
+            </Animated.View>
             </TutorialTarget>
           </View>
             </>
@@ -961,6 +1183,7 @@ export const GameTable: React.FC = () => {
         showPurchase={
           isBuyableMarketCard(previewCard, state.galleryPurchasedBy) &&
           !pendingHandDiscard &&
+          !destroyPickPending &&
           !pendingForcedDiscard &&
           !pendingArenaLoss
         }
@@ -973,6 +1196,11 @@ export const GameTable: React.FC = () => {
         visible={discardPlayer !== null}
         onClose={() => setDiscardPlayer(null)}
         onCardPress={(card) => {
+          if (pendingCardDestroyPick?.fromZones.includes('discard')) {
+            handleCardDestroyPick(card, 'discard');
+            setDiscardPlayer(null);
+            return;
+          }
           setDiscardPlayer(null);
           setPreviewCard(card);
         }}
@@ -985,6 +1213,50 @@ export const GameTable: React.FC = () => {
           setDestroyedModalOpen(false);
           setPreviewCard(card);
         }}
+      />
+      <CardDestroyPickModal
+        visible={pendingCardDestroyPick != null}
+        sourceCardName={pendingCardDestroyPick?.sourceCardName}
+        remaining={pendingCardDestroyPick?.remaining ?? 1}
+        fromZones={pendingCardDestroyPick?.fromZones ?? ['hand']}
+        optional={pendingCardDestroyPick?.optional}
+        localHand={localPlayer?.hand ?? []}
+        localDiscard={localPlayer?.discard ?? []}
+        localPlayArea={localPlayer?.playArea ?? []}
+        onDestroyCard={handleCardDestroyPick}
+        onSkip={
+          pendingCardDestroyPick?.optional ? handleSkipCardDestroy : undefined
+        }
+      />
+      <CardDestroyPickModal
+        visible={pendingOnGainDestroyPick != null}
+        sourceCardName={pendingOnGainDestroyPick?.sourceCardName}
+        remaining={pendingOnGainDestroyPick?.remaining ?? 1}
+        fromZones={pendingOnGainDestroyPick?.fromZones ?? ['hand', 'discard']}
+        optional={pendingOnGainDestroyPick?.optional}
+        localHand={localPlayer?.hand ?? []}
+        localDiscard={localPlayer?.discard ?? []}
+        localPlayArea={[]}
+        onDestroyCard={(card, zone) => {
+          if (zone === 'play_area') return;
+          handleOnGainDestroyPick(card, zone);
+        }}
+        onSkip={
+          pendingOnGainDestroyPick?.optional ? handleSkipOnGainDestroy : undefined
+        }
+      />
+      <AnyDiscardDestroyModal
+        visible={pendingAnyDiscardDestroyPick != null}
+        sourceCardName={pendingAnyDiscardDestroyPick?.sourceCardName}
+        players={state.players}
+        onDestroyCard={handleAnyDiscardDestroyPick}
+      />
+      <OrEffectChoiceModal
+        visible={pendingOrEffectChoice != null}
+        cardName={pendingOrEffectChoice?.sourceCardName ?? 'Card'}
+        baseGainCoins={pendingOrEffectChoice?.baseGainCoins ?? 0}
+        branchLabels={orBranchLabels}
+        onChoose={handleChooseOrEffect}
       />
       <FactionChoiceModal
         card={factionChoiceCard}
@@ -1025,6 +1297,24 @@ export const GameTable: React.FC = () => {
         onDiscardCard={handleEventDiscardCard}
         onSkipOptional={handleSkipGalleryOptional}
       />
+      <FavorRevealModal
+        favor={state.pendingFavorReveal?.card ?? null}
+        beneficiaryId={state.pendingFavorReveal?.playerId ?? ''}
+        beneficiaryName={
+          state.players.find((p) => p.id === state.pendingFavorReveal?.playerId)
+            ?.name ?? 'Player'
+        }
+        visible={state.pendingFavorReveal != null}
+        localPlayerId={localPlayer?.id ?? ''}
+        localHand={localPlayer?.hand ?? []}
+        localDiscard={localPlayer?.discard ?? []}
+        localPlayArea={localPlayer?.playArea ?? []}
+        pendingDestroyPick={state.pendingFavorDestroyPick ?? null}
+        onResolve={handleResolveFavor}
+        onAccept={handleAcceptFavor}
+        onDecline={handleDeclineFavor}
+        onDestroyCard={handleFavorDestroyCard}
+      />
       <ArenaChallengeModal
         visible={arenaModalOpen}
         step={arenaModalStep}
@@ -1046,6 +1336,7 @@ export const GameTable: React.FC = () => {
         totalValor={arenaChallengeTotal}
         lastResult={state.lastArenaResult ?? null}
         mandatory={mandatoryArenaPending}
+        maxCommit={arenaMaxCommit}
       />
       <TutorialOverlay />
       </View>
@@ -1156,6 +1447,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
     marginTop: 6,
     gap: 6,
+    overflow: 'hidden',
   },
   playTargetWrap: {
     flex: 1,
@@ -1198,6 +1490,9 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  handZoneShell: {
+    overflow: 'hidden',
   },
   handZone: {
     backgroundColor: 'transparent',

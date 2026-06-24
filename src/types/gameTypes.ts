@@ -24,8 +24,20 @@ export type GameActionType =
   | 'RESOLVE_GALLERY_EVENT'
   | 'EVENT_DISCARD_CARD'
   | 'EVENT_SKIP_GALLERY_CHOICE'
+  | 'RESOLVE_FAVOR'
+  | 'ACCEPT_FAVOR'
+  | 'DECLINE_FAVOR'
+  | 'FAVOR_DESTROY_CARD'
+  | 'CARD_DESTROY_PICK'
+  | 'CARD_DESTROY_SKIP'
+  | 'GALLERY_DESTROY_PICK'
+  | 'ANY_DISCARD_DESTROY_PICK'
+  | 'CHOOSE_OR_EFFECT'
+  | 'ON_GAIN_DESTROY_PICK'
+  | 'ON_GAIN_DESTROY_SKIP'
   | 'FORCE_OPPONENT_DISCARD'
-  | 'RESOLVE_ARENA_LOSS';
+  | 'RESOLVE_ARENA_LOSS'
+  | 'DISMISS_ARENA_RESULT';
 
 export type BandingFaction = 'Ludus' | 'Legion' | 'Senate';
 
@@ -100,6 +112,8 @@ export interface GameAction {
     cardInstanceId?: string;
     cardInstanceIds?: string[];
     targetZone?: CardLocation;
+    targetPlayerId?: string;
+    branchIndex?: number;
     sourceZone?: CardLocation;
     count?: number;
     responseType?: ArenaResponseType;
@@ -182,6 +196,68 @@ export interface GameState {
   pendingEventOptionalDiscards?: {
     coinReward: number;
     pendingPlayerIds: string[];
+  } | null;
+  /** Face-up favor being revealed and resolved */
+  pendingFavorReveal?: {
+    card: CardInstance;
+    playerId: string;
+  } | null;
+  /** Favors waiting while another reveal or gallery event is active */
+  pendingFavorQueue?: {
+    card: CardInstance;
+    playerId: string;
+  }[];
+  /** Beneficiary must destroy cards for a favor effect */
+  pendingFavorDestroyPick?: {
+    playerId: string;
+    remaining: number;
+    fromZones: ('hand' | 'discard' | 'play_area')[];
+    sourceCardName?: string;
+  } | null;
+  /** Active player must destroy cards for a played card effect (e.g. War Banner) */
+  pendingCardDestroyPick?: {
+    playerId: string;
+    remaining: number;
+    fromZones: ('hand' | 'discard' | 'play_area')[];
+    sourceCardName?: string;
+    sourceCardInstanceId?: string;
+    deferRemainingEffects?: boolean;
+    optional?: boolean;
+    /** Tax Collector: add destroyed card cost to turn coins */
+    rewardCoinsFromCost?: boolean;
+  } | null;
+  /** Pick cards in the Gallery row to destroy */
+  pendingGalleryDestroyPick?: {
+    playerId: string;
+    remaining: number;
+    sourceCardName?: string;
+    sourceCardInstanceId?: string;
+    deferRemainingEffects?: boolean;
+    refillGallery?: boolean;
+  } | null;
+  /** Pick a card from any player's discard pile */
+  pendingAnyDiscardDestroyPick?: {
+    playerId: string;
+    remaining: number;
+    sourceCardName?: string;
+    sourceCardInstanceId?: string;
+    deferRemainingEffects?: boolean;
+  } | null;
+  /** OR effect choice (e.g. +1 Coin OR destroy to draw) */
+  pendingOrEffectChoice?: {
+    playerId: string;
+    sourceCardName?: string;
+    sourceCardInstanceId: string;
+    baseGainCoins: number;
+    branches: Record<string, unknown>[];
+  } | null;
+  /** on_gain destroy when buying a card */
+  pendingOnGainDestroyPick?: {
+    playerId: string;
+    remaining: number;
+    fromZones: ('hand' | 'discard')[];
+    sourceCardName?: string;
+    optional?: boolean;
   } | null;
   /** Active player must discard N cards from hand (e.g. Gladiatrix) */
   pendingHandDiscard?: {

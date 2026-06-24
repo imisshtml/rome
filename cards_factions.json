@@ -368,7 +368,7 @@
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Destroy a card from your hand or discard to gain +3 Coins.",
+      "effect_text": "Destroy a card from your handand gain +3 Coins.",
       "effect_keywords": [
         "coins",
         "destroy"
@@ -2509,7 +2509,7 @@
       "faction": "Ludus",
       "banding_bonus": "Gain 1 Favor card",
       "cost": 3,
-      "valor": 0,
+      "valor": 1,
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 10,

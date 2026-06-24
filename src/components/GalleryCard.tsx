@@ -14,6 +14,8 @@ interface GalleryCardProps {
   disabled?: boolean;
   /** Card was bought — show overlay and buy icon until gallery refill. */
   purchased?: boolean;
+  /** Highlight as valid destroy target (gallery destroy pick). */
+  destroyTarget?: boolean;
   onPress?: (card: CardInstance) => void;
   onLongPress?: (card: CardInstance) => void;
 }
@@ -24,15 +26,16 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
   size,
   disabled,
   purchased = false,
+  destroyTarget = false,
   onPress,
   onLongPress,
 }) => {
   const cardH = heightProp ?? size ?? 80;
   const cardW = cardH / CARD_PORTRAIT_RATIO;
-  const isDisabled = disabled || purchased;
+  const isDisabled = (disabled && !destroyTarget) || purchased;
 
   return (
-    <View style={[styles.wrap, { width: cardW, height: cardH }]}>
+    <View style={[styles.wrap, { width: cardW, height: cardH }, destroyTarget && styles.destroyTarget]}>
       <Card
         card={card}
         width={cardW}
@@ -60,6 +63,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: 10,
     overflow: 'hidden',
+  },
+  destroyTarget: {
+    borderWidth: 2,
+    borderColor: '#e74c3c',
+    borderRadius: 10,
   },
   purchasedOverlay: {
     ...StyleSheet.absoluteFillObject,

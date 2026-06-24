@@ -15,6 +15,7 @@ import {
 } from '../types/gameTypes';
 import { CardInstance } from '../types/cardTypes';
 import { ARENA_MAX_COMMIT } from '../game/GameEngine';
+import { ARENA_MIN_COMMIT } from '../utils/arenaUtils';
 import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
 import Card from './Card';
 
@@ -41,6 +42,7 @@ interface ArenaChallengeModalProps {
   totalValor: number;
   lastResult: ArenaChallengeResult | null;
   mandatory?: boolean;
+  maxCommit?: number;
 }
 
 export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
@@ -64,6 +66,7 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
   totalValor,
   lastResult,
   mandatory = false,
+  maxCommit = ARENA_MAX_COMMIT,
 }) => {
   const { width: screenW } = useWindowDimensions();
   const cardW = Math.min(92, (screenW - 96) / 4);
@@ -91,7 +94,7 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
   const toggleFighter = (id: string) => {
     setSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= ARENA_MAX_COMMIT) return prev;
+      if (prev.length >= maxCommit) return prev;
       return [...prev, id];
     });
   };
@@ -111,8 +114,8 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
       ) : null}
       <Text style={styles.body}>
         {mandatory
-          ? 'You must enter the Arena this turn. Choose 3 fighters from your play area. Declining adds Crowd Disfavor.'
-          : 'Enter the Arena to fight this challenge with 3 cards from your play area. Other players may Support or Hinder you.'}
+          ? `You must enter the Arena this turn. Choose ${ARENA_MIN_COMMIT} to ${maxCommit} fighters from your play area. Declining adds Crowd Disfavor.`
+          : `Enter the Arena to fight this challenge with up to ${maxCommit} cards from your play area. Other players may Support or Hinder you.`}
       </Text>
       <View style={styles.actions}>
         <Pressable style={styles.primaryBtn} onPress={onEnterArena}>
@@ -129,10 +132,10 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
 
   const renderSelect = () => (
     <>
-      <Text style={styles.heading}>Select {ARENA_MAX_COMMIT} Fighters</Text>
+      <Text style={styles.heading}>Select Fighters</Text>
       <Text style={styles.body}>
-        Choose {ARENA_MAX_COMMIT} cards from your play area ({selectedIds.length}/{ARENA_MAX_COMMIT}
-        ).
+        Choose {ARENA_MIN_COMMIT} to {maxCommit} cards from your play area (
+        {selectedIds.length}/{maxCommit} selected).
       </Text>
       {playArea.length === 0 ? (
         <Text style={styles.empty}>Play cards to your play area first.</Text>
@@ -155,9 +158,9 @@ export const ArenaChallengeModal: React.FC<ArenaChallengeModalProps> = ({
         <Pressable
           style={[
             styles.primaryBtn,
-            selectedIds.length !== ARENA_MAX_COMMIT && styles.btnDisabled,
+            selectedIds.length < ARENA_MIN_COMMIT && styles.btnDisabled,
           ]}
-          disabled={selectedIds.length !== ARENA_MAX_COMMIT}
+          disabled={selectedIds.length < ARENA_MIN_COMMIT}
           onPress={() => onConfirmFighters(selectedIds)}
         >
           <Text style={styles.primaryBtnText}>Commit Fighters</Text>

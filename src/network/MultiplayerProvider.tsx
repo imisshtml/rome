@@ -167,6 +167,28 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     };
   }, [ensureClient]);
 
+  useEffect(() => {
+    if (phase !== 'lobby' || !session || session.gameId === 'local') return;
+
+    const client = clientRef.current;
+    if (!client) return;
+
+    const refreshLobby = () => {
+      client
+        .fetchLobby()
+        .then((info) => {
+          lobbyRef.current = info;
+          setLobby(info);
+          setJoinCode(info.joinCode);
+        })
+        .catch(() => {});
+    };
+
+    refreshLobby();
+    const intervalId = setInterval(refreshLobby, 2000);
+    return () => clearInterval(intervalId);
+  }, [phase, session?.gameId]);
+
   const runOnline = useCallback(
     async (fn: (client: MultiplayerGameClient) => Promise<GameSession>) => {
       const client = ensureClient();

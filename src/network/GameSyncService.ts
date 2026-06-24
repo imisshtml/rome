@@ -205,7 +205,9 @@ export class GameSyncService {
           table: 'game_players',
           filter: `game_id=eq.${gameId}`,
         },
-        async () => {
+        async (payload) => {
+          const row = (payload.new ?? payload.old) as DbGamePlayer | undefined;
+          if (!row?.game_id) return;
           const lobby = await this.fetchLobbyInfo(gameId);
           this.emitLobby(lobby);
         }

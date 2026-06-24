@@ -83,6 +83,45 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
           Gallery event resolved
         </Text>
       );
+    case 'RESOLVE_FAVOR':
+    case 'ACCEPT_FAVOR':
+      if (cardName) {
+        return (
+          <Text style={styles.line} numberOfLines={3}>
+            Favor:{' '}
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+            {effect ? ` — ${effect}` : ''}
+          </Text>
+        );
+      }
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          Favor resolved
+        </Text>
+      );
+    case 'DECLINE_FAVOR':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} declined{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a Favor'
+          )}
+        </Text>
+      );
+    case 'FAVOR_DESTROY_CARD':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} destroyed{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}{' '}
+          for a Favor
+        </Text>
+      );
     case 'EVENT_DISCARD_CARD':
       return (
         <Text style={styles.line} numberOfLines={2}>

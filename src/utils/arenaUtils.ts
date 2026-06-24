@@ -1,5 +1,5 @@
 import { CardInstance } from '../types/cardTypes';
-import { GameState } from '../types/gameTypes';
+import type { GameState, PlayerState } from '../types/gameTypes';
 import { isCharityCard } from './cardFactionUtils';
 
 export const OPENING_GAMES_ARENA_ID = 'arena_opening_games';
@@ -53,4 +53,34 @@ export function mustEnterArenaBeforeEndTurn(
   if (!player) return false;
 
   return playAreaTriggersMandatoryArena(player.playArea);
+}
+
+export const ARENA_MIN_COMMIT = 1;
+export const ARENA_DEFAULT_MAX_COMMIT = 3;
+
+export function playerHasFourthArenaParticipantEffect(
+  player: Pick<PlayerState, 'playArea' | 'itemsInPlay'>
+): boolean {
+  const cards = [...player.playArea, ...player.itemsInPlay];
+  return cards.some((card) => {
+    const effects = card.definition.effects as
+      | { allow_fourth_arena_participant?: boolean }
+      | undefined;
+    return effects?.allow_fourth_arena_participant === true;
+  });
+}
+
+export function getArenaMaxCommit(
+  player: Pick<PlayerState, 'playArea' | 'itemsInPlay'>
+): number {
+  return playerHasFourthArenaParticipantEffect(player)
+    ? 4
+    : ARENA_DEFAULT_MAX_COMMIT;
+}
+
+export function isValidArenaCommitCount(
+  count: number,
+  maxCommit: number
+): boolean {
+  return count >= ARENA_MIN_COMMIT && count <= maxCommit;
 }
