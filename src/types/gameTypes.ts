@@ -38,6 +38,8 @@ export type GameActionType =
   | 'FORCE_OPPONENT_DISCARD'
   | 'GAIN_CARD_PICK'
   | 'COPY_CARD_PICK'
+  | 'PLACE_DESTROYED_ON_MARKET_PICK'
+  | 'PLACE_DESTROYED_ON_MARKET_SKIP'
   | 'DECK_LOOK_CHOOSE_PLAYER'
   | 'DECK_LOOK_KEEP_TOP'
   | 'CHOOSE_GAIN_BANDING_BONUS'
@@ -62,6 +64,14 @@ export interface PendingGainCardPick {
   maxCost?: number;
   cardType?: 'faction' | 'item' | 'imperial_favor';
   thenDiscard?: number;
+  gainSource?: 'market' | 'market_or_epic' | 'destroyed_pile';
+}
+
+export interface PendingPlaceDestroyedOnMarketPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  optional?: boolean;
 }
 
 export interface PendingCopyCardPick {
@@ -172,6 +182,7 @@ export interface GameAction {
     effectSummary?: string;
     arenaLossChoice?: 'disfavor' | 'destroy_fighter';
     eventOutcomes?: GalleryEventPlayerOutcome[];
+    destroyedCardNames?: string[];
     bandingFaction?: BandingFaction;
   };
   timestamp: number;
@@ -331,6 +342,10 @@ export interface GameState {
   pendingDeckLookPick?: PendingDeckLookPick | null;
   /** Choose a faction banding bonus to gain (Preparation) */
   pendingGainBandingBonusPick?: PendingGainBandingBonusPick | null;
+  /** Optional: place a destroyed card onto the market supply deck (Patron) */
+  pendingPlaceDestroyedOnMarketPick?: PendingPlaceDestroyedOnMarketPick | null;
+  /** Names of gallery cards destroyed by the current event (Slave Revolt log) */
+  lastEventGalleryDestroyNames?: string[] | null;
   /** Extra arena valor from sabotage cards played as hinder */
   arenaSabotageValorByPlayerId?: Record<string, number>;
   /** Turn pass paused until gallery refill + events finish */

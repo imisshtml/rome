@@ -4,6 +4,7 @@ import {
   getCopyCardSpec,
   getGainCardSpec,
   getLookAtTopCount,
+  listEligibleDestroyedGainCards,
   listEligibleMarketCopyCards,
   listEligibleMarketGainCards,
   shouldDeferGalleryRefill,
@@ -56,6 +57,23 @@ export function beginInteractivePlayPicks(
   }
 
   const gainSpec = getGainCardSpec(card);
+  if (gainSpec?.source === 'destroyed_pile') {
+    const eligible = listEligibleDestroyedGainCards(state, gainSpec);
+    if (eligible.length > 0) {
+      return {
+        ...state,
+        pendingGainCardPick: {
+          playerId: player.id,
+          sourceCardName: card.definition.name,
+          sourceCardInstanceId: card.instanceId,
+          maxCost: gainSpec.maxCost,
+          cardType: gainSpec.type,
+          gainSource: 'destroyed_pile',
+        },
+      };
+    }
+  }
+
   if (gainSpec && (gainSpec.source === 'market' || gainSpec.source === 'market_or_epic')) {
     const eligible = listEligibleMarketGainCards(
       state,
@@ -72,6 +90,7 @@ export function beginInteractivePlayPicks(
           sourceCardInstanceId: card.instanceId,
           maxCost: gainSpec.maxCost,
           cardType: gainSpec.type,
+          gainSource: gainSpec.source === 'market_or_epic' ? 'market_or_epic' : 'market',
           thenDiscard: discardAfter > 0 ? discardAfter : undefined,
         },
       };
@@ -168,6 +187,66 @@ export function gainMarketCardToPlayer(
   next.players = [...next.players];
   next.players[playerIdx] = player;
   return { state: next, gained };
+}
+
+export function gainDestroyedCardToPlayer(
+  state: GameState,
+  playerIdx: number,
+  cardInstanceId: string,
+  maxCost?: number
+): { state: GameState; gained: CardInstance | null } {
+  const pile = state.destroyedPile ?? [];
+  const idx = pile.findIndex((c) => c.instanceId === cardInstanceId);
+  if (idx === -1) return { state, gained: null };
+
+  const card = pile[idx];
+  if ((card.definition.cost ?? 0) > (maxCost ?? Infinity)) {
+    return { state, gained: null };
+  }
+
+  const gained: CardInstance = {
+    ...card,
+    location: 'DISCARD',
+    ownerId: state.players[playerIdx].id,
+  };
+  const player = {
+    ...state.players[playerIdx],
+    discard: [...state.players[playerIdx].discard, gained],
+  };
+  const players = [...state.players];
+  players[playerIdx] = player;
+  return {
+    state: {
+      ...state,
+      players,
+      destroyedPile: pile.filter((_, i) => i !== idx),
+    },
+    gained,
+  };
+}
+
+export function placeDestroyedCardOnMarketSupply(
+  state: GameState,
+  cardInstanceId: string
+): { state: GameState; placed: CardInstance | null } {
+  const pile = state.destroyedPile ?? [];
+  const idx = pile.findIndex((c) => c.instanceId === cardInstanceId);
+  if (idx === -1) return { state, placed: null };
+
+  const card = pile[idx];
+  const placed: CardInstance = {
+    ...card,
+    location: 'GALLERY',
+    faceUp: false,
+  };
+  return {
+    state: {
+      ...state,
+      destroyedPile: pile.filter((_, i) => i !== idx),
+      gallerySupply: [...(state.gallerySupply ?? []), placed],
+    },
+    placed,
+  };
 }
 
 export function finishGainCardPick(

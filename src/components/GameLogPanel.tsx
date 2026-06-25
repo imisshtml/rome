@@ -251,10 +251,15 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
       );
     case 'GAIN_CARD_PICK':
     case 'COPY_CARD_PICK':
+    case 'PLACE_DESTROYED_ON_MARKET_PICK':
       return (
         <Text style={styles.line} numberOfLines={2}>
           {playerName}{' '}
-          {action.type === 'COPY_CARD_PICK' ? 'copied' : 'gained'}{' '}
+          {action.type === 'COPY_CARD_PICK'
+            ? 'copied'
+            : action.type === 'PLACE_DESTROYED_ON_MARKET_PICK'
+              ? 'placed on market deck'
+              : 'gained'}{' '}
           {cardName ? (
             <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
           ) : (

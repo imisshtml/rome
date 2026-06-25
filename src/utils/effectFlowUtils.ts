@@ -43,16 +43,44 @@ export function shouldDeferGalleryRefill(card: CardInstance): boolean {
   return getRawEffects(card).replace_gallery_at === 'end_of_turn';
 }
 
-/** Main-phase play uses base effect; sabotage branch is arena-only. */
+const ARENA_ONLY_OR_KEYS = new Set([
+  'arena_sabotage',
+  'arena_support',
+  'arena_bonus_valor',
+  'gain_valor',
+]);
+
+function branchIsArenaOnly(branch: Record<string, unknown>): boolean {
+  const keys = Object.keys(branch).filter((k) => {
+    const v = branch[k];
+    return v != null && v !== false && v !== 0 && !(Array.isArray(v) && v.length === 0);
+  });
+  return keys.length > 0 && keys.every((k) => ARENA_ONLY_OR_KEYS.has(k));
+}
+
+/** Main-phase play uses base effect; arena OR branches resolve in arena only. */
 export function skipOrChoiceOnMainPlay(card: CardInstance): boolean {
   const raw = getRawEffects(card);
   const branches = raw.or_effects as Record<string, unknown>[] | undefined;
-  if (!Array.isArray(branches) || branches.length !== 1) return false;
-  const branch = branches[0];
-  if (typeof branch.arena_bonus_valor !== 'number') return false;
-  const baseDraw = (raw.draw_cards as number) ?? 0;
-  const baseCoins = (raw.gain_coins as number) ?? 0;
-  return baseDraw > 0 && baseCoins === 0 && !!branch.draw_cards;
+  if (!Array.isArray(branches) || branches.length === 0) return false;
+
+  if (branches.every(branchIsArenaOnly)) return true;
+
+  if (branches.length === 1) {
+    const branch = branches[0];
+    if (typeof branch.arena_bonus_valor === 'number') {
+      const baseDraw = (raw.draw_cards as number) ?? 0;
+      const baseCoins = (raw.gain_coins as number) ?? 0;
+      return baseDraw > 0 && baseCoins === 0 && !!branch.draw_cards;
+    }
+  }
+  return false;
+}
+
+export function getOptionalPlaceDestroyedOnMarket(card: CardInstance): boolean {
+  const opt = getRawEffects(card).optional;
+  if (!opt || typeof opt !== 'object') return false;
+  return !!(opt as Record<string, unknown>).place_destroyed_on_market;
 }
 
 export function getSabotageArenaBonus(card: CardInstance): number {
@@ -132,6 +160,22 @@ export function listEligibleMarketGainCards(
   }
 
   return results;
+}
+
+export function listEligibleDestroyedGainCards(
+  state: GameState,
+  spec: GainCardSpec
+): CardInstance[] {
+  if (spec.source !== 'destroyed_pile') return [];
+  const maxCost = spec.maxCost ?? Infinity;
+  return (state.destroyedPile ?? []).filter((card) => {
+    if ((card.definition.cost ?? 0) > maxCost) return false;
+    return cardMatchesGainType(card, spec.type);
+  });
+}
+
+export function listEligibleDestroyedPlaceCards(state: GameState): CardInstance[] {
+  return [...(state.destroyedPile ?? [])];
 }
 
 export function listEligibleMarketCopyCards(

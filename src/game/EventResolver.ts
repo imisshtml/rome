@@ -195,14 +195,11 @@ export function applyInstantGalleryEventEffects(
         ...p,
         carryCoins: (p.carryCoins ?? 0) + gainCoins,
       }));
+      next = { ...next, players };
     } else {
-      players = players.map((p) =>
-        p.id === next.turnPlayerId
-          ? { ...p }
-          : { ...p, carryCoins: (p.carryCoins ?? 0) + gainCoins }
-      );
-      if (next.turnPlayerId) {
-        next = { ...next, turnCoins: next.turnCoins + gainCoins };
+      next = { ...next, players };
+      for (const p of next.players) {
+        next = applyPlayerCoinDelta(next, p.id, gainCoins);
       }
     }
   }
@@ -282,14 +279,17 @@ export function destroyLowestGalleryCards(state: GameState): GameState {
     delete galleryPurchasedBy[id];
   }
 
-  return addToDestroyedPile(
-    {
-      ...state,
-      galleryCards: remaining,
-      galleryPurchasedBy,
-    },
-    removed
-  );
+  return {
+    ...addToDestroyedPile(
+      {
+        ...state,
+        galleryCards: remaining,
+        galleryPurchasedBy,
+      },
+      removed
+    ),
+    lastEventGalleryDestroyNames: removed.map((c) => c.definition.name),
+  };
 }
 
 /** Gallery events / end-of-turn refill — bank on the player for a future turn. */

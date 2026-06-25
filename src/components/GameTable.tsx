@@ -68,6 +68,8 @@ import { getValorInPlay } from '../utils/combatStatsUtils';
 import { requiresFactionChoiceOnPlay } from '../utils/cardFactionUtils';
 import {
   isCoinOnlyPlayCard,
+  listEligibleDestroyedGainCards,
+  listEligibleDestroyedPlaceCards,
   listEligibleMarketCopyCards,
   listEligibleMarketGainCards,
 } from '../utils/effectFlowUtils';
@@ -468,6 +470,11 @@ export const GameTable: React.FC = () => {
       ? state.pendingGainBandingBonusPick
       : null;
 
+  const pendingPlaceDestroyedOnMarketPick =
+    state.pendingPlaceDestroyedOnMarketPick?.playerId === localPlayer?.id
+      ? state.pendingPlaceDestroyedOnMarketPick
+      : null;
+
   const pendingArenaLoss =
     state.pendingArenaLoss?.playerId === localPlayer?.id
       ? state.pendingArenaLoss
@@ -485,7 +492,8 @@ export const GameTable: React.FC = () => {
     pendingGainCardPick ||
     pendingCopyCardPick ||
     pendingDeckLookPick ||
-    pendingGainBandingBonusPick;
+    pendingGainBandingBonusPick ||
+    pendingPlaceDestroyedOnMarketPick;
 
   const canPlayAllCoins =
     canInteract &&
@@ -548,6 +556,21 @@ export const GameTable: React.FC = () => {
     [dispatchAction, localPlayer]
   );
 
+  const handlePlaceDestroyedOnMarketPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('PLACE_DESTROYED_ON_MARKET_PICK', {
+        cardInstanceId: card.instanceId,
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipPlaceDestroyedOnMarket = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('PLACE_DESTROYED_ON_MARKET_SKIP');
+  }, [dispatchAction, localPlayer]);
+
   const handleDeckLookChoosePlayer = useCallback(
     (playerId: string) => {
       if (!localPlayer) return;
@@ -573,15 +596,28 @@ export const GameTable: React.FC = () => {
   );
 
   const gainPickCards = pendingGainCardPick
-    ? listEligibleMarketGainCards(
-        state,
-        {
-          source: 'market',
+    ? pendingGainCardPick.gainSource === 'destroyed_pile'
+      ? listEligibleDestroyedGainCards(state, {
+          source: 'destroyed_pile',
           maxCost: pendingGainCardPick.maxCost,
           type: pendingGainCardPick.cardType,
-        },
-        (id) => !state.galleryPurchasedBy?.[id]
-      )
+        })
+      : listEligibleMarketGainCards(
+          state,
+          {
+            source:
+              pendingGainCardPick.gainSource === 'market_or_epic'
+                ? 'market_or_epic'
+                : 'market',
+            maxCost: pendingGainCardPick.maxCost,
+            type: pendingGainCardPick.cardType,
+          },
+          (id) => !state.galleryPurchasedBy?.[id]
+        )
+    : [];
+
+  const placeDestroyedPickCards = pendingPlaceDestroyedOnMarketPick
+    ? listEligibleDestroyedPlaceCards(state)
     : [];
 
   const copyPickCards = pendingCopyCardPick
@@ -609,6 +645,10 @@ export const GameTable: React.FC = () => {
 
   const handleHandCardPress = useCallback(
     (card: CardInstance) => {
+      if (pendingForcedDiscard) {
+        handleForcedOpponentDiscard(card);
+        return;
+      }
       if (pendingHandDiscard && pendingHandDiscard.remaining > 0) {
         dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
         return;
@@ -622,7 +662,7 @@ export const GameTable: React.FC = () => {
       }
       setPreviewCard(card);
     },
-    [dispatchAction, pendingHandDiscard, pendingCardDestroyPick]
+    [dispatchAction, pendingHandDiscard, pendingCardDestroyPick, pendingForcedDiscard, handleForcedOpponentDiscard]
   );
 
   const handleCardPreview = useCallback((card: CardInstance) => {
@@ -1196,7 +1236,12 @@ export const GameTable: React.FC = () => {
                 </Text>
               ) : null}
               <View style={styles.playFieldCards}>
-                {(turnPlayer?.playArea.length ?? 0) === 0 ? (
+              {isMainActive && !isTurnPlayerLocal && pendingForcedDiscard ? (
+                <Text style={styles.playFieldEmptyText}>
+                  Choose cards to discard ({pendingForcedDiscard.remainingForTarget}{' '}
+                  remaining)
+                </Text>
+              ) : (turnPlayer?.playArea.length ?? 0) === 0 ? (
                   isMainActive ? (
                     <Text style={styles.playFieldEmptyText}>
                       {isTurnPlayerLocal
@@ -1421,10 +1466,33 @@ export const GameTable: React.FC = () => {
       />
       <MarketPickModal
         visible={pendingGainCardPick != null && gainPickCards.length > 0}
-        title="Gain a Card"
+        title={
+          pendingGainCardPick?.gainSource === 'destroyed_pile'
+            ? 'Gain from Destroyed Pile'
+            : 'Gain a Card'
+        }
         subtitle={pendingGainCardPick?.sourceCardName}
         cards={gainPickCards}
         onChoose={handleGainCardPick}
+      />
+      <MarketPickModal
+        visible={
+          pendingPlaceDestroyedOnMarketPick != null &&
+          placeDestroyedPickCards.length > 0
+        }
+        title="Place on Market Deck"
+        subtitle={
+          pendingPlaceDestroyedOnMarketPick?.sourceCardName
+            ? `Optional (${pendingPlaceDestroyedOnMarketPick.sourceCardName})`
+            : 'Choose a destroyed card'
+        }
+        cards={placeDestroyedPickCards}
+        onChoose={handlePlaceDestroyedOnMarketPick}
+        onSkip={
+          pendingPlaceDestroyedOnMarketPick?.optional
+            ? handleSkipPlaceDestroyedOnMarket
+            : undefined
+        }
       />
       <MarketPickModal
         visible={pendingCopyCardPick != null && copyPickCards.length > 0}

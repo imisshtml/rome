@@ -185,7 +185,10 @@ export class MultiplayerGameClient {
       }
     }
 
-    if (next === state) return state;
+    if (next === state) {
+      this.scheduleAI(state);
+      return state;
+    }
 
     if (!this.session || this.session.gameId === 'local') {
       this.pushState(next);

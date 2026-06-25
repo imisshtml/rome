@@ -6,6 +6,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Platform,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -60,21 +61,24 @@ function EventTimerRing({
     });
   }, [active, durationMs, progress]);
 
-  const sweepStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${progress.value * 360}deg` }],
-  }));
-
-  const arcStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + progress.value * 0.65,
-  }));
+  const ringStyle = useAnimatedStyle(() => {
+    const sweepDeg = progress.value * 360;
+    if (Platform.OS === 'web') {
+      return {
+        background: `conic-gradient(from -90deg, #2980B9 0deg, #2980B9 ${sweepDeg}deg, transparent ${sweepDeg}deg, transparent 360deg)`,
+      } as Record<string, string>;
+    }
+    return {
+      opacity: 0.35 + progress.value * 0.65,
+      transform: [{ rotate: `${-90 + (1 - progress.value) * 360}deg` }],
+    };
+  });
 
   return (
     <View style={styles.timerWrap}>
       <View style={styles.timerTrack} />
-      <Animated.View style={[styles.timerArc, arcStyle]} />
-      <Animated.View style={[styles.timerSweep, sweepStyle]}>
-        <View style={styles.timerSweepCap} />
-      </Animated.View>
+      <Animated.View style={[styles.timerRing, ringStyle]} />
+      <View style={styles.timerHole} />
     </View>
   );
 }
@@ -392,23 +396,17 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'rgba(41,128,185,0.25)',
   },
-  timerArc: {
+  timerRing: {
     position: 'absolute',
     width: 28,
     height: 28,
     borderRadius: 14,
-    borderWidth: 3,
-    borderColor: '#2980B9',
   },
-  timerSweep: {
+  timerHole: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-  },
-  timerSweepCap: {
-    width: 28,
-    height: 14,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: '#1a1a2e',
   },
   outcomeList: {

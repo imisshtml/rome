@@ -1,16 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Modal,
-  Pressable,
   ScrollView,
 } from 'react-native';
 import { PlayerState } from '../types/gameTypes';
 import { CardInstance } from '../types/cardTypes';
-import { getCardDefinition } from '../game/CardDefinitions';
-import { CardFace } from './CardFace';
+import { Card } from './Card';
+import CardPreviewModal from './CardPreviewModal';
 
 interface AnyDiscardDestroyModalProps {
   visible: boolean;
@@ -19,7 +18,7 @@ interface AnyDiscardDestroyModalProps {
   onDestroyCard: (targetPlayerId: string, card: CardInstance) => void;
 }
 
-const CARD_W = 80;
+const CARD_W = 96;
 const CARD_H = Math.round(CARD_W * 1.4);
 
 export const AnyDiscardDestroyModal: React.FC<AnyDiscardDestroyModalProps> = ({
@@ -28,49 +27,54 @@ export const AnyDiscardDestroyModal: React.FC<AnyDiscardDestroyModalProps> = ({
   players,
   onDestroyCard,
 }) => {
+  const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
   const piles = players.flatMap((p) =>
     p.discard.map((card) => ({ player: p, card }))
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View style={styles.panel}>
-          <Text style={styles.title}>Destroy from Discard</Text>
-          <Text style={styles.prompt}>
-            Choose a card to destroy
-            {sourceCardName ? ` (${sourceCardName})` : ''}
-          </Text>
-          {piles.length === 0 ? (
-            <Text style={styles.empty}>No cards in any discard pile.</Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.row}
-            >
-              {piles.map(({ player, card }) => (
-                <Pressable
-                  key={card.instanceId}
-                  onPress={() => onDestroyCard(player.id, card)}
-                  style={styles.cardBtn}
-                >
-                  <CardFace
-                    definition={
-                      card.definition ?? getCardDefinition(card.definitionId)
-                    }
-                    faceUp={card.faceUp}
-                    width={CARD_W}
-                    height={CARD_H}
-                  />
-                  <Text style={styles.owner}>{player.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+    <>
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.backdrop}>
+          <View style={styles.panel}>
+            <Text style={styles.title}>Destroy from Discard</Text>
+            <Text style={styles.prompt}>
+              Choose a card to destroy
+              {sourceCardName ? ` (${sourceCardName})` : ''}
+            </Text>
+            {piles.length === 0 ? (
+              <Text style={styles.empty}>No cards in any discard pile.</Text>
+            ) : (
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.grid}
+                showsVerticalScrollIndicator
+              >
+                {piles.map(({ player, card }) => (
+                  <View key={card.instanceId} style={styles.cardWrap}>
+                    <Card
+                      card={card}
+                      width={CARD_W}
+                      height={CARD_H}
+                      hoverPreview
+                      onPress={() => onDestroyCard(player.id, card)}
+                      onLongPress={() => setPreviewCard(card)}
+                    />
+                    <Text style={styles.owner}>{player.name}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <CardPreviewModal
+        card={previewCard}
+        visible={previewCard != null}
+        onClose={() => setPreviewCard(null)}
+      />
+    </>
   );
 };
 
@@ -80,14 +84,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.72)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   panel: {
     backgroundColor: '#1a1a2e',
     borderRadius: 14,
     padding: 18,
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 760,
+    maxHeight: '88%',
     borderWidth: 1,
     borderColor: 'rgba(231,76,60,0.45)',
   },
@@ -109,11 +114,18 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
   },
-  row: {
-    gap: 8,
-    paddingVertical: 4,
+  scroll: {
+    width: '100%',
+    maxHeight: 520,
   },
-  cardBtn: {
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  cardWrap: {
     alignItems: 'center',
   },
   owner: {

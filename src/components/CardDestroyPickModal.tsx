@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
-import { getCardDefinition } from '../game/CardDefinitions';
-import { CardFace } from './CardFace';
+import { Card } from './Card';
+import CardPreviewModal from './CardPreviewModal';
 
 interface CardDestroyPickModalProps {
   visible: boolean;
@@ -27,7 +27,7 @@ interface CardDestroyPickModalProps {
   onSkip?: () => void;
 }
 
-const CARD_W = 88;
+const CARD_W = 96;
 const CARD_H = Math.round(CARD_W * 1.4);
 
 export const CardDestroyPickModal: React.FC<CardDestroyPickModalProps> = ({
@@ -42,6 +42,8 @@ export const CardDestroyPickModal: React.FC<CardDestroyPickModalProps> = ({
   onDestroyCard,
   onSkip,
 }) => {
+  const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
+
   const destroyCards: {
     card: CardInstance;
     zone: 'hand' | 'discard' | 'play_area';
@@ -62,54 +64,57 @@ export const CardDestroyPickModal: React.FC<CardDestroyPickModalProps> = ({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View style={styles.panel}>
-          <Text style={styles.title}>Destroy a Card</Text>
-          <Text style={styles.prompt}>
-            Choose {remaining} card{remaining === 1 ? '' : 's'} to destroy
-            {sourceCardName ? ` (${sourceCardName})` : ''}
-          </Text>
-          {destroyCards.length === 0 ? (
-            <Text style={styles.empty}>No valid cards available.</Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.handRow}
-            >
-              {destroyCards.map(({ card, zone }) => (
-                <Pressable
-                  key={card.instanceId}
-                  onPress={() => onDestroyCard(card, zone)}
-                  style={styles.handCardBtn}
-                >
-                  <CardFace
-                    definition={
-                      card.definition ?? getCardDefinition(card.definitionId)
-                    }
-                    faceUp={card.faceUp}
-                    width={CARD_W}
-                    height={CARD_H}
-                    chosenFaction={card.chosenFaction}
-                  />
-                  {zone !== 'hand' ? (
-                    <Text style={styles.zoneTag}>
-                      {zone === 'discard' ? 'Discard' : 'In play'}
-                    </Text>
-                  ) : null}
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-          {optional && onSkip ? (
-            <Pressable style={styles.skipBtn} onPress={onSkip}>
-              <Text style={styles.skipText}>Skip</Text>
-            </Pressable>
-          ) : null}
+    <>
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.backdrop}>
+          <View style={styles.panel}>
+            <Text style={styles.title}>Destroy a Card</Text>
+            <Text style={styles.prompt}>
+              Choose {remaining} card{remaining === 1 ? '' : 's'} to destroy
+              {sourceCardName ? ` (${sourceCardName})` : ''}
+            </Text>
+            {destroyCards.length === 0 ? (
+              <Text style={styles.empty}>No valid cards available.</Text>
+            ) : (
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.grid}
+                showsVerticalScrollIndicator
+              >
+                {destroyCards.map(({ card, zone }) => (
+                  <View key={card.instanceId} style={styles.cardWrap}>
+                    <Card
+                      card={card}
+                      width={CARD_W}
+                      height={CARD_H}
+                      hoverPreview
+                      onPress={() => onDestroyCard(card, zone)}
+                      onLongPress={() => setPreviewCard(card)}
+                    />
+                    {zone !== 'hand' ? (
+                      <Text style={styles.zoneTag}>
+                        {zone === 'discard' ? 'Discard' : 'In play'}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            {optional && onSkip ? (
+              <Pressable style={styles.skipBtn} onPress={onSkip}>
+                <Text style={styles.skipText}>Skip</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <CardPreviewModal
+        card={previewCard}
+        visible={previewCard != null}
+        onClose={() => setPreviewCard(null)}
+      />
+    </>
   );
 };
 
@@ -119,14 +124,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.72)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   panel: {
     backgroundColor: '#1a1a2e',
     borderRadius: 14,
     padding: 18,
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 760,
+    maxHeight: '88%',
     borderWidth: 1,
     borderColor: 'rgba(231,76,60,0.45)',
     alignItems: 'center',
@@ -150,23 +156,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 12,
   },
-  handRow: {
-    gap: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    marginBottom: 12,
+  scroll: {
+    width: '100%',
+    maxHeight: 520,
   },
-  handCardBtn: {
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'transparent',
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  cardWrap: {
     alignItems: 'center',
+    gap: 4,
   },
   zoneTag: {
     color: 'rgba(255,255,255,0.45)',
     fontSize: 8,
     fontWeight: '700',
-    marginTop: 2,
     textTransform: 'uppercase',
   },
   skipBtn: {
@@ -175,6 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 20,
+    marginTop: 12,
   },
   skipText: {
     color: 'rgba(255,255,255,0.75)',
