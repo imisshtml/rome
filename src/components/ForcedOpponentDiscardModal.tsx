@@ -30,22 +30,18 @@ export const ForcedOpponentDiscardModal: React.FC<ForcedOpponentDiscardModalProp
 }) => {
   if (!pending || !targetPlayer) return null;
 
-  const remaining = pending.remainingTargetIds.length;
-
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <Text style={styles.title}>Force Discard</Text>
+          <Text style={styles.title}>Forced Discard</Text>
           <Text style={styles.subtitle}>
-            {pending.sourceCardName ?? 'Manipulator'}
+            {targetPlayer.name}
           </Text>
           <Text style={styles.body}>
-            Choose a card for {targetPlayer.name} to discard
-            {remaining > 0
-              ? ` (${remaining + 1} opponent${remaining + 1 === 1 ? '' : 's'} total)`
-              : ''}
-            .
+            Discard {pending.remainingForTarget} card
+            {pending.remainingForTarget === 1 ? '' : 's'}
+            {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
           </Text>
 
           <ScrollView

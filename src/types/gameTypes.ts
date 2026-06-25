@@ -36,6 +36,11 @@ export type GameActionType =
   | 'ON_GAIN_DESTROY_PICK'
   | 'ON_GAIN_DESTROY_SKIP'
   | 'FORCE_OPPONENT_DISCARD'
+  | 'GAIN_CARD_PICK'
+  | 'COPY_CARD_PICK'
+  | 'DECK_LOOK_CHOOSE_PLAYER'
+  | 'DECK_LOOK_KEEP_TOP'
+  | 'CHOOSE_GAIN_BANDING_BONUS'
   | 'RESOLVE_ARENA_LOSS'
   | 'DISMISS_ARENA_RESULT';
 
@@ -44,8 +49,42 @@ export type BandingFaction = 'Ludus' | 'Legion' | 'Senate';
 export interface PendingForcedOpponentDiscards {
   controllerId: string;
   sourceCardName?: string;
+  perOpponent: number;
   targetPlayerId: string;
+  remainingForTarget: number;
   remainingTargetIds: string[];
+}
+
+export interface PendingGainCardPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  maxCost?: number;
+  cardType?: 'faction' | 'item' | 'imperial_favor';
+  thenDiscard?: number;
+}
+
+export interface PendingCopyCardPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  maxCost?: number;
+}
+
+export interface PendingDeckLookPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  lookCount: number;
+  phase: 'choose_deck' | 'keep_top';
+  targetPlayerId?: string;
+  viewedCards?: CardInstance[];
+}
+
+export interface PendingGainBandingBonusPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
 }
 
 export interface PendingBandingBonus {
@@ -105,6 +144,16 @@ export interface PendingArenaLoss {
   remainingDestroyPicks?: number;
 }
 
+export interface GalleryEventPlayerOutcome {
+  playerId: string;
+  playerName: string;
+  cardName: string;
+  definitionId: string;
+  cardInstanceId: string;
+  cost: number;
+  gratiaCount: number;
+}
+
 export interface GameAction {
   type: GameActionType;
   playerId: string;
@@ -122,6 +171,8 @@ export interface GameAction {
     definitionId?: string;
     effectSummary?: string;
     arenaLossChoice?: 'disfavor' | 'destroy_fighter';
+    eventOutcomes?: GalleryEventPlayerOutcome[];
+    bandingFaction?: BandingFaction;
   };
   timestamp: number;
 }
@@ -189,7 +240,10 @@ export interface GameState {
   /** Highlights opponent buy / arena for the active turn player */
   turnActionHighlight?: TurnActionHighlight | null;
   /** Face-up gallery event shown while resolving or acknowledging */
+  /** Flipped gallery event awaiting dismiss / player responses */
   pendingGalleryEvent?: CardInstance | null;
+  /** Per-player results from the active gallery event (e.g. Triumph of Rome). */
+  galleryEventOutcomes?: GalleryEventPlayerOutcome[] | null;
   /** Players who must pick a hand card to discard (Plague Spreads) */
   pendingEventDiscards?: string[];
   /** Each player may discard for coins (Barbarian Incursion) */
@@ -269,6 +323,16 @@ export interface GameState {
   pendingArenaLoss?: PendingArenaLoss | null;
   /** Active player chooses cards for opponents to discard (e.g. Manipulator) */
   pendingForcedOpponentDiscards?: PendingForcedOpponentDiscards | null;
+  /** Pick a market card to gain (Black Market Deal, Encampment, etc.) */
+  pendingGainCardPick?: PendingGainCardPick | null;
+  /** Pick a market card to copy (Veteran) */
+  pendingCopyCardPick?: PendingCopyCardPick | null;
+  /** Look at / reorder top of a deck (Tribune) */
+  pendingDeckLookPick?: PendingDeckLookPick | null;
+  /** Choose a faction banding bonus to gain (Preparation) */
+  pendingGainBandingBonusPick?: PendingGainBandingBonusPick | null;
+  /** Extra arena valor from sabotage cards played as hinder */
+  arenaSabotageValorByPlayerId?: Record<string, number>;
   /** Turn pass paused until gallery refill + events finish */
   deferredTurnEnd?: {
     endingPlayerId: string;

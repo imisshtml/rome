@@ -24,8 +24,17 @@ import {
 } from '../store/useGameStore';
 import { GameState } from '../types/gameTypes';
 import { createLobbyGameState } from '../game/GameEngine';
+import {
+  getSavedGameSession,
+  saveGameSession,
+  clearSavedGameSession,
+  getStoredNickname,
+} from '../utils/playerStorage';
 
 export type AppPhase = 'landing' | 'lobby' | 'game' | 'postgame';
+
+/** Survives Strict Mode remount so we only auto-resume once per page load. */
+let rejoinBootstrapStarted = false;
 
 interface MultiplayerContextValue {
   phase: AppPhase;
@@ -104,6 +113,44 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     setSessionState(next);
   }, []);
 
+  const persistOnlineSession = useCallback(
+    (onlineSession: GameSession, displayName: string) => {
+      saveGameSession({
+        gameId: onlineSession.gameId,
+        joinCode: onlineSession.joinCode,
+        playerKey: onlineSession.playerKey,
+        playerId: onlineSession.playerId,
+        isHost: onlineSession.isHost,
+        displayName: displayName.trim(),
+      });
+    },
+    []
+  );
+
+  const finishOnlineConnect = useCallback(
+    async (client: MultiplayerGameClient, onlineSession: GameSession) => {
+      applySession(onlineSession);
+      setLocalPlayerKey(onlineSession.playerKey);
+      setJoinCode(onlineSession.joinCode);
+      setMeta({ online: true, joinCode: onlineSession.joinCode, error: null });
+      setStatus(client.getStatus());
+
+      const lobbyInfo = await client.fetchLobby();
+      lobbyRef.current = lobbyInfo;
+      setLobby(lobbyInfo);
+
+      const state = jotaiStoreRef.current.get(gameStateAtom);
+      if (state?.status === 'finished' || lobbyInfo.status === 'finished') {
+        setPhase('postgame');
+      } else if (state?.status === 'active' || lobbyInfo.status === 'active') {
+        setPhase('game');
+      } else {
+        setPhase('lobby');
+      }
+    },
+    [applySession, setLocalPlayerKey, setMeta]
+  );
+
   const syncPhase = useCallback(
     (state: GameState | null, lobbyInfo: LobbyInfo | null = lobbyRef.current) => {
       const activeSession =
@@ -162,10 +209,54 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     return () => {
       registerGameStateReader(null);
       registerRemoteDispatch(null);
-      clientRef.current?.disconnect();
-      clientRef.current = null;
     };
   }, [ensureClient]);
+
+  useEffect(() => {
+    if (rejoinBootstrapStarted || !isOnlineModeAvailable()) return;
+
+    rejoinBootstrapStarted = true;
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const client = ensureClient();
+        const saved = getSavedGameSession();
+        const displayName = (
+          getStoredNickname() ??
+          saved?.displayName ??
+          'Gladiator'
+        ).trim();
+
+        let onlineSession: GameSession | null = null;
+        try {
+          onlineSession = await client.resumeGame(displayName);
+        } catch {
+          if (saved?.joinCode) {
+            onlineSession = await client.joinGame(
+              saved.joinCode,
+              displayName,
+              saved.playerId
+            );
+          }
+        }
+
+        if (!onlineSession || cancelled) return;
+        persistOnlineSession(onlineSession, displayName);
+        await finishOnlineConnect(client, onlineSession);
+      } catch {
+        /* stay on landing */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureClient, finishOnlineConnect, persistOnlineSession]);
 
   useEffect(() => {
     if (phase !== 'lobby' || !session || session.gameId === 'local') return;
@@ -190,7 +281,10 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
   }, [phase, session?.gameId]);
 
   const runOnline = useCallback(
-    async (fn: (client: MultiplayerGameClient) => Promise<GameSession>) => {
+    async (
+      displayName: string,
+      fn: (client: MultiplayerGameClient) => Promise<GameSession>
+    ) => {
       const client = ensureClient();
       if (!isOnlineModeAvailable()) {
         setError('Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_ANON_KEY to .env');
@@ -203,16 +297,8 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
         client.disconnect();
         setGameState(createLobbyGameState('pending', []));
         const onlineSession = await fn(client);
-        applySession(onlineSession);
-        setLocalPlayerKey(onlineSession.playerKey);
-        setJoinCode(onlineSession.joinCode);
-        setMeta({ online: true, joinCode: onlineSession.joinCode, error: null });
-        setStatus(client.getStatus());
-
-        const lobbyInfo = await client.fetchLobby();
-        lobbyRef.current = lobbyInfo;
-        setLobby(lobbyInfo);
-        setPhase('lobby');
+        persistOnlineSession(onlineSession, displayName);
+        await finishOnlineConnect(client, onlineSession);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Request failed';
         setError(message);
@@ -221,19 +307,29 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
         setLoading(false);
       }
     },
-    [applySession, ensureClient, setGameState, setLocalPlayerKey, setMeta]
+    [ensureClient, finishOnlineConnect, persistOnlineSession, setGameState, setMeta]
   );
 
   const createGame = useCallback(
     async (displayName: string, maxPlayers: number) => {
-      await runOnline((client) => client.createGame(displayName.trim(), maxPlayers));
+      await runOnline(displayName, (client) =>
+        client.createGame(displayName.trim(), maxPlayers)
+      );
     },
     [runOnline]
   );
 
   const joinGame = useCallback(
     async (code: string, displayName: string) => {
-      await runOnline((client) => client.joinGame(code.trim(), displayName.trim()));
+      const saved = getSavedGameSession();
+      const reclaimId =
+        saved &&
+        saved.joinCode.toUpperCase() === code.trim().toUpperCase()
+          ? saved.playerId
+          : undefined;
+      await runOnline(displayName, (client) =>
+        client.joinGame(code.trim(), displayName.trim(), reclaimId)
+      );
     },
     [runOnline]
   );
@@ -321,6 +417,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     setLocalPlayerKey('player_1');
     setGameState(createLobbyGameState('pending', []));
     setMeta({ online: false, joinCode: '', error: null });
+    clearSavedGameSession();
   }, [applySession, setGameState, setLocalPlayerKey, setMeta]);
 
   return (

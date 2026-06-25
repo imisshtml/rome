@@ -1,5 +1,5 @@
 import type { CardDefinition, CardInstance } from '../types/cardTypes';
-import type { GameState, PlayerState } from '../types/gameTypes';
+import type { GameState, PlayerState, GalleryEventPlayerOutcome } from '../types/gameTypes';
 import { addToDestroyedPile } from '../utils/destroyedPileUtils';
 import { GRATIA_SUPPLY, isGalleryEventCard } from './CardCatalog';
 
@@ -72,8 +72,9 @@ function drawRandomGallerySupplyCard(
 function applyTriumphOfRome(
   state: GameState,
   createCard: CreateCardFn
-): GameState {
+): { state: GameState; outcomes: GalleryEventPlayerOutcome[] } {
   let next = state;
+  const outcomes: GalleryEventPlayerOutcome[] = [];
   let players = next.players.map((p) => ({
     ...p,
     hand: [...p.hand],
@@ -99,9 +100,21 @@ function applyTriumphOfRome(
       ...players[i],
       discard: [...players[i].discard, gained, ...gratiaCards],
     };
+    outcomes.push({
+      playerId: players[i].id,
+      playerName: players[i].name,
+      cardName: gained.definition?.name ?? 'Card',
+      definitionId: gained.definitionId,
+      cardInstanceId: gained.instanceId,
+      cost,
+      gratiaCount: cost,
+    });
   }
 
-  return { ...next, players };
+  return {
+    state: { ...next, players, galleryEventOutcomes: outcomes },
+    outcomes,
+  };
 }
 
 function createGratiaInstance(
@@ -194,6 +207,14 @@ export function applyInstantGalleryEventEffects(
     }
   }
 
+  const loseCoins = legacy.all_players_lose_coins;
+  if (typeof loseCoins === 'number' && loseCoins > 0 && legacy.next_turn) {
+    players = players.map((p) => ({
+      ...p,
+      carryCoins: (p.carryCoins ?? 0) - loseCoins,
+    }));
+  }
+
   const gainVp = legacy.all_players_gain_vp;
   if (typeof gainVp === 'number' && gainVp > 0) {
     players = players.map((p) => ({
@@ -240,7 +261,7 @@ export function applyInstantGalleryEventEffects(
   }
 
   if (legacy.all_players_gain_random_gallery_card) {
-    next = applyTriumphOfRome(next, createCard);
+    next = applyTriumphOfRome(next, createCard).state;
   }
 
   return next;
@@ -271,14 +292,35 @@ export function destroyLowestGalleryCards(state: GameState): GameState {
   );
 }
 
-export function awardOptionalEventDiscardCoins(
+/** Gallery events / end-of-turn refill — bank on the player for a future turn. */
+export function eventCoinFlowActive(state: GameState): boolean {
+  return (
+    state.pendingGalleryEvent != null ||
+    (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0 ||
+    (state.pendingEventDiscards?.length ?? 0) > 0 ||
+    state.deferredTurnEnd != null ||
+    state.phase === 'CLEANUP'
+  );
+}
+
+export function applyPlayerCoinDelta(
   state: GameState,
   playerId: string,
-  amount: number
+  delta: number
 ): GameState {
-  if (playerId === state.turnPlayerId) {
-    return { ...state, turnCoins: state.turnCoins + amount };
+  const amount = Number(delta);
+  if (!Number.isFinite(amount) || amount === 0) return state;
+
+  const bankForLaterTurn =
+    eventCoinFlowActive(state) || playerId !== state.turnPlayerId;
+
+  if (!bankForLaterTurn) {
+    return {
+      ...state,
+      turnCoins: Math.max(0, state.turnCoins + amount),
+    };
   }
+
   const idx = state.players.findIndex((p) => p.id === playerId);
   if (idx === -1) return state;
   const players = [...state.players];
@@ -288,6 +330,14 @@ export function awardOptionalEventDiscardCoins(
     carryCoins: (player.carryCoins ?? 0) + amount,
   };
   return { ...state, players };
+}
+
+export function awardOptionalEventDiscardCoins(
+  state: GameState,
+  playerId: string,
+  amount: number
+): GameState {
+  return applyPlayerCoinDelta(state, playerId, amount);
 }
 
 /** Flip an event from supply — apply instant effects or queue player choices. */
@@ -301,8 +351,11 @@ export function beginGalleryEventResolution(
   let next: GameState = { ...state, pendingGalleryEvent: event };
 
   if (eventIsOptionalDiscardForCoins(event)) {
-    const coinReward = getEventLegacy(event.definition)
-      .optional_discard_for_coins as number;
+    const legacy = getEventLegacy(event.definition);
+    const coinReward =
+      typeof legacy.optional_discard_for_coins === 'number'
+        ? legacy.optional_discard_for_coins
+        : 2;
     const pendingPlayerIds = next.players
       .filter((p) => p.hand.length > 0)
       .map((p) => p.id);
@@ -326,11 +379,16 @@ export function beginGalleryEventResolution(
   }
 
   if (eventIsImperialTax(event)) {
+    const legacy = getEventLegacy(event.definition);
+    const loseCoins =
+      typeof legacy.all_players_lose_coins === 'number'
+        ? legacy.all_players_lose_coins
+        : 1;
     next = {
       ...next,
       players: next.players.map((p) => ({
         ...p,
-        imperialTaxPending: true,
+        carryCoins: (p.carryCoins ?? 0) - loseCoins,
       })),
     };
     return next;
@@ -391,5 +449,6 @@ export function clearPendingGalleryEventFlow(state: GameState): GameState {
     pendingGalleryEvent: null,
     pendingEventDiscards: [],
     pendingEventOptionalDiscards: null,
+    galleryEventOutcomes: null,
   };
 }

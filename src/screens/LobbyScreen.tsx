@@ -6,12 +6,15 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
 import { homeBackground } from '../assets/images';
 import { FullBleedBackground } from '../components/FullBleedBackground';
 import RulesModal from '../components/RulesModal';
+import { copyToClipboard } from '../utils/copyToClipboard';
+import { previewAiNameForSeat } from '../utils/aiPlayerNames';
 
 export const LobbyScreen: React.FC = () => {
   const {
@@ -41,14 +44,25 @@ export const LobbyScreen: React.FC = () => {
     }
     return {
       seatIndex,
-      label: `AI ${seatIndex}`,
-      sub: 'Waiting',
+      label: previewAiNameForSeat(joinCode || lobby?.joinCode || 'lobby', seatIndex),
+      sub: 'AI · joins at start',
       kind: 'ai' as const,
     };
   });
 
   const canStart = session?.isHost && humans.length >= 1;
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const codeDisplay = joinCode || lobby?.joinCode || '——';
+
+  const handleCopyCode = async () => {
+    if (codeDisplay === '——') return;
+    const ok = await copyToClipboard(codeDisplay);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <FullBleedBackground source={homeBackground} style={styles.root}>
@@ -73,7 +87,17 @@ export const LobbyScreen: React.FC = () => {
 
         <View style={styles.codeBox}>
           <Text style={styles.codeLabel}>Join Code</Text>
-          <Text style={styles.code}>{joinCode || lobby?.joinCode || '——'}</Text>
+          <Text style={styles.code} selectable>
+            {codeDisplay}
+          </Text>
+          <Pressable style={styles.copyBtn} onPress={handleCopyCode}>
+            <Text style={styles.copyBtnText}>
+              {copied ? 'Copied!' : 'Copy code'}
+            </Text>
+          </Pressable>
+          {Platform.OS === 'web' ? (
+            <Text style={styles.copyHint}>Select the code above or tap Copy</Text>
+          ) : null}
         </View>
 
         {session?.isHost ? (
@@ -232,6 +256,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 4,
     marginTop: 4,
+    userSelect: 'text',
+  } as object,
+  copyBtn: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: 'rgba(212,175,55,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
+  },
+  copyBtnText: {
+    color: '#F1C40F',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  copyHint: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 9,
+    marginTop: 6,
   },
   section: {
     marginBottom: 10,

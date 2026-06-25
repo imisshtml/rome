@@ -15,6 +15,7 @@ import {
   splitPlayerDeckCycleCards,
 } from '../utils/deckCycleUtils';
 import { pickForcedDiscardCard } from '../utils/forcedDiscardUtils';
+import { pickAiDisplayNames } from '../utils/aiPlayerNames';
 import {
   normalizeDestroyFromZones,
   playerHasDestroyTargetsInZones,
@@ -33,6 +34,16 @@ import {
   hasOrEffectChoice,
   playerCanFulfillHandDiscardDestroy,
 } from '../utils/playDestroyUtils';
+import { skipOrChoiceOnMainPlay, getGainCardSpec, getSabotageArenaBonus, getSabotageDrawCards } from '../utils/effectFlowUtils';
+import {
+  beginHandDiscardIfNeeded,
+  beginInteractivePlayPicks,
+  finishGainCardPick,
+  gainMarketCardToPlayer,
+  galleryDestroyRefillImmediate,
+  peekPlayerDeckTop,
+  reorderDeckKeepTop,
+} from './playEffectFlow';
 import { addToDestroyedPile } from '../utils/destroyedPileUtils';
 import {
   isOpeningGamesArena,
@@ -304,6 +315,28 @@ function createMarketCards() {
   };
 }
 
+function isFirstCardPlayedThisTurn(
+  player: PlayerState,
+  sourceCardInstanceId: string
+): boolean {
+  const played = [...player.playArea, ...player.itemsInPlay];
+  return (
+    played.length === 1 && played[0].instanceId === sourceCardInstanceId
+  );
+}
+
+function filterOrEffectBranches(
+  card: CardInstance,
+  player: PlayerState
+): Record<string, unknown>[] {
+  return getOrEffectBranches(card).filter((branch) => {
+    if (branch.if_first_card_played) {
+      return isFirstCardPlayedThisTurn(player, card.instanceId);
+    }
+    return true;
+  });
+}
+
 function applyImperialTaxIfPending(
   state: GameState,
   playerIdx: number,
@@ -336,8 +369,12 @@ function applyCardPlayEffects(
     | undefined;
   const player = state.players[playerIdx];
 
-  if (!options?.skipOr && hasOrEffectChoice(card)) {
-    const branches = getOrEffectBranches(card);
+  if (
+    !options?.skipOr &&
+    hasOrEffectChoice(card) &&
+    !skipOrChoiceOnMainPlay(card)
+  ) {
+    const branches = filterOrEffectBranches(card, player);
     return {
       ...state,
       pendingOrEffectChoice: {
@@ -398,6 +435,7 @@ function applyCardPlayEffects(
     state.galleryCards.some((c) => !isGalleryCardPurchased(state, c.instanceId))
   ) {
     const defer = destroyDefersOtherEffects(card);
+    const refillNow = galleryDestroyRefillImmediate(card);
     if (defer) {
       return {
         ...state,
@@ -407,7 +445,7 @@ function applyCardPlayEffects(
           sourceCardName: card.definition.name,
           sourceCardInstanceId: card.instanceId,
           deferRemainingEffects: true,
-          refillGallery: true,
+          refillGallery: refillNow,
         },
       };
     }
@@ -464,15 +502,12 @@ function applyCardPlayEffects(
   }
   const discardCount = effects?.discard_cards ?? 0;
   const forceOpponentDiscard = effects?.force_opponent_discard ?? 0;
-  if (discardCount > 0 && forceOpponentDiscard <= 0) {
-    next = {
-      ...next,
-      pendingHandDiscard: {
-        playerId: next.players[playerIdx].id,
-        remaining: discardCount,
-        sourceCardName: card.definition.name,
-      },
-    };
+  if (
+    discardCount > 0 &&
+    forceOpponentDiscard <= 0 &&
+    !getGainCardSpec(card)
+  ) {
+    next = beginHandDiscardIfNeeded(next, playerIdx, card, false);
   }
 
   if (!options?.skipDestroy && hasDestroyHandForCoins(card) && player.hand.length > 0) {
@@ -560,9 +595,16 @@ function applyCardPlayEffects(
         sourceCardName: card.definition.name,
         sourceCardInstanceId: card.instanceId,
         deferRemainingEffects: false,
-        refillGallery: true,
+        refillGallery: galleryDestroyRefillImmediate(card),
       },
     };
+  }
+
+  next = beginInteractivePlayPicks(next, playerIdx, card, (_, id) =>
+    !isGalleryCardPurchased(next, id)
+  );
+  if (!next.pendingGainCardPick) {
+    next = beginHandDiscardIfNeeded(next, playerIdx, card, true);
   }
 
   return applyImperialTaxIfPending(next, playerIdx, coinGain);
@@ -678,9 +720,10 @@ function finishCardDestroyPick(
   return next;
 }
 
-function destroyGalleryCardAndRefill(
+function destroyGalleryCard(
   state: GameState,
-  instanceId: string
+  instanceId: string,
+  refill: boolean
 ): GameState {
   const card = state.galleryCards.find((c) => c.instanceId === instanceId);
   if (!card) return state;
@@ -697,6 +740,8 @@ function destroyGalleryCardAndRefill(
     [card]
   );
 
+  if (!refill) return next;
+
   const supply = [...(next.gallerySupply ?? [])];
   if (supply.length > 0) {
     const drawn = supply.shift()!;
@@ -710,6 +755,13 @@ function destroyGalleryCardAndRefill(
     };
   }
   return next;
+}
+
+function destroyGalleryCardAndRefill(
+  state: GameState,
+  instanceId: string
+): GameState {
+  return destroyGalleryCard(state, instanceId, true);
 }
 
 function finishGalleryDestroyPick(
@@ -809,6 +861,13 @@ function advanceForcedOpponentDiscards(state: GameState): GameState {
   const pending = state.pendingForcedOpponentDiscards;
   if (!pending) return state;
 
+  if (pending.remainingForTarget > 0) {
+    const target = state.players.find((p) => p.id === pending.targetPlayerId);
+    if (target && target.hand.length > 0) {
+      return state;
+    }
+  }
+
   let remainingTargetIds = [...pending.remainingTargetIds];
 
   while (remainingTargetIds.length > 0) {
@@ -820,6 +879,7 @@ function advanceForcedOpponentDiscards(state: GameState): GameState {
         pendingForcedOpponentDiscards: {
           ...pending,
           targetPlayerId: nextTargetId,
+          remainingForTarget: pending.perOpponent,
           remainingTargetIds,
         },
       };
@@ -832,8 +892,7 @@ function advanceForcedOpponentDiscards(state: GameState): GameState {
 function resolveForcedOpponentDiscardsForAI(
   state: GameState,
   controllerIdx: number,
-  perOpponent: number,
-  sourceCardName?: string
+  perOpponent: number
 ): GameState {
   const controller = state.players[controllerIdx];
   const opponents = state.players.filter(
@@ -870,12 +929,7 @@ function maybeBeginForcedOpponentDiscards(
   if (opponents.length === 0) return state;
 
   if (controller.isAI) {
-    return resolveForcedOpponentDiscardsForAI(
-      state,
-      playerIdx,
-      perOpponent,
-      card.definition.name
-    );
+    return resolveForcedOpponentDiscardsForAI(state, playerIdx, perOpponent);
   }
 
   const [first, ...rest] = opponents.map((p) => p.id);
@@ -884,10 +938,57 @@ function maybeBeginForcedOpponentDiscards(
     pendingForcedOpponentDiscards: {
       controllerId: controller.id,
       sourceCardName: card.definition.name,
+      perOpponent,
       targetPlayerId: first,
+      remainingForTarget: perOpponent,
       remainingTargetIds: rest,
     },
   };
+}
+
+function handleForcedOpponentSelfDiscard(
+  state: GameState,
+  pending: NonNullable<GameState['pendingForcedOpponentDiscards']>,
+  cardInstanceId: string
+): GameState {
+  let next = applyForcedOpponentDiscard(
+    state,
+    pending.targetPlayerId,
+    cardInstanceId
+  );
+  const remainingForTarget = pending.remainingForTarget - 1;
+
+  if (remainingForTarget > 0) {
+    const target = next.players.find((p) => p.id === pending.targetPlayerId);
+    if (target && target.hand.length > 0) {
+      return {
+        ...next,
+        pendingForcedOpponentDiscards: {
+          ...pending,
+          remainingForTarget,
+        },
+      };
+    }
+  }
+
+  let remainingTargetIds = [...pending.remainingTargetIds];
+  while (remainingTargetIds.length > 0) {
+    const nextTargetId = remainingTargetIds.shift()!;
+    const target = next.players.find((p) => p.id === nextTargetId);
+    if (target && target.hand.length > 0) {
+      return {
+        ...next,
+        pendingForcedOpponentDiscards: {
+          ...pending,
+          targetPlayerId: nextTargetId,
+          remainingForTarget: pending.perOpponent,
+          remainingTargetIds,
+        },
+      };
+    }
+  }
+
+  return { ...next, pendingForcedOpponentDiscards: null };
 }
 
 function isGalleryCardPurchased(state: GameState, instanceId: string): boolean {
@@ -934,6 +1035,7 @@ function activateGameFromPregame(state: GameState): GameState {
     pendingBandingBonus: null,
     turnActionHighlight: null,
     pendingGalleryEvent: null,
+    galleryEventOutcomes: null,
     pendingEventDiscards: [],
     pendingEventOptionalDiscards: null,
     pendingFavorReveal: null,
@@ -946,6 +1048,11 @@ function activateGameFromPregame(state: GameState): GameState {
     pendingOnGainDestroyPick: null,
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
+    pendingGainCardPick: null,
+    pendingCopyCardPick: null,
+    pendingDeckLookPick: null,
+    pendingGainBandingBonusPick: null,
+    arenaSabotageValorByPlayerId: {},
     pendingArenaLoss: null,
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
@@ -987,9 +1094,12 @@ export function getArenaChallengeTotalValor(state: GameState): number {
     .filter((c): c is CardInstance => c != null)
     .reduce((sum, c) => sum + (c.definition?.valor ?? 0), 0);
 
-  const hinderValor = Object.values(challenge.hinderByPlayerId)
-    .filter((c): c is CardInstance => c != null)
-    .reduce((sum, c) => sum + (c.definition?.valor ?? 0), 0);
+  const hinderValor = Object.entries(challenge.hinderByPlayerId)
+    .filter((entry): entry is [string, CardInstance] => entry[1] != null)
+    .reduce((sum, [playerId, c]) => {
+      const sabotage = state.arenaSabotageValorByPlayerId?.[playerId] ?? 0;
+      return sum + (c.definition?.valor ?? 0) + sabotage;
+    }, 0);
 
   return getArenaCommitValor(state) + supportValor - hinderValor;
 }
@@ -1065,6 +1175,7 @@ function resolveArenaChallenge(state: GameState): GameState {
         turnValor: state.turnValor,
         arenaCommitZone: [],
         arenaChallenge: null,
+        arenaSabotageValorByPlayerId: {},
         pendingArenaLoss: beginPendingArenaLoss(
           state,
           challenge.challengerId,
@@ -1120,6 +1231,7 @@ function resolveArenaChallenge(state: GameState): GameState {
     turnValor: state.turnValor + (success ? valorGain : 0),
     arenaCommitZone: [],
     arenaChallenge: null,
+    arenaSabotageValorByPlayerId: {},
     lastArenaResult: {
       success,
       totalValor,
@@ -1221,6 +1333,7 @@ export function rehydrateGameState(state: GameState): GameState {
       : null,
     pendingEventDiscards: state.pendingEventDiscards ?? [],
     pendingEventOptionalDiscards: state.pendingEventOptionalDiscards ?? null,
+    galleryEventOutcomes: state.galleryEventOutcomes ?? null,
     pendingFavorReveal: state.pendingFavorReveal
       ? {
           ...state.pendingFavorReveal,
@@ -1239,6 +1352,11 @@ export function rehydrateGameState(state: GameState): GameState {
     pendingOnGainDestroyPick: state.pendingOnGainDestroyPick ?? null,
     pendingHandDiscard: state.pendingHandDiscard ?? null,
     pendingForcedOpponentDiscards: state.pendingForcedOpponentDiscards ?? null,
+    pendingGainCardPick: state.pendingGainCardPick ?? null,
+    pendingCopyCardPick: state.pendingCopyCardPick ?? null,
+    pendingDeckLookPick: state.pendingDeckLookPick ?? null,
+    pendingGainBandingBonusPick: state.pendingGainBandingBonusPick ?? null,
+    arenaSabotageValorByPlayerId: state.arenaSabotageValorByPlayerId ?? {},
     pendingArenaLoss: state.pendingArenaLoss
       ? {
           ...state.pendingArenaLoss,
@@ -1523,6 +1641,10 @@ export function validateGameAction(
   }
 
   if (state.pendingHandDiscard?.playerId === action.playerId) {
+    if (action.type === 'END_PHASE') {
+      const handPlayer = state.players.find((p) => p.id === action.playerId);
+      if (handPlayer && handPlayer.hand.length === 0) return null;
+    }
     if (action.type === 'DISCARD_CARD') {
       if (!action.payload?.cardInstanceId) return 'Select a card to discard';
       if (!player.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
@@ -1536,6 +1658,20 @@ export function validateGameAction(
   if (state.pendingOrEffectChoice?.playerId === action.playerId) {
     if (action.type === 'CHOOSE_OR_EFFECT') {
       if (action.payload?.branchIndex == null) return 'Choose an option';
+      const pending = state.pendingOrEffectChoice;
+      const branchIndex = action.payload.branchIndex;
+      if (branchIndex > 0) {
+        const branch = pending.branches[branchIndex - 1];
+        if (!branch) return 'Invalid option';
+        const player = state.players.find((p) => p.id === action.playerId);
+        if (
+          branch.if_first_card_played &&
+          player &&
+          !isFirstCardPlayedThisTurn(player, pending.sourceCardInstanceId)
+        ) {
+          return 'First card only';
+        }
+      }
       return null;
     }
     return 'Resolve card choice first';
@@ -1608,21 +1744,52 @@ export function validateGameAction(
     return 'Choose a card to destroy';
   }
 
-  if (state.pendingForcedOpponentDiscards?.controllerId === action.playerId) {
-    if (action.type === 'FORCE_OPPONENT_DISCARD') {
+  if (state.pendingForcedOpponentDiscards?.targetPlayerId === action.playerId) {
+    if (action.type === 'DISCARD_CARD' || action.type === 'FORCE_OPPONENT_DISCARD') {
       if (!action.payload?.cardInstanceId) return 'Select a card to discard';
-      const targetId = state.pendingForcedOpponentDiscards.targetPlayerId;
-      const target = state.players.find((p) => p.id === targetId);
+      const target = state.players.find(
+        (p) => p.id === state.pendingForcedOpponentDiscards!.targetPlayerId
+      );
       if (!target?.hand.some((c) => c.instanceId === action.payload!.cardInstanceId)) {
-        return 'Card not in opponent hand';
+        return 'Card not in your hand';
       }
       return null;
     }
-    return 'Choose a card for your opponent to discard';
+    return `Discard ${state.pendingForcedOpponentDiscards.remainingForTarget} card(s)`;
   }
 
   if (state.pendingForcedOpponentDiscards) {
     return 'Waiting for forced discard';
+  }
+
+  if (state.pendingGainCardPick?.playerId === action.playerId) {
+    if (action.type === 'GAIN_CARD_PICK') {
+      if (!action.payload?.cardInstanceId) return 'Select a card to gain';
+      return null;
+    }
+    return 'Choose a card to gain';
+  }
+
+  if (state.pendingCopyCardPick?.playerId === action.playerId) {
+    if (action.type === 'COPY_CARD_PICK') return null;
+    return 'Choose a market card to copy';
+  }
+
+  if (state.pendingDeckLookPick?.playerId === action.playerId) {
+    if (action.type === 'DECK_LOOK_CHOOSE_PLAYER' && action.payload?.targetPlayerId) {
+      return null;
+    }
+    if (action.type === 'DECK_LOOK_KEEP_TOP' && action.payload?.cardInstanceId) {
+      return null;
+    }
+    return 'Resolve deck look effect';
+  }
+
+  if (state.pendingGainBandingBonusPick?.playerId === action.playerId) {
+    if (action.type === 'CHOOSE_GAIN_BANDING_BONUS' && action.payload?.bandingFaction) {
+      return null;
+    }
+    return 'Choose a faction bonus';
   }
 
   if (!canPerformAction(state.phase, action.type, state.status)) {
@@ -1833,13 +2000,25 @@ function enrichActionLog(state: GameState, action: GameAction): GameAction {
   }
 
   if (action.type === 'RESOLVE_GALLERY_EVENT' && state.pendingGalleryEvent) {
+    const outcomes = state.galleryEventOutcomes ?? [];
+    const outcomeSummary =
+      outcomes.length > 0
+        ? outcomes
+            .map(
+              (o) =>
+                `${o.playerName}: ${o.cardName} (${o.cost}c) + ${o.gratiaCount} Gratia`
+            )
+            .join('; ')
+        : undefined;
     return {
       ...action,
       payload: {
         ...action.payload,
         cardName: state.pendingGalleryEvent.definition.name,
         definitionId: state.pendingGalleryEvent.definitionId,
-        effectSummary: state.pendingGalleryEvent.definition.text,
+        effectSummary:
+          outcomeSummary ?? state.pendingGalleryEvent.definition.text,
+        eventOutcomes: outcomes.length > 0 ? outcomes : undefined,
       },
     };
   }
@@ -1860,6 +2039,107 @@ function enrichActionLog(state: GameState, action: GameAction): GameAction {
         effectSummary: card.definition.text,
       },
     };
+  }
+
+  if (action.type === 'DISCARD_CARD' && action.payload?.cardInstanceId) {
+    const discardPlayer = state.players.find((p) => p.id === action.playerId);
+    const card = discardPlayer?.hand.find(
+      (c) => c.instanceId === action.payload!.cardInstanceId
+    );
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+          effectSummary: state.pendingHandDiscard?.sourceCardName
+            ? `Discarded for ${state.pendingHandDiscard.sourceCardName}`
+            : state.pendingForcedOpponentDiscards?.sourceCardName
+              ? `Forced discard (${state.pendingForcedOpponentDiscards.sourceCardName})`
+              : undefined,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'CARD_DESTROY_PICK' && action.payload?.cardInstanceId) {
+    const pick = state.pendingCardDestroyPick;
+    const zone = action.payload.sourceZone ?? 'HAND';
+    const pool =
+      zone === 'DISCARD'
+        ? player.discard
+        : zone === 'PLAY_AREA'
+          ? player.playArea
+          : player.hand;
+    const card = pool.find((c) => c.instanceId === action.payload!.cardInstanceId);
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+          effectSummary: pick?.sourceCardName
+            ? `Destroyed for ${pick.sourceCardName}`
+            : undefined,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'GALLERY_DESTROY_PICK' && action.payload?.cardInstanceId) {
+    const card = state.galleryCards.find(
+      (c) => c.instanceId === action.payload!.cardInstanceId
+    );
+    if (card) {
+      const pick = state.pendingGalleryDestroyPick;
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+          effectSummary: pick?.sourceCardName
+            ? `Destroyed for ${pick.sourceCardName}`
+            : undefined,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'GAIN_CARD_PICK' && action.payload?.cardInstanceId) {
+    const card = findMarketCard(state, action.payload.cardInstanceId);
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+          effectSummary: state.pendingGainCardPick?.sourceCardName
+            ? `Gained for ${state.pendingGainCardPick.sourceCardName}`
+            : undefined,
+        },
+      };
+    }
+  }
+
+  if (action.type === 'COPY_CARD_PICK' && action.payload?.cardInstanceId) {
+    const card = findMarketCard(state, action.payload.cardInstanceId);
+    if (card) {
+      return {
+        ...action,
+        payload: {
+          ...action.payload,
+          cardName: card.definition.name,
+          definitionId: card.definitionId,
+          effectSummary: state.pendingCopyCardPick?.sourceCardName
+            ? `Copied for ${state.pendingCopyCardPick.sourceCardName}`
+            : undefined,
+        },
+      };
+    }
   }
 
   if (action.type === 'EVENT_DISCARD_CARD' && action.payload?.cardInstanceId) {
@@ -2053,6 +2333,7 @@ export function createPregameState(
     pendingBandingBonus: null,
     turnActionHighlight: null,
     pendingGalleryEvent: null,
+    galleryEventOutcomes: null,
     pendingEventDiscards: [],
     pendingEventOptionalDiscards: null,
     pendingFavorReveal: null,
@@ -2127,6 +2408,7 @@ export function createLobbyGameState(
     pendingBandingBonus: null,
     turnActionHighlight: null,
     pendingGalleryEvent: null,
+    galleryEventOutcomes: null,
     pendingEventDiscards: [],
     pendingEventOptionalDiscards: null,
     pendingFavorReveal: null,
@@ -2271,18 +2553,114 @@ export function processGameAction(
       if (!next.pendingForcedOpponentDiscards || !action.payload?.cardInstanceId) {
         return next;
       }
-      if (action.playerId !== next.pendingForcedOpponentDiscards.controllerId) {
+      if (action.playerId !== next.pendingForcedOpponentDiscards.targetPlayerId) {
         return next;
       }
-
-      const { targetPlayerId } = next.pendingForcedOpponentDiscards;
-      next = applyForcedOpponentDiscard(
+      return handleForcedOpponentSelfDiscard(
         next,
-        targetPlayerId,
+        next.pendingForcedOpponentDiscards,
         action.payload.cardInstanceId
       );
-      next = advanceForcedOpponentDiscards(next);
+    }
+
+    case 'GAIN_CARD_PICK': {
+      const pending = next.pendingGainCardPick;
+      if (!pending || action.playerId !== pending.playerId || !player) return next;
+      if (!action.payload?.cardInstanceId) return next;
+
+      const gained = gainMarketCardToPlayer(
+        next,
+        playerIdx,
+        action.payload.cardInstanceId,
+        (_, id) => !isGalleryCardPurchased(next, id)
+      );
+      if (!gained.gained) return next;
+      next = finishGainCardPick(gained.state, playerIdx, pending);
       return next;
+    }
+
+    case 'COPY_CARD_PICK': {
+      const pending = next.pendingCopyCardPick;
+      if (!pending || action.playerId !== pending.playerId || !player) return next;
+      if (!action.payload?.cardInstanceId) return next;
+
+      const marketCard = findMarketCard(next, action.payload.cardInstanceId);
+      if (!marketCard) return next;
+
+      const stub: CardInstance = {
+        instanceId: pending.sourceCardInstanceId ?? marketCard.instanceId,
+        definitionId: marketCard.definitionId,
+        definition: marketCard.definition,
+        location: 'PLAY_AREA',
+        ownerId: player.id,
+        faceUp: true,
+      };
+
+      next = { ...next, pendingCopyCardPick: null };
+      next = applyCardPlayEffects(next, playerIdx, stub, {
+        skipOr: true,
+        skipDestroy: true,
+      });
+      return next;
+    }
+
+    case 'DECK_LOOK_CHOOSE_PLAYER': {
+      const pending = next.pendingDeckLookPick;
+      if (!pending || action.playerId !== pending.playerId || !player) return next;
+      const targetId = action.payload?.targetPlayerId;
+      if (!targetId) return next;
+      const targetIdx = next.players.findIndex((p) => p.id === targetId);
+      if (targetIdx === -1) return next;
+      const target = next.players[targetIdx];
+      const viewed = peekPlayerDeckTop(target, pending.lookCount);
+      if (viewed.length === 0) {
+        return { ...next, pendingDeckLookPick: null };
+      }
+      if (viewed.length === 1) {
+        return { ...next, pendingDeckLookPick: null };
+      }
+      return {
+        ...next,
+        pendingDeckLookPick: {
+          ...pending,
+          phase: 'keep_top',
+          targetPlayerId: targetId,
+          viewedCards: viewed,
+        },
+      };
+    }
+
+    case 'DECK_LOOK_KEEP_TOP': {
+      const pending = next.pendingDeckLookPick;
+      if (
+        !pending ||
+        pending.phase !== 'keep_top' ||
+        action.playerId !== pending.playerId ||
+        !pending.targetPlayerId ||
+        !action.payload?.cardInstanceId
+      ) {
+        return next;
+      }
+      const targetIdx = next.players.findIndex((p) => p.id === pending.targetPlayerId);
+      if (targetIdx === -1) return next;
+      const viewed = pending.viewedCards ?? [];
+      const updated = reorderDeckKeepTop(
+        next.players[targetIdx],
+        viewed,
+        action.payload.cardInstanceId
+      );
+      next.players = [...next.players];
+      next.players[targetIdx] = updated;
+      return { ...next, pendingDeckLookPick: null };
+    }
+
+    case 'CHOOSE_GAIN_BANDING_BONUS': {
+      const pending = next.pendingGainBandingBonusPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      const faction = action.payload?.bandingFaction;
+      if (!faction) return next;
+      next = { ...next, pendingGainBandingBonusPick: null };
+      return applyBandingBonus(next, playerIdx, faction);
     }
 
     case 'RESOLVE_ARENA_LOSS': {
@@ -2406,7 +2784,11 @@ export function processGameAction(
       if (!action.payload?.cardInstanceId) return next;
       if (isGalleryCardPurchased(next, action.payload.cardInstanceId)) return next;
 
-      next = destroyGalleryCardAndRefill(next, action.payload.cardInstanceId);
+      next = destroyGalleryCard(
+        next,
+        action.payload.cardInstanceId,
+        pending.refillGallery !== false
+      );
       const remaining = pending.remaining - 1;
       if (remaining > 0) {
         return {
@@ -2471,6 +2853,12 @@ export function processGameAction(
 
       const branch = pending.branches[branchIndex - 1];
       if (!branch) return next;
+      if (
+        branch.if_first_card_played &&
+        !isFirstCardPlayedThisTurn(player, pending.sourceCardInstanceId)
+      ) {
+        return next;
+      }
       return applyBranchEffects(next, playerIdx, branch, played);
     }
 
@@ -2507,6 +2895,14 @@ export function processGameAction(
 
     case 'DISCARD_CARD': {
       if (!player || !action.payload?.cardInstanceId) return next;
+
+      if (next.pendingForcedOpponentDiscards?.targetPlayerId === action.playerId) {
+        return handleForcedOpponentSelfDiscard(
+          next,
+          next.pendingForcedOpponentDiscards,
+          action.payload.cardInstanceId
+        );
+      }
 
       if (next.pendingHandDiscard?.playerId === action.playerId) {
         const handIdx = player.hand.findIndex(
@@ -2628,6 +3024,28 @@ export function processGameAction(
         if (handIdx === -1) return next;
         const card = { ...responder.hand[handIdx] };
         responder.hand = responder.hand.filter((_, i) => i !== handIdx);
+
+        if (responseType === 'hinder') {
+          const sabotageValor = getSabotageArenaBonus(card);
+          const sabotageDraw = getSabotageDrawCards(card);
+          if (sabotageDraw > 0) {
+            const drawn = drawCardsIntoState(next, responder, sabotageDraw);
+            next = drawn.state;
+            responder = drawn.player;
+          }
+          if (sabotageValor !== 0) {
+            next = {
+              ...next,
+              arenaSabotageValorByPlayerId: {
+                ...(next.arenaSabotageValorByPlayerId ?? {}),
+                [action.playerId]:
+                  (next.arenaSabotageValorByPlayerId?.[action.playerId] ?? 0) +
+                  sabotageValor,
+              },
+            };
+          }
+        }
+
         if (responseType === 'support') {
           updatedChallenge.supportByPlayerId[action.playerId] = card;
         } else {
@@ -2734,6 +3152,7 @@ export function processGameAction(
       }
 
       next.pendingGalleryEvent = null;
+      next.galleryEventOutcomes = null;
       next = processGalleryRefill(next);
       return processFavorQueue(next);
     }
@@ -2905,10 +3324,12 @@ export function processGameAction(
       }
 
       if (isOptional && optional) {
+        next.players = [...next.players];
+        next.players[playerIdx] = player;
         next = awardOptionalEventDiscardCoins(
           next,
           action.playerId,
-          optional.coinReward
+          optional.coinReward ?? 2
         );
         next.pendingEventOptionalDiscards = {
           ...optional,
@@ -2916,8 +3337,6 @@ export function processGameAction(
             (id) => id !== action.playerId
           ),
         };
-        next.players = [...next.players];
-        next.players[playerIdx] = player;
 
         if (next.pendingEventOptionalDiscards.pendingPlayerIds.length > 0) {
           return next;
@@ -2966,6 +3385,13 @@ export function processGameAction(
 
     case 'END_PHASE': {
       if (next.phase === 'MAIN') {
+        if (
+          next.pendingHandDiscard &&
+          player &&
+          player.hand.length === 0
+        ) {
+          next = { ...next, pendingHandDiscard: null };
+        }
         return endTurnAndPass(next, playerIdx, player);
       }
       return next;
@@ -3005,6 +3431,7 @@ function finishGalleryEventPlayerResponses(state: GameState): GameState {
   let next: GameState = {
     ...state,
     pendingGalleryEvent: null,
+    galleryEventOutcomes: null,
     pendingEventDiscards: [],
     pendingEventOptionalDiscards: null,
   };
@@ -3095,6 +3522,11 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     pendingOrEffectChoice: null,
     pendingOnGainDestroyPick: null,
     pendingForcedOpponentDiscards: null,
+    pendingGainCardPick: null,
+    pendingCopyCardPick: null,
+    pendingDeckLookPick: null,
+    pendingGainBandingBonusPick: null,
+    arenaSabotageValorByPlayerId: {},
     pendingArenaLoss: null,
     deferredTurnEnd: null,
     purchaseCostCap: state.purchaseCostCap ?? null,
@@ -3105,13 +3537,27 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     lastArenaResult: null,
   };
 
-  const nextPlayer = next.players[nextPlayerIdx];
-  let turnCoins = 0;
-  let updatedPlayer = { ...nextPlayer, carryCoins: 0 };
-  const carry = nextPlayer.carryCoins ?? 0;
-  if (carry > 0) {
-    turnCoins = carry;
+  const endingIdx =
+    deferred?.endingPlayerId != null
+      ? state.players.findIndex((p) => p.id === deferred.endingPlayerId)
+      : endingPlayerIdx;
+  if (
+    endingIdx >= 0 &&
+    state.turnCoins > 0 &&
+    state.turnPlayerId === state.players[endingIdx]?.id
+  ) {
+    const endingPlayer = state.players[endingIdx];
+    next.players = [...next.players];
+    next.players[endingIdx] = {
+      ...endingPlayer,
+      carryCoins: (endingPlayer.carryCoins ?? 0) + state.turnCoins,
+    };
   }
+
+  const nextPlayer = next.players[nextPlayerIdx];
+  const carry = nextPlayer.carryCoins ?? 0;
+  let turnCoins = Math.max(0, carry);
+  let updatedPlayer = { ...nextPlayer, carryCoins: 0 };
   if (updatedPlayer.imperialTaxPending) {
     turnCoins = Math.max(0, turnCoins - 1);
     updatedPlayer = { ...updatedPlayer, imperialTaxPending: false };
@@ -3187,11 +3633,14 @@ export function buildPlayerSetupsFromDb(
   }));
 
   let seat = setups.length;
+  const humanNames = setups.map((s) => s.name);
+  const aiNames = pickAiDisplayNames(fillWithAiTo - setups.length, humanNames);
+  let aiNameIdx = 0;
   while (setups.length < fillWithAiTo && seat < MAX_PLAYERS) {
     seat += 1;
     setups.push({
       id: `player_${seat}`,
-      name: `AI ${seat}`,
+      name: aiNames[aiNameIdx++] ?? pickAiDisplayNames(1, humanNames)[0],
       isAI: true,
     });
   }
@@ -3371,14 +3820,24 @@ export function getNextAIAction(state: GameState): GameAction | null {
     const pick = state.pendingOrEffectChoice;
     const player = state.players.find((p) => p.id === pick.playerId);
     if (player?.isAI) {
+      const playerState = player;
+      const isFirstCard =
+        playerState.playArea.length + playerState.itemsInPlay.length === 1 &&
+        playerState.playArea.some(
+          (c) => c.instanceId === pick.sourceCardInstanceId
+        );
       let bestIndex = 0;
       let bestScore = pick.baseGainCoins;
       pick.branches.forEach((branch, i) => {
         const b = branch as Record<string, unknown>;
-        const score =
+        if (b.if_first_card_played && !isFirstCard) return;
+        let score =
           Number(b.gain_coins ?? 0) +
           Number(b.draw_cards ?? 0) * 2 -
           Number(b.destroy_cards ?? 0);
+        if (b.discard_hand && Number(b.draw_cards ?? 0) >= 5) {
+          score += isFirstCard ? 12 : 0;
+        }
         if (score > bestScore) {
           bestScore = score;
           bestIndex = i + 1;
@@ -3432,15 +3891,14 @@ export function getNextAIAction(state: GameState): GameAction | null {
   }
 
   if (state.pendingForcedOpponentDiscards) {
-    const { controllerId, targetPlayerId } = state.pendingForcedOpponentDiscards;
-    const controller = state.players.find((p) => p.id === controllerId);
+    const { targetPlayerId } = state.pendingForcedOpponentDiscards;
     const target = state.players.find((p) => p.id === targetPlayerId);
-    if (controller?.isAI && target && target.hand.length > 0) {
+    if (target?.isAI && target.hand.length > 0) {
       const card = pickForcedDiscardCard(target.hand);
       if (card) {
         return {
-          type: 'FORCE_OPPONENT_DISCARD',
-          playerId: controllerId,
+          type: 'DISCARD_CARD',
+          playerId: targetPlayerId,
           payload: { cardInstanceId: card.instanceId },
           timestamp: Date.now(),
         };
@@ -3685,7 +4143,8 @@ export function getNextAIAction(state: GameState): GameAction | null {
         const card = pickAICardToPlayFirst(
           current.hand,
           current.playArea,
-          claimed
+          claimed,
+          state.turnNumber
         );
         const payload: GameAction['payload'] = {
           cardInstanceId: card.instanceId,
@@ -3737,7 +4196,8 @@ export function getNextAIAction(state: GameState): GameAction | null {
           const card = pickAICardToPlayFirst(
             current.hand,
             current.playArea,
-            claimed
+            claimed,
+            state.turnNumber
           );
           const payload: GameAction['payload'] = {
             cardInstanceId: card.instanceId,

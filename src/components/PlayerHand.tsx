@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Pressable, Text } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
+import type { ViewStyle } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { BandingFaction } from '../types/gameTypes';
 import { calculateHandFanAngle } from '../utils/dragHelpers';
@@ -22,6 +24,8 @@ interface PlayerHandProps {
   playArea?: CardInstance[];
   claimedBandingFactions?: BandingFaction[];
   showBandingKey?: boolean;
+  /** Applied only to the card row — faction key / charity btn stay fixed. */
+  cardsContainerStyle?: AnimatedStyle<ViewStyle>;
   /** @deprecated pass cardWidth/cardHeight from board layout */
   compact?: boolean;
 }
@@ -40,6 +44,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   playArea = [],
   claimedBandingFactions = [],
   showBandingKey = false,
+  cardsContainerStyle,
   compact = false,
 }) => {
   const cardWidth = cardWidthProp ?? (compact ? 72 : 95);
@@ -48,12 +53,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   return (
     <View style={styles.handHost}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.container}
-      >
+      <Animated.View style={[styles.cardsWrap, cardsContainerStyle]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          style={styles.container}
+        >
         {cards.map((card, index) => {
           const angle = calculateHandFanAngle(index, cards.length, 8);
           const yOffset = Math.abs(angle) * 0.8;
@@ -88,7 +94,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             </View>
           );
         })}
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
 
       {showBandingKey ? (
         <TutorialTarget targetKey="tutorial_faction_key" style={styles.bandingOverlay}>
@@ -109,7 +116,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           ]}
           onPress={onPlayAllCharity}
         >
-          <Text style={styles.playAllCharityText}>Play All Charity</Text>
+          <Text style={styles.playAllCharityText}>Play All Coins</Text>
         </Pressable>
       ) : null}
     </View>
@@ -123,6 +130,11 @@ const styles = StyleSheet.create({
     minHeight: 0,
     minWidth: 0,
     overflow: 'visible',
+  },
+  cardsWrap: {
+    flex: 1,
+    minHeight: 0,
+    minWidth: 0,
   },
   container: {
     flex: 1,

@@ -9,6 +9,7 @@ import { Provider as JotaiProvider } from 'jotai';
 import { MultiplayerProvider } from '../network/MultiplayerProvider';
 import { TutorialProvider } from '../context/TutorialContext';
 import AppShell from './AppShell';
+import { WebAppUpdateBanner } from '../components/WebAppUpdateBanner';
 
 export const GameScreen: React.FC = () => {
   return (
@@ -18,6 +19,7 @@ export const GameScreen: React.FC = () => {
           <MultiplayerProvider>
             <TutorialProvider>
               <View style={styles.container}>
+                <WebAppUpdateBanner />
                 <AppShell />
               </View>
             </TutorialProvider>

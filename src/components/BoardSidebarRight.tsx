@@ -43,6 +43,8 @@ interface BoardSidebarRightProps {
   readyCount: number;
   totalPlayers: number;
   mainPhaseButtonLabel?: string;
+  /** Shown under coin stat when coins are banked for a future turn */
+  coinsHint?: string;
   onEndPhase: () => void;
   onPlayerReady?: () => void;
   onPreviewLogCard?: (card: CardInstance) => void;
@@ -68,6 +70,7 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   readyCount,
   totalPlayers,
   mainPhaseButtonLabel,
+  coinsHint,
   onEndPhase,
   onPreviewLogCard,
 }) => {
@@ -106,6 +109,9 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
               <StatBadge icon={valorIcon} value={valorInPlay} size={iconSize} gapAfter />
               <StatBadge icon={victoryIcon} value={victoryPoints} size={iconSize} />
             </View>
+            {coinsHint ? (
+              <Text style={styles.coinsHint}>{coinsHint}</Text>
+            ) : null}
           </TutorialTarget>
         ) : null}
 
@@ -197,6 +203,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  coinsHint: {
+    color: 'rgba(241,196,15,0.65)',
+    fontSize: 8,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: -4,
+    marginBottom: 4,
   },
   statsRow: {
     flexDirection: 'row',

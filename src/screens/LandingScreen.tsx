@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,12 @@ import { MAX_PLAYERS, MIN_PLAYERS } from '../game/GameEngine';
 import { gameLogo, homeBackground } from '../assets/images';
 import { FullBleedBackground } from '../components/FullBleedBackground';
 import RulesModal from '../components/RulesModal';
+import BuildLabel from '../components/BuildLabel';
+import {
+  getSavedGameSession,
+  getStoredNickname,
+  setStoredNickname,
+} from '../utils/playerStorage';
 
 export const LandingScreen: React.FC = () => {
   const {
@@ -31,6 +37,13 @@ export const LandingScreen: React.FC = () => {
   const [joinCode, setJoinCode] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [rulesOpen, setRulesOpen] = useState(false);
+
+  useEffect(() => {
+    const storedName = getStoredNickname();
+    if (storedName) setNickname(storedName);
+    const saved = getSavedGameSession();
+    if (saved?.joinCode) setJoinCode(saved.joinCode);
+  }, []);
 
   const name = nickname.trim() || 'Gladiator';
   const canSubmit = !loading && name.length > 0;
@@ -59,7 +72,10 @@ export const LandingScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             value={nickname}
-            onChangeText={setNickname}
+            onChangeText={(text) => {
+              setNickname(text);
+              if (text.trim()) setStoredNickname(text);
+            }}
             placeholder="Enter your name"
             placeholderTextColor="rgba(255,255,255,0.3)"
             autoCapitalize="words"
@@ -95,7 +111,10 @@ export const LandingScreen: React.FC = () => {
           <Pressable
             style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit || !onlineReady}
-            onPress={() => createGame(name, maxPlayers)}
+            onPress={() => {
+              setStoredNickname(name);
+              createGame(name, maxPlayers);
+            }}
           >
             {loading ? (
               <ActivityIndicator color="#1a1a28" />
@@ -119,7 +138,10 @@ export const LandingScreen: React.FC = () => {
           <Pressable
             style={[styles.secondaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit || !onlineReady || joinCode.trim().length < 4}
-            onPress={() => joinGame(joinCode, name)}
+            onPress={() => {
+              setStoredNickname(name);
+              joinGame(joinCode, name);
+            }}
           >
             <Text style={styles.secondaryBtnText}>Join Game</Text>
           </Pressable>
@@ -135,6 +157,8 @@ export const LandingScreen: React.FC = () => {
           <Pressable style={styles.rulesBtn} onPress={() => setRulesOpen(true)}>
             <Text style={styles.rulesBtnText}>Rules of the Game</Text>
           </Pressable>
+
+          <BuildLabel style={styles.buildLabel} />
         </View>
       </ScrollView>
       <RulesModal visible={rulesOpen} onClose={() => setRulesOpen(false)} />
@@ -282,6 +306,9 @@ const styles = StyleSheet.create({
     color: 'rgba(241,196,15,0.85)',
     fontSize: 13,
     fontWeight: '700',
+  },
+  buildLabel: {
+    marginTop: 8,
   },
   btnDisabled: {
     opacity: 0.45,

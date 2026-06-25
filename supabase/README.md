@@ -8,12 +8,17 @@ In Supabase Dashboard → **SQL Editor** → New query, paste and run:
 
 `supabase/migrations/001_initial_schema.sql`
 
+Then run (in order):
+
+- `supabase/migrations/002_rejoin_game.sql` — reclaim seat by `session_id` / player id on rejoin
+- `supabase/migrations/003_single_game_per_session.sql` — one game per session, `resume_session` RPC, purge stale seats on create/join
+
 This creates:
 
 - `games` — lobby/active state, JSON game state, optimistic `version`
 - `game_players` — up to 6 seats (`player_1` … `player_6`), AI flag
 - `game_actions` — action audit log
-- RPCs: `create_game`, `join_game`, `sync_game_state`
+- RPCs: `create_game`, `join_game`, `sync_game_state`, `resume_session`
 - Realtime on `games` + `game_players`
 - Open RLS policies for prototype (tighten before production)
 
@@ -36,7 +41,11 @@ EXPO_PUBLIC_PLAYER_NAME=You
 
 Restart Expo after changing `.env`.
 
-## 4. Multiplayer flow
+## 4. Web build version
+
+`npm run web` / `npm run build:web` runs `scripts/generate-build-info.js`, which writes git commit SHA into the landing menu and polls `/build-meta.json` for update banners on web.
+
+## 5. Multiplayer flow
 
 1. **Landing** — nickname, optional join code, create/join/practice
 2. **Lobby** — share join code, host sets table size (2–6), empty seats = AI at start
@@ -49,7 +58,7 @@ Restart Expo after changing `.env`.
 | Practice vs AI | Offline 6-player table, no Supabase |
 | Host Start | Fills empty seats with AI, syncs to all clients via Realtime |
 
-## 5. Turn flow (Echoside-style)
+## 6. Turn flow (Echoside-style)
 
 1. **Draw** — end phase auto-draws 5, then Main  
 2. **Main** — play cards from hand  

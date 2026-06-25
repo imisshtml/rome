@@ -12,20 +12,17 @@ import {
   MAX_PLAYERS,
 } from '../game/GameEngine';
 
-const DEFAULT_PLAYER_NAMES = [
-  'You',
-  'Opponent 1',
-  'Opponent 2',
-  'Opponent 3',
-  'Opponent 4',
-  'Opponent 5',
-];
+import { pickAiDisplayNames } from '../utils/aiPlayerNames';
 
-const defaultSetups = DEFAULT_PLAYER_NAMES.slice(0, MAX_PLAYERS).map((name, i) => ({
-  id: `player_${i + 1}`,
-  name,
-  isAI: i > 0,
-}));
+const aiDefaultNames = pickAiDisplayNames(MAX_PLAYERS - 1, ['You']);
+const defaultSetups = [
+  { id: 'player_1', name: 'You', isAI: false },
+  ...aiDefaultNames.map((name, i) => ({
+    id: `player_${i + 2}`,
+    name,
+    isAI: true,
+  })),
+];
 
 const gameStateAtom = atom<GameState>(
   createLobbyGameState('local', [])

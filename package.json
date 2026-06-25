@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "postinstall": "node scripts/generate-build-info.js",
+    "build-info": "node scripts/generate-build-info.js",
+    "prestart": "node scripts/generate-build-info.js",
+    "preweb": "node scripts/generate-build-info.js",
+    "prebuild:web": "node scripts/generate-build-info.js",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:web": "expo export -p web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",

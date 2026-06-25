@@ -21,13 +21,19 @@ export const OrEffectChoiceModal: React.FC<OrEffectChoiceModalProps> = ({
       <View style={styles.panel}>
         <Text style={styles.title}>Choose One</Text>
         <Text style={styles.subtitle}>{cardName}</Text>
-        <Pressable style={styles.optionBtn} onPress={() => onChoose(0)}>
-          <Text style={styles.optionText}>
-            +{baseGainCoins} Coin{baseGainCoins === 1 ? '' : 's'}
-          </Text>
-        </Pressable>
+        {baseGainCoins > 0 ? (
+          <Pressable style={styles.optionBtn} onPress={() => onChoose(0)}>
+            <Text style={styles.optionText}>
+              +{baseGainCoins} Coin{baseGainCoins === 1 ? '' : 's'}
+            </Text>
+          </Pressable>
+        ) : null}
         {branchLabels.map((label, i) => (
-          <Pressable key={i} style={styles.optionBtn} onPress={() => onChoose(i + 1)}>
+          <Pressable
+            key={i}
+            style={styles.optionBtn}
+            onPress={() => onChoose(baseGainCoins > 0 ? i + 1 : i)}
+          >
             <Text style={styles.optionText}>{label}</Text>
           </Pressable>
         ))}

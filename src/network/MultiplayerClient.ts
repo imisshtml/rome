@@ -4,6 +4,7 @@ import {
   LobbyInfo,
   createOnlineGame,
   joinOnlineGame,
+  resumeOnlineGame,
   isOnlineModeAvailable,
 } from './GameSyncService';
 import { GameAction, GameState } from '../types/gameTypes';
@@ -14,14 +15,16 @@ import {
   rehydrateGameState,
 } from '../game/GameEngine';
 import { readGameStateSnapshot } from '../store/useGameStore';
+import { getOrCreateSessionId } from '../utils/playerStorage';
+import { pickOneAiDisplayName } from '../utils/aiPlayerNames';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 export type { GameSession, LobbyInfo };
-export { createOnlineGame, joinOnlineGame, isOnlineModeAvailable };
+export { createOnlineGame, joinOnlineGame, resumeOnlineGame, isOnlineModeAvailable };
 
 function randomSessionId() {
-  return `sess_${Math.random().toString(36).slice(2, 10)}`;
+  return getOrCreateSessionId();
 }
 
 function resolvePregameAI(state: GameState): GameState {
@@ -86,8 +89,19 @@ export class MultiplayerGameClient {
     return session;
   }
 
-  async joinGame(joinCode: string, displayName: string): Promise<GameSession> {
-    const session = await joinOnlineGame(joinCode, displayName, this.sessionId);
+  async joinGame(joinCode: string, displayName: string, reclaimPlayerId?: string): Promise<GameSession> {
+    const session = await joinOnlineGame(
+      joinCode,
+      displayName,
+      this.sessionId,
+      reclaimPlayerId
+    );
+    await this.connectOnline(session);
+    return session;
+  }
+
+  async resumeGame(displayName?: string): Promise<GameSession> {
+    const session = await resumeOnlineGame(this.sessionId, displayName);
     await this.connectOnline(session);
     return session;
   }
@@ -104,7 +118,11 @@ export class MultiplayerGameClient {
 
     const setups = [
       { id: 'player_1', name: displayName, isAI: false },
-      { id: 'player_2', name: 'AI', isAI: true },
+      {
+        id: 'player_2',
+        name: pickOneAiDisplayName([displayName]),
+        isAI: true,
+      },
     ];
     const state = createPregameState(setups, 'local');
     this.pushState(state);
@@ -234,6 +252,5 @@ export class MultiplayerGameClient {
     this.sync.disconnect();
     this.session = null;
     this.status = 'disconnected';
-    this.sessionId = randomSessionId();
   }
 }

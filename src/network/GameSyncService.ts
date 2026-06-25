@@ -368,40 +368,61 @@ export async function createOnlineGame(
     join_code: string;
     player_key: string;
     player_id: string;
+    is_host?: boolean;
   };
   return {
     gameId: row.game_id,
     joinCode: row.join_code,
     playerKey: row.player_key,
     playerId: row.player_id,
-    isHost: true,
+    isHost: row.is_host ?? row.player_key === 'player_1',
   };
 }
 
 export async function joinOnlineGame(
   joinCode: string,
   displayName: string,
-  sessionId?: string
+  sessionId?: string,
+  reclaimPlayerId?: string
 ): Promise<GameSession> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('join_game', {
     p_join_code: joinCode.toUpperCase(),
     p_display_name: displayName,
     p_session_id: sessionId ?? null,
+    p_reclaim_player_id: reclaimPlayerId ?? null,
   });
   if (error) throw new Error(error.message);
+  return parseSessionRpcRow(data);
+}
+
+export async function resumeOnlineGame(
+  sessionId: string,
+  displayName?: string
+): Promise<GameSession> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('resume_session', {
+    p_session_id: sessionId,
+    p_display_name: displayName ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return parseSessionRpcRow(data);
+}
+
+function parseSessionRpcRow(data: unknown): GameSession {
   const row = data as {
     game_id: string;
     join_code: string;
     player_key: string;
     player_id: string;
+    is_host?: boolean;
   };
   return {
     gameId: row.game_id,
     joinCode: row.join_code,
     playerKey: row.player_key,
     playerId: row.player_id,
-    isHost: false,
+    isHost: row.is_host ?? false,
   };
 }
 

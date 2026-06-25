@@ -40,6 +40,21 @@ export function summarizeCardBuyEffect(definition: CardDefinition): string {
   return cost > 0 ? `${cost} coin${cost === 1 ? '' : 's'}` : 'free';
 }
 
+/** Build a preview card from a gallery event outcome line. */
+export function getLogPreviewCardFromOutcome(
+  outcome: { definitionId: string; cardInstanceId: string; playerId: string }
+): CardInstance | null {
+  const definition = getCardDefinition(outcome.definitionId);
+  return {
+    instanceId: outcome.cardInstanceId,
+    definitionId: definition.id,
+    definition,
+    location: 'DISCARD',
+    ownerId: outcome.playerId,
+    faceUp: true,
+  };
+}
+
 /** Build a preview card from a logged action (for game log card links). */
 export function getLogPreviewCard(action: GameAction): CardInstance | null {
   const definitionId = action.payload?.definitionId;

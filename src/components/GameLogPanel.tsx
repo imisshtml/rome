@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
-import { getLogPreviewCard } from '../utils/cardLogUtils';
+import { getLogPreviewCard, getLogPreviewCardFromOutcome } from '../utils/cardLogUtils';
+import { GalleryEventPlayerOutcome } from '../types/gameTypes';
 
 const MAX_VISIBLE_LOG_LINES = 48;
 
@@ -70,6 +71,36 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
       );
     case 'RESOLVE_GALLERY_EVENT':
       if (cardName) {
+        const outcomes = action.payload?.eventOutcomes ?? [];
+        if (outcomes.length > 0) {
+          return (
+            <View style={styles.outcomeBlock}>
+              <Text style={styles.line} numberOfLines={2}>
+                Event:{' '}
+                <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+              </Text>
+              {outcomes.map((outcome: GalleryEventPlayerOutcome) => {
+                const preview = getLogPreviewCardFromOutcome(outcome);
+                return (
+                  <Text key={outcome.cardInstanceId} style={styles.subLine} numberOfLines={2}>
+                    {outcome.playerName} gained{' '}
+                    {preview && onPreviewCard ? (
+                      <Text
+                        style={styles.cardLink}
+                        onPress={() => onPreviewCard(preview)}
+                      >
+                        {outcome.cardName}
+                      </Text>
+                    ) : (
+                      outcome.cardName
+                    )}{' '}
+                    ({outcome.cost}c) + {outcome.gratiaCount} Gratia
+                  </Text>
+                );
+              })}
+            </View>
+          );
+        }
         return (
           <Text style={styles.line} numberOfLines={3}>
             Event:{' '}
@@ -185,7 +216,51 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
     case 'DISCARD_CARD':
       return (
         <Text style={styles.line} numberOfLines={2}>
-          {playerName} discarded a card
+          {playerName} discarded{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}
+          {effect ? ` (${effect})` : ''}
+        </Text>
+      );
+    case 'CARD_DESTROY_PICK':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} destroyed{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}
+          {effect ? ` (${effect})` : ''}
+        </Text>
+      );
+    case 'GALLERY_DESTROY_PICK':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName} destroyed{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a market card'
+          )}
+          {effect ? ` (${effect})` : ''}
+        </Text>
+      );
+    case 'GAIN_CARD_PICK':
+    case 'COPY_CARD_PICK':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName}{' '}
+          {action.type === 'COPY_CARD_PICK' ? 'copied' : 'gained'}{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}
+          {effect ? ` (${effect})` : ''}
         </Text>
       );
     case 'END_PHASE':
@@ -313,6 +388,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.72)',
     fontSize: 9,
     lineHeight: 13,
+  },
+  outcomeBlock: {
+    gap: 2,
+  },
+  subLine: {
+    color: 'rgba(255,255,255,0.58)',
+    fontSize: 8,
+    lineHeight: 12,
+    paddingLeft: 6,
   },
   cardLink: {
     color: '#f1c40f',

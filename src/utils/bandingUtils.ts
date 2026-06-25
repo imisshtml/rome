@@ -66,6 +66,17 @@ function phaseBandingPreference(faction: BandingFaction, turnNumber: number): nu
   return 38;
 }
 
+function countBandingFactionInHand(
+  hand: CardInstance[],
+  faction: BandingFaction
+): number {
+  return hand.filter((c) => {
+    if (requiresFactionChoiceOnPlay(c.definition)) return false;
+    const f = getCardEffectiveFaction(c);
+    return f === faction;
+  }).length;
+}
+
 function spyChosenFactionInPlay(playArea: CardInstance[]): BandingFaction | null {
   const chosen = playArea
     .filter(
@@ -109,20 +120,23 @@ export function chooseSpyFactionForAI(
     if (claimedFactions.includes(faction)) continue;
 
     const inPlay = countBandingFactionInPlayArea(playArea, faction);
+    const inHand = countBandingFactionInHand(hand, faction);
     const afterThisSpy = inPlay + 1;
-    const potentialThisTurn = inPlay + spyCount;
+    const potentialThisTurn = inPlay + inHand + spyCount;
 
     let score = phaseBandingPreference(faction, turnNumber);
 
-    if (afterThisSpy >= 3) {
+    if (potentialThisTurn >= 3) {
+      score += 1200 + inPlay * 30 + inHand * 40;
+    } else if (afterThisSpy >= 3) {
       score += 1000;
-    } else if (potentialThisTurn >= 3) {
-      score += 400 + inPlay * 20;
+    } else if (inPlay + inHand >= 2 && spyCount > 0) {
+      score += 550 + (inPlay + inHand) * 35;
     } else if (afterThisSpy === 2) {
       score += 250;
     }
 
-    score += inPlay * 40;
+    score += inPlay * 40 + inHand * 55;
 
     if (score > bestScore) {
       bestScore = score;
@@ -133,21 +147,47 @@ export function chooseSpyFactionForAI(
   return bestFaction;
 }
 
-/** Prefer playing Spies first when a banding line is reachable this turn. */
+/** Prefer matching faction cards before Spies when a triple is reachable. */
 export function pickAICardToPlayFirst(
   hand: CardInstance[],
   playArea: CardInstance[],
-  claimedFactions: BandingFaction[]
+  claimedFactions: BandingFaction[],
+  turnNumber: number
 ): CardInstance {
   if (hand.length === 0) throw new Error('pickAICardToPlayFirst: empty hand');
 
   const spies = hand.filter((c) => requiresFactionChoiceOnPlay(c.definition));
+  const committed = spyChosenFactionInPlay(playArea);
+
+  const targetFaction =
+    committed && !claimedFactions.includes(committed)
+      ? committed
+      : spies.length > 0
+        ? chooseSpyFactionForAI(playArea, hand, claimedFactions, turnNumber)
+        : null;
+
+  if (targetFaction && !claimedFactions.includes(targetFaction)) {
+    const matching = hand.filter(
+      (c) =>
+        !requiresFactionChoiceOnPlay(c.definition) &&
+        getCardEffectiveFaction(c) === targetFaction
+    );
+    const inPlay = countBandingFactionInPlayArea(playArea, targetFaction);
+    if (matching.length > 0 && inPlay + matching.length + spies.length >= 3) {
+      return matching[0];
+    }
+    if (spies.length > 0 && (inPlay >= 2 || inPlay + spies.length >= 3)) {
+      return spies[0];
+    }
+  }
+
   if (spies.length === 0) return hand[0];
 
   const shouldStackSpies = BANDING_FACTIONS.some((faction) => {
     if (claimedFactions.includes(faction)) return false;
     const inPlay = countBandingFactionInPlayArea(playArea, faction);
-    return inPlay >= 2 || inPlay + spies.length >= 3;
+    const inHand = countBandingFactionInHand(hand, faction);
+    return inPlay + inHand + spies.length >= 3 || inPlay >= 2;
   });
 
   if (shouldStackSpies || spies.length >= 2) {

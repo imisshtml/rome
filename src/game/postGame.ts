@@ -1,5 +1,9 @@
 import { CardInstance } from '../types/cardTypes';
 import { GameState, PlayerState } from '../types/gameTypes';
+import {
+  countFactionCardsInDeck,
+  getDeckVpPerFactionPassive,
+} from '../utils/effectFlowUtils';
 
 export interface PostGameCardRow {
   definitionId: string;
@@ -64,11 +68,24 @@ export function buildCardVpBreakdown(cards: CardInstance[]): PostGameCardRow[] {
   );
 }
 
+export function getScalingPassiveVp(cards: CardInstance[]): number {
+  let total = 0;
+  for (const card of cards) {
+    const spec = getDeckVpPerFactionPassive(card);
+    if (!spec) continue;
+    const matches = countFactionCardsInDeck(cards, spec.faction);
+    total += matches * spec.per;
+  }
+  return total;
+}
+
 export function getDeckVpFromCards(player: PlayerState): number {
-  return getAllPlayerCards(player).reduce(
+  const cards = getAllPlayerCards(player);
+  const baseVp = cards.reduce(
     (sum, card) => sum + (card.definition?.victoryPoints ?? 0),
     0
   );
+  return baseVp + getScalingPassiveVp(cards);
 }
 
 /** Arena and other VP tracked on player.victoryPoints during play. */
@@ -81,7 +98,7 @@ export function buildPostGameSummary(state: GameState): PostGameSummary {
     .map((player) => {
       const cards = getAllPlayerCards(player);
       const cardRows = buildCardVpBreakdown(cards);
-      const deckVp = cardRows.reduce((sum, row) => sum + row.vpTotal, 0);
+      const deckVp = getDeckVpFromCards(player);
       const bonusVp = player.victoryPoints;
 
       return {

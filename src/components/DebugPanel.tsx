@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  Modal,
+  useWindowDimensions,
+} from 'react-native';
 import {
   useGameState,
   useDebugVisible,
@@ -14,6 +22,8 @@ import { useTutorialOptional } from '../context/TutorialContext';
 import { resetTutorialCompleted } from '../tutorial/tutorialStorage';
 import { PHASE_LABELS } from '../types/gameTypes';
 import { getPlayerTotalVp } from '../game/postGame';
+import { copyToClipboard } from '../utils/copyToClipboard';
+import BuildLabel from './BuildLabel';
 
 export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
   inOpponentsBar = false,
@@ -27,144 +37,183 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
   const dispatch = useDispatchAction();
   const { joinCode, isOnline, startGame, session } = useMultiplayer();
   const tutorial = useTutorialOptional();
+  const { width: screenW, height: screenH } = useWindowDimensions();
 
   const currentPlayer = state.players.find(
     (p) => p.id === state.turnPlayerId
   );
 
+  const displayJoinCode = joinCode || mpMeta.joinCode || '—';
+  const panelW = Math.min(360, screenW - 32);
+  const panelMaxH = Math.min(560, screenH * 0.88);
+
+  const handleCopyCode = async () => {
+    if (displayJoinCode === '—') return;
+    await copyToClipboard(displayJoinCode);
+  };
+
   return (
-    <View style={inOpponentsBar ? styles.opponentsAnchor : styles.wrapper}>
-      <Pressable
-        style={styles.toggleBtn}
-        onPress={() => setVisible(!visible)}
-      >
-        <Text style={styles.toggleText}>
-          {visible ? '✕' : '⚙'}
-        </Text>
-      </Pressable>
-
-      {visible && (
-        <ScrollView
-          style={[
-            styles.panel,
-            inOpponentsBar ? styles.panelInOpponentsBar : null,
-          ]}
-          nestedScrollEnabled
+    <>
+      <View style={inOpponentsBar ? styles.opponentsAnchor : styles.wrapper}>
+        <Pressable
+          style={styles.toggleBtn}
+          onPress={() => setVisible(!visible)}
         >
-          <Text style={styles.header}>Debug</Text>
+          <Text style={styles.toggleText}>{visible ? '✕' : '⚙'}</Text>
+        </Pressable>
+      </View>
 
-          <View style={styles.section}>
-            <Row label="Online" value={isOnline ? 'Yes' : 'Local'} />
-            <Row label="Join Code" value={joinCode || mpMeta.joinCode || '—'} highlight />
-            <Row label="You" value={localPlayerKey} />
-            <Row label="Game" value={state.status ?? 'active'} />
-            {mpMeta.error ? (
-              <Text style={styles.errorText}>{mpMeta.error}</Text>
-            ) : null}
-            {session?.isHost && session.gameId !== 'local' && state.status === 'lobby' ? (
-              <Pressable style={styles.startBtn} onPress={() => startGame()}>
-                <Text style={styles.startBtnText}>Start Game</Text>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={[styles.panel, { width: panelW, maxHeight: panelMaxH }]}>
+            <View style={styles.headerRow}>
+              <Text style={styles.header}>Debug</Text>
+              <Pressable onPress={() => setVisible(false)} hitSlop={12}>
+                <Text style={styles.closeText}>✕</Text>
               </Pressable>
-            ) : null}
-            {state.status === 'active' ? (
-              <Pressable
-                style={styles.endBtn}
-                onPress={() =>
-                  dispatch({
-                    type: 'END_GAME',
-                    playerId: localPlayerKey,
-                    timestamp: Date.now(),
-                  })
-                }
-              >
-                <Text style={styles.endBtnText}>End Game (scores)</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.section}>
-            <Row label="Turn" value={`${state.turnNumber}`} />
-            <Row label="Phase" value={PHASE_LABELS[state.phase]} highlight />
-            <Row label="Current" value={currentPlayer?.name ?? 'N/A'} />
-            <Row label="Arena Valor" value={`${arenaValor} ⚔`} />
-            <Row
-              label="Cards in Play"
-              value={`${currentPlayer?.playArea.length ?? 0}`}
-            />
-            <Row
-              label="Commit Zone"
-              value={`${state.arenaCommitZone.length} cards`}
-            />
-          </View>
-
-          <View style={styles.divider} />
-          <Text style={styles.subHeader}>Players</Text>
-          {state.players.map((p) => (
-            <View key={p.id} style={styles.playerBlock}>
-              <Text style={styles.playerName}>
-                {p.name} {p.id === state.turnPlayerId ? '⚔' : ''}
-              </Text>
-              <View style={styles.playerStats}>
-                <MiniStat label="VP" value={getPlayerTotalVp(p)} />
-                <MiniStat label="H" value={p.hand.length} />
-                <MiniStat label="D" value={p.deck.length} />
-                <MiniStat label="X" value={p.discard.length} />
-                <MiniStat label="P" value={p.playArea.length} />
-              </View>
             </View>
-          ))}
 
-          <View style={styles.divider} />
-          <Text style={styles.subHeader}>Zones</Text>
-          <Row label="Gallery row" value={`${state.galleryCards.length}`} />
-          <Row label="Gallery deck" value={`${state.gallerySupply?.length ?? 0}`} />
-          <Row
-            label="Recruit"
-            value={
-              state.recruitCard
-                ? `${state.recruitCard.definition.name} (+${state.recruitDeck?.length ?? 0})`
-                : 'Empty'
-            }
-          />
-          <Row
-            label="Arena"
-            value={state.arenaCard?.definition.name ?? 'None'}
-          />
-          <Row label="Arena Deck" value={`${state.arenaDeck.length}`} />
-          <Row label="Epic" value={`${state.epicCards.length}`} />
-          <Row label="Favor" value={`${state.flavorDeck.length}`} />
-          <Row label="Disfavor" value={`${state.disfavorDeck.length}`} />
-
-          <View style={styles.divider} />
-          <Text style={styles.subHeader}>
-            Log ({state.actionLog.length})
-          </Text>
-          {state.actionLog.slice(-8).map((a, i) => (
-            <Text key={i} style={styles.logEntry}>
-              {a.type} → {a.playerId}
-            </Text>
-          ))}
-
-          {tutorial ? (
-            <Pressable
-              style={styles.resetBtn}
-              onPress={() => {
-                resetTutorialCompleted();
-                tutorial.startTutorial();
-              }}
-            >
-              <Text style={styles.resetText}>Replay Tutorial</Text>
+            <Pressable style={styles.codeHero} onPress={handleCopyCode}>
+              <Text style={styles.codeHeroLabel}>Game / Join Code</Text>
+              <Text style={styles.codeHeroValue} selectable>
+                {displayJoinCode}
+              </Text>
+              {displayJoinCode !== '—' ? (
+                <Text style={styles.codeHeroHint}>Tap to copy</Text>
+              ) : null}
             </Pressable>
-          ) : null}
 
-          <Pressable style={styles.resetBtn} onPress={() => resetGame()}>
-            <Text style={styles.resetText}>Reset Game</Text>
-          </Pressable>
-        </ScrollView>
-      )}
-    </View>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+            >
+              <View style={styles.section}>
+                <Row label="Online" value={isOnline ? 'Yes' : 'Local'} />
+                <Row label="You" value={localPlayerKey} />
+                <Row label="Game" value={state.status ?? 'active'} />
+                {mpMeta.error ? (
+                  <Text style={styles.errorText}>{mpMeta.error}</Text>
+                ) : null}
+                {session?.isHost &&
+                session.gameId !== 'local' &&
+                state.status === 'lobby' ? (
+                  <Pressable style={styles.startBtn} onPress={() => startGame()}>
+                    <Text style={styles.startBtnText}>Start Game</Text>
+                  </Pressable>
+                ) : null}
+                {state.status === 'active' ? (
+                  <Pressable
+                    style={styles.endBtn}
+                    onPress={() =>
+                      dispatch({
+                        type: 'END_GAME',
+                        playerId: localPlayerKey,
+                        timestamp: Date.now(),
+                      })
+                    }
+                  >
+                    <Text style={styles.endBtnText}>End Game (scores)</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.section}>
+                <Row label="Turn" value={`${state.turnNumber}`} />
+                <Row label="Phase" value={PHASE_LABELS[state.phase]} highlight />
+                <Row label="Current" value={currentPlayer?.name ?? 'N/A'} />
+                <Row label="Arena Valor" value={`${arenaValor} ⚔`} />
+                <Row
+                  label="Cards in Play"
+                  value={`${currentPlayer?.playArea.length ?? 0}`}
+                />
+                <Row
+                  label="Commit Zone"
+                  value={`${state.arenaCommitZone.length} cards`}
+                />
+              </View>
+
+              <View style={styles.divider} />
+              <Text style={styles.subHeader}>Players</Text>
+              {state.players.map((p) => (
+                <View key={p.id} style={styles.playerBlock}>
+                  <Text style={styles.playerName}>
+                    {p.name} {p.id === state.turnPlayerId ? '⚔' : ''}
+                  </Text>
+                  <View style={styles.playerStats}>
+                    <MiniStat label="VP" value={getPlayerTotalVp(p)} />
+                    <MiniStat label="H" value={p.hand.length} />
+                    <MiniStat label="D" value={p.deck.length} />
+                    <MiniStat label="X" value={p.discard.length} />
+                    <MiniStat label="P" value={p.playArea.length} />
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.divider} />
+              <Text style={styles.subHeader}>Zones</Text>
+              <Row label="Gallery row" value={`${state.galleryCards.length}`} />
+              <Row
+                label="Gallery deck"
+                value={`${state.gallerySupply?.length ?? 0}`}
+              />
+              <Row
+                label="Recruit"
+                value={
+                  state.recruitCard
+                    ? `${state.recruitCard.definition.name} (+${state.recruitDeck?.length ?? 0})`
+                    : 'Empty'
+                }
+              />
+              <Row
+                label="Arena"
+                value={state.arenaCard?.definition.name ?? 'None'}
+              />
+              <Row label="Arena Deck" value={`${state.arenaDeck.length}`} />
+              <Row label="Epic" value={`${state.epicCards.length}`} />
+              <Row label="Favor" value={`${state.flavorDeck.length}`} />
+              <Row label="Disfavor" value={`${state.disfavorDeck.length}`} />
+
+              <View style={styles.divider} />
+              <Text style={styles.subHeader}>
+                Log ({state.actionLog.length})
+              </Text>
+              {state.actionLog.slice(-8).map((a, i) => (
+                <Text key={i} style={styles.logEntry}>
+                  {a.type} → {a.playerId}
+                </Text>
+              ))}
+
+              {tutorial ? (
+                <Pressable
+                  style={styles.resetBtn}
+                  onPress={() => {
+                    resetTutorialCompleted();
+                    tutorial.startTutorial();
+                  }}
+                >
+                  <Text style={styles.resetText}>Replay Tutorial</Text>
+                </Pressable>
+              ) : null}
+
+              <Pressable style={styles.resetBtn} onPress={() => resetGame()}>
+                <Text style={styles.resetText}>Reset Game</Text>
+              </Pressable>
+
+              <BuildLabel style={styles.buildLabel} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
@@ -221,29 +270,75 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
   },
-  panel: {
-    backgroundColor: 'rgba(10,10,20,0.92)',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 6,
-    maxHeight: 450,
-    width: 240,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
-  panelInOpponentsBar: {
-    position: 'absolute',
-    top: 36,
-    right: 0,
-    marginTop: 0,
-    maxHeight: 420,
+  panel: {
+    backgroundColor: 'rgba(10,10,20,0.96)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   header: {
     color: '#F1C40F',
     fontWeight: '800',
-    fontSize: 13,
-    marginBottom: 8,
+    fontSize: 14,
     letterSpacing: 1,
+  },
+  closeText: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  codeHero: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: 'rgba(212,175,55,0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  codeHeroLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  codeHeroValue: {
+    color: '#F1C40F',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 4,
+    marginTop: 4,
+  },
+  codeHeroHint: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 9,
+    marginTop: 4,
+  },
+  scroll: {
+    maxHeight: 420,
+  },
+  scrollContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   },
   subHeader: {
     color: '#3498DB',
@@ -338,6 +433,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 11,
+  },
+  buildLabel: {
+    marginTop: 12,
+    marginBottom: 4,
   },
 });
 
