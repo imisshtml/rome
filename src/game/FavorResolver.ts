@@ -1,6 +1,10 @@
 import type { CardInstance, CardLocation } from '../types/cardTypes';
 import type { GameState } from '../types/gameTypes';
 import { galleryRefillPaused } from './EventResolver';
+import {
+  beneficiaryHasArenaWagerTargets,
+  favorIsArenaWager,
+} from '../utils/arenaWagerUtils';
 
 export const FAVOR_DISPLAY_MS = 5000;
 
@@ -22,6 +26,16 @@ export function returnFavorCardToSupply(card: CardInstance): CardInstance {
     location: 'FLAVOR_DECK',
     ownerId: 'market',
     faceUp: false,
+    chosenFaction: undefined,
+  };
+}
+
+export function returnFavorCardToDiscard(card: CardInstance): CardInstance {
+  return {
+    ...card,
+    location: 'FLAVOR_DISCARD' as CardLocation,
+    ownerId: 'market',
+    faceUp: true,
     chosenFaction: undefined,
   };
 }
@@ -57,7 +71,9 @@ export function shouldDeferFavorReveal(state: GameState): boolean {
 export function favorResolutionPaused(state: GameState): boolean {
   return (
     state.pendingFavorReveal != null ||
-    state.pendingFavorDestroyPick != null
+    state.pendingFavorDestroyPick != null ||
+    state.pendingFavorArenaWagerPick != null ||
+    state.pendingFavorReplayPick != null
   );
 }
 
@@ -97,16 +113,56 @@ export function processFavorQueue(state: GameState): GameState {
 
 export function finishFavorResolution(
   state: GameState,
-  card: CardInstance
+  card: CardInstance,
+  options?: { removeFromGame?: boolean }
 ): GameState {
+  const removeFromGame =
+    options?.removeFromGame === true ||
+    state.pendingFavorReplayRemovalId === card.instanceId;
+
   const next: GameState = {
     ...state,
     pendingFavorReveal: null,
     pendingFavorDestroyPick: null,
-    flavorDeck: [...state.flavorDeck, returnFavorCardToSupply(card)],
+    pendingFavorArenaWagerPick: null,
+    pendingFavorReplayRemovalId: removeFromGame
+      ? null
+      : state.pendingFavorReplayRemovalId ?? null,
   };
-  return processFavorQueue(next);
+
+  if (removeFromGame) {
+    return processFavorQueue(next);
+  }
+
+  return processFavorQueue({
+    ...next,
+    flavorDiscard: [
+      ...(next.flavorDiscard ?? []),
+      returnFavorCardToDiscard(card),
+    ],
+  });
 }
+
+export function beginFavorArenaWagerPick(
+  state: GameState,
+  card: CardInstance,
+  beneficiaryId: string
+): GameState {
+  const beneficiary = state.players.find((p) => p.id === beneficiaryId);
+  if (!beneficiary || !beneficiaryHasArenaWagerTargets(beneficiary)) {
+    return finishFavorResolution(state, card);
+  }
+
+  return {
+    ...state,
+    pendingFavorArenaWagerPick: {
+      beneficiaryId,
+      sourceCardName: card.definition.name,
+    },
+  };
+}
+
+export { favorIsArenaWager };
 
 export function playerHasFavorDestroyTargets(
   state: GameState,

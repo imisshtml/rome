@@ -211,8 +211,10 @@ export class MultiplayerGameClient {
     if (last?.type === 'DISMISS_ARENA_RESULT') return 800;
     if (state.pendingGalleryEvent) return 5000;
     if (state.pendingFavorReveal) return 5000;
-    if (state.lastArenaResult) return 4000;
-    if ((state.pendingEventDiscards?.length ?? 0) > 0) return 800;
+    if (last?.type === 'DISMISS_ARENA_WAGER_RESULT') return 800;
+    if (state.lastArenaWagerResult) return 5000;
+    if ((state.pendingEventHandChoices?.length ?? 0) > 0) return 800;
+    if ((state.pendingEventItemChoices?.length ?? 0) > 0) return 800;
     if (
       (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
     ) {

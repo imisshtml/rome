@@ -66,8 +66,8 @@ export const FAVOR_EFFECT_SPECS = {
     effects: { force_opponent_discard: 1 },
   },
   favor_arena_wager: {
-    engine: 'play: consult_augur (pending)',
-    effects: { consult_augur: true },
+    engine: 'play: arena_wager pick + reveal',
+    effects: { arena_wager: true },
   },
   favor_merchant_caravan: {
     engine: 'play: gain_coins',

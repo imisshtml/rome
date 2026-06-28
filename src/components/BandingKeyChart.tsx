@@ -10,6 +10,7 @@ import { BANDING_FACTION_ICONS } from '../utils/factionIconAssets';
 
 interface BandingKeyChartProps {
   playArea: CardInstance[];
+  turnPlayedCards?: CardInstance[];
   claimedFactions?: BandingFaction[];
 }
 
@@ -51,6 +52,7 @@ function DashRow({
 
 export const BandingKeyChart: React.FC<BandingKeyChartProps> = ({
   playArea,
+  turnPlayedCards = [],
   claimedFactions = [],
 }) => {
   return (
@@ -58,7 +60,7 @@ export const BandingKeyChart: React.FC<BandingKeyChartProps> = ({
       {BANDING_FACTIONS.map((faction) => {
         const count = Math.min(
           3,
-          countBandingFactionInPlayArea(playArea, faction)
+          countBandingFactionInPlayArea(playArea, faction, turnPlayedCards)
         );
         const claimed = claimedFactions.includes(faction);
         const color = FACTION_COLORS[faction];

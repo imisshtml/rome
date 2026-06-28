@@ -13,6 +13,11 @@ import {
 } from '../game/GameEngine';
 
 import { pickAiDisplayNames } from '../utils/aiPlayerNames';
+import {
+  applyTestDeckConfig,
+  loadTestDeckConfig,
+  TestDeckConfig,
+} from '../utils/testDeckConfig';
 
 const aiDefaultNames = pickAiDisplayNames(MAX_PLAYERS - 1, ['You']);
 const defaultSetups = [
@@ -107,8 +112,35 @@ const dispatchActionAtom = atom(
   }
 );
 
+const testDeckConfigAtom = atom<TestDeckConfig>(loadTestDeckConfig());
+
+export const setTestDeckConfigAtom = atom(
+  null,
+  (_get, set, config: TestDeckConfig) => {
+    set(testDeckConfigAtom, applyTestDeckConfig(config));
+  }
+);
+
 const resetGameAtom = atom(null, (get, set) => {
+  const meta = get(multiplayerMetaAtom);
+  applyTestDeckConfig(get(testDeckConfigAtom));
+
   const current = rehydrateGameState(get(gameStateAtom));
+  const setups =
+    current.players.length > 0
+      ? current.players.map((p) => ({
+          id: p.id,
+          name: p.name,
+          isAI: p.isAI ?? false,
+        }))
+      : defaultSetups;
+  const gameId =
+    current.id && current.id !== 'pending' ? current.id : 'game_1';
+
+  if (!meta.online) {
+    set(gameStateAtom, rehydrateGameState(createInitialGameState(setups, gameId)));
+    return;
+  }
 
   if (
     current.phase === 'PREGAME' &&
@@ -128,7 +160,7 @@ const resetGameAtom = atom(null, (get, set) => {
     return;
   }
 
-  set(gameStateAtom, rehydrateGameState(createInitialGameState(defaultSetups)));
+  set(gameStateAtom, rehydrateGameState(createInitialGameState(setups, gameId)));
 });
 
 export function useGameState(): GameState {
@@ -141,6 +173,14 @@ export function useDispatchAction() {
 
 export function useResetGame() {
   return useSetAtom(resetGameAtom);
+}
+
+export function useTestDeckConfig() {
+  return useAtomValue(testDeckConfigAtom);
+}
+
+export function useSetTestDeckConfig() {
+  return useSetAtom(setTestDeckConfigAtom);
 }
 
 export function useLocalPlayerKey() {
@@ -205,4 +245,5 @@ export {
   hoverPreviewAtom,
   localPlayerKeyAtom,
   multiplayerMetaAtom,
+  testDeckConfigAtom,
 };

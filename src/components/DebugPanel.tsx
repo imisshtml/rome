@@ -16,6 +16,8 @@ import {
   useMultiplayerMeta,
   useLocalPlayerKey,
   useDispatchAction,
+  useTestDeckConfig,
+  useSetTestDeckConfig,
 } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { useTutorialOptional } from '../context/TutorialContext';
@@ -24,6 +26,7 @@ import { PHASE_LABELS } from '../types/gameTypes';
 import { getPlayerTotalVp } from '../game/postGame';
 import { copyToClipboard } from '../utils/copyToClipboard';
 import BuildLabel from './BuildLabel';
+import DeckTestConfigSection from './DeckTestConfigSection';
 
 export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
   inOpponentsBar = false,
@@ -31,6 +34,8 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
   const state = useGameState();
   const [visible, setVisible] = useDebugVisible();
   const resetGame = useResetGame();
+  const testDeckConfig = useTestDeckConfig();
+  const setTestDeckConfig = useSetTestDeckConfig();
   const arenaValor = useArenaValor();
   const mpMeta = useMultiplayerMeta();
   const localPlayerKey = useLocalPlayerKey();
@@ -44,8 +49,8 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
   );
 
   const displayJoinCode = joinCode || mpMeta.joinCode || '—';
-  const panelW = Math.min(360, screenW - 32);
-  const panelMaxH = Math.min(560, screenH * 0.88);
+  const panelW = Math.min(Math.max(screenW * 0.92, 480), screenW - 16);
+  const panelH = screenH - 16;
 
   const handleCopyCode = async () => {
     if (displayJoinCode === '—') return;
@@ -70,7 +75,7 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
         onRequestClose={() => setVisible(false)}
       >
         <View style={styles.backdrop}>
-          <View style={[styles.panel, { width: panelW, maxHeight: panelMaxH }]}>
+          <View style={[styles.panel, { width: panelW, height: panelH }]}>
             <View style={styles.headerRow}>
               <Text style={styles.header}>Debug</Text>
               <Pressable onPress={() => setVisible(false)} hitSlop={12}>
@@ -125,6 +130,26 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
               </View>
 
               <View style={styles.divider} />
+
+              {!isOnline ? (
+                <>
+                  <DeckTestConfigSection
+                    config={testDeckConfig}
+                    onChange={setTestDeckConfig}
+                    onResetGame={() => resetGame()}
+                    spawnEnabled={state.status === 'active'}
+                    onSpawnCard={(definitionId, zone) =>
+                      dispatch({
+                        type: 'DEBUG_SPAWN_CARD',
+                        playerId: localPlayerKey,
+                        payload: { definitionId, targetZone: zone },
+                        timestamp: Date.now(),
+                      })
+                    }
+                  />
+                  <View style={styles.divider} />
+                </>
+              ) : null}
 
               <View style={styles.section}>
                 <Row label="Turn" value={`${state.turnNumber}`} />
@@ -204,9 +229,11 @@ export const DebugPanel: React.FC<{ inOpponentsBar?: boolean }> = ({
                 </Pressable>
               ) : null}
 
-              <Pressable style={styles.resetBtn} onPress={() => resetGame()}>
-                <Text style={styles.resetText}>Reset Game</Text>
-              </Pressable>
+              {isOnline ? (
+                <Pressable style={styles.resetBtn} onPress={() => resetGame()}>
+                  <Text style={styles.resetText}>Reset Game</Text>
+                </Pressable>
+              ) : null}
 
               <BuildLabel style={styles.buildLabel} />
             </ScrollView>
@@ -275,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.78)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 8,
   },
   panel: {
     backgroundColor: 'rgba(10,10,20,0.96)',
@@ -334,7 +361,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   scroll: {
-    maxHeight: 420,
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 14,

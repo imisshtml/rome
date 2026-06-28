@@ -34,24 +34,26 @@ export function parseArenaLossSpec(
   card: CardInstance | null
 ): ArenaLossSpec {
   const lossText = card?.definition.effectTextLoss?.trim() ?? '';
+  const bodyText = card?.definition.text?.trim() ?? '';
+  const searchable = `${lossText} ${bodyText}`.trim();
   const effectsDisfavor = card?.definition.effects?.gain_crowd_disfavor ?? 0;
 
-  if (/gain\s+5\s+disfavor\s+or\s+destroy your strongest fighter/i.test(lossText)) {
+  if (/gain\s+5\s+disfavor\s+or\s+destroy your strongest fighter/i.test(searchable)) {
     return { type: 'primus_choice', disfavorCount: 5 };
   }
 
-  if (/destroy\s+1\s+of your fighters/i.test(lossText)) {
+  if (/destroy\s+1\s+of your fighters/i.test(searchable)) {
     return { type: 'destroy_fighter', destroyFighterCount: 1 };
   }
 
-  if (/destroy the top card of your deck/i.test(lossText)) {
+  if (/destroy the top card of your deck/i.test(searchable)) {
     return { type: 'destroy_deck_top' };
   }
 
-  const disfavorMatch = lossText.match(/gain\s+(\d+)\s+disfavor/i);
+  const disfavorMatch = searchable.match(/gain\s+(\d+)\s+disfavor/i);
   if (disfavorMatch) {
     const count = parseInt(disfavorMatch[1], 10);
-    const drawLess = lossText.match(/draw\s+(\d+)\s+less card/i);
+    const drawLess = searchable.match(/draw\s+(\d+)\s+less card/i);
     return {
       type: 'disfavor',
       disfavorCount: count,

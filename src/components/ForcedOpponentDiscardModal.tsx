@@ -15,8 +15,10 @@ import { CardFace } from './CardFace';
 interface ForcedOpponentDiscardModalProps {
   pending: PendingForcedOpponentDiscards | null;
   targetPlayer: PlayerState | null;
+  opponentCandidates?: PlayerState[];
   visible: boolean;
   onChoose: (card: CardInstance) => void;
+  onChooseOpponent?: (playerId: string) => void;
 }
 
 const CARD_W = 96;
@@ -25,46 +27,76 @@ const CARD_H = Math.round(CARD_W * 1.4);
 export const ForcedOpponentDiscardModal: React.FC<ForcedOpponentDiscardModalProps> = ({
   pending,
   targetPlayer,
+  opponentCandidates = [],
   visible,
   onChoose,
+  onChooseOpponent,
 }) => {
-  if (!pending || !targetPlayer) return null;
+  if (!pending) return null;
+
+  const choosingOpponent = pending.phase === 'choose_opponent';
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <Text style={styles.title}>Forced Discard</Text>
-          <Text style={styles.subtitle}>
-            {targetPlayer.name}
+          <Text style={styles.title}>
+            {choosingOpponent ? 'Choose Opponent' : 'Forced Discard'}
           </Text>
-          <Text style={styles.body}>
-            Discard {pending.remainingForTarget} card
-            {pending.remainingForTarget === 1 ? '' : 's'}
-            {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
-          </Text>
+          {choosingOpponent ? (
+            <>
+              <Text style={styles.body}>
+                Look at an opponent&apos;s hand and force them to discard 1 card
+                {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
+              </Text>
+              <View style={styles.opponentList}>
+                {opponentCandidates.map((opponent) => (
+                  <Pressable
+                    key={opponent.id}
+                    style={styles.opponentBtn}
+                    onPress={() => onChooseOpponent?.(opponent.id)}
+                  >
+                    <Text style={styles.opponentBtnText}>
+                      {opponent.name} ({opponent.hand.length} in hand)
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : targetPlayer ? (
+            <>
+              <Text style={styles.subtitle}>{targetPlayer.name}&apos;s hand</Text>
+              <Text style={styles.body}>
+                Choose {pending.remainingForTarget} card
+                {pending.remainingForTarget === 1 ? '' : 's'} to discard
+                {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
+              </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.handRow}
-          >
-            {targetPlayer.hand.map((card) => (
-              <Pressable
-                key={card.instanceId}
-                onPress={() => onChoose(card)}
-                style={styles.handCardBtn}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.handRow}
               >
-                <CardFace
-                  definition={card.definition ?? getCardDefinition(card.definitionId)}
-                  faceUp={card.faceUp}
-                  width={CARD_W}
-                  height={CARD_H}
-                  chosenFaction={card.chosenFaction}
-                />
-              </Pressable>
-            ))}
-          </ScrollView>
+                {targetPlayer.hand.map((card) => (
+                  <Pressable
+                    key={card.instanceId}
+                    onPress={() => onChoose(card)}
+                    style={styles.handCardBtn}
+                  >
+                    <CardFace
+                      definition={
+                        card.definition ?? getCardDefinition(card.definitionId)
+                      }
+                      faceUp
+                      width={CARD_W}
+                      height={CARD_H}
+                      chosenFaction={card.chosenFaction}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -119,6 +151,24 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  opponentList: {
+    width: '100%',
+    gap: 8,
+  },
+  opponentBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.45)',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(212,175,55,0.08)',
+  },
+  opponentBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 

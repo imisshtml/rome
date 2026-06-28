@@ -12,6 +12,7 @@ Then run (in order):
 
 - `supabase/migrations/002_rejoin_game.sql` — reclaim seat by `session_id` / player id on rejoin
 - `supabase/migrations/003_single_game_per_session.sql` — one game per session, `resume_session` RPC, purge stale seats on create/join
+- `supabase/migrations/004_gallery_tested_cards.sql` — shared gallery “tested” checklist for QA (all clients)
 
 This creates:
 

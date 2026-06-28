@@ -1,4 +1,5 @@
 import { CardInstance, Faction } from '../types/cardTypes';
+import type { PlayerState } from '../types/gameTypes';
 import {
   getCardEffectiveFaction,
   requiresFactionChoiceOnPlay,
@@ -24,16 +25,44 @@ function cardCountsForBanding(card: CardInstance, faction: BandingFaction): bool
   return getCardEffectiveFaction(card) === faction;
 }
 
-export function countBandingFactionInPlayArea(
-  playArea: CardInstance[],
+export function getCardsPlayedThisTurn(player: PlayerState): CardInstance[] {
+  const byId = new Map<string, CardInstance>();
+  for (const card of [
+    ...(player.turnPlayedCards ?? []),
+    ...player.playArea,
+    ...player.itemsInPlay,
+  ]) {
+    byId.set(card.instanceId, card);
+  }
+  return [...byId.values()];
+}
+
+function countBandingFactionInCards(
+  cards: CardInstance[],
   faction: BandingFaction
 ): number {
-  return playArea.filter((c) => cardCountsForBanding(c, faction)).length;
+  return cards.filter((c) => cardCountsForBanding(c, faction)).length;
+}
+
+export function countBandingFactionInPlayArea(
+  playArea: CardInstance[],
+  faction: BandingFaction,
+  turnPlayedCards?: CardInstance[]
+): number {
+  if (!turnPlayedCards?.length) {
+    return playArea.filter((c) => cardCountsForBanding(c, faction)).length;
+  }
+  const merged = [
+    ...new Map(
+      [...turnPlayedCards, ...playArea].map((c) => [c.instanceId, c])
+    ).values(),
+  ];
+  return countBandingFactionInCards(merged, faction);
 }
 
 /** Returns the faction whose banding bonus was just earned, if any. */
 export function detectTriggeredBandingFaction(
-  playArea: CardInstance[],
+  player: PlayerState,
   claimedFactions: Faction[],
   triggeringCard: CardInstance
 ): BandingFaction | null {
@@ -43,7 +72,9 @@ export function detectTriggeredBandingFaction(
     return null;
   }
   if (claimedFactions.includes(faction)) return null;
-  if (countBandingFactionInPlayArea(playArea, faction) < 3) return null;
+  if (countBandingFactionInCards(getCardsPlayedThisTurn(player), faction) < 3) {
+    return null;
+  }
   return faction;
 }
 

@@ -40,3 +40,41 @@ export function splitPlayerDeckCycleCards(cards: CardInstance[]): {
 
   return { deckable, favorReturns };
 }
+
+function shuffleDeckCycleCards(cards: CardInstance[]): CardInstance[] {
+  const arr = [...cards];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.map((c) => ({
+    ...c,
+    location: 'DECK' as const,
+    faceUp: false,
+    chosenFaction: undefined,
+  }));
+}
+
+/** When the deck is empty, shuffle discard pile into deck (same as drawing). */
+export function refillPlayerDeckFromDiscard(player: {
+  deck: CardInstance[];
+  discard: CardInstance[];
+}): {
+  player: { deck: CardInstance[]; discard: CardInstance[] };
+  favorReturns: CardInstance[];
+} {
+  if (player.deck.length > 0) {
+    return { player, favorReturns: [] };
+  }
+  const { deckable, favorReturns } = splitPlayerDeckCycleCards(player.discard);
+  if (deckable.length === 0) {
+    return { player, favorReturns };
+  }
+  return {
+    player: {
+      deck: shuffleDeckCycleCards(deckable),
+      discard: [],
+    },
+    favorReturns,
+  };
+}

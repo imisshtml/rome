@@ -34,6 +34,8 @@ export interface CardProps {
   sizeMode?: CardSizeMode;
   /** Show enlarged preview beside card on web hover */
   hoverPreview?: boolean;
+  /** Display cost badge override (epic discount). */
+  costOverride?: number | null;
 }
 
 const SPRING_CONFIG = { damping: 32, stiffness: 320 };
@@ -53,6 +55,7 @@ export const Card: React.FC<CardProps> = ({
   compact = false,
   sizeMode,
   hoverPreview = true,
+  costOverride,
 }) => {
   const definition =
     card.definition ?? getCardDefinition(card.definitionId);
@@ -197,6 +200,7 @@ export const Card: React.FC<CardProps> = ({
           width={width}
           height={height}
           chosenFaction={displayChosenFaction}
+          costOverride={costOverride}
           style={
             displayChosenFaction
               ? {

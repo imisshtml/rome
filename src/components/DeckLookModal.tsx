@@ -41,7 +41,7 @@ export const DeckLookModal: React.FC<DeckLookModalProps> = ({
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <Text style={styles.title}>Tribune</Text>
+          <Text style={styles.title}>Deck Look</Text>
           <Text style={styles.subtitle}>{pending.sourceCardName ?? 'Card'}</Text>
 
           {pending.phase === 'choose_deck' ? (
@@ -64,8 +64,8 @@ export const DeckLookModal: React.FC<DeckLookModalProps> = ({
           ) : (
             <>
               <Text style={styles.body}>
-                {targetPlayer?.name ?? 'Player'}&apos;s deck — keep 1 on top; the rest go
-                to the bottom.
+                {targetPlayer?.name ?? 'Player'}&apos;s deck — tap the card to
+                keep on top; the other goes to the bottom.
               </Text>
               <ScrollView
                 horizontal

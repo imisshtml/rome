@@ -132,7 +132,10 @@ export interface CardStatDisplay {
   valor: number | null;
 }
 
-export function getCardStatDisplay(definition: CardDefinition): CardStatDisplay {
+export function getCardStatDisplay(
+  definition: CardDefinition,
+  options?: { costOverride?: number | null }
+): CardStatDisplay {
   if (
     definition.type === 'CrowdDisfavor' ||
     definition.faction === 'CrowdDisfavor'
@@ -158,8 +161,13 @@ export function getCardStatDisplay(definition: CardDefinition): CardStatDisplay 
     definition.type === 'Action' ||
     definition.type === 'Basic'
   ) {
+    const baseCost = definition.cost;
+    const cost =
+      options?.costOverride != null && options.costOverride !== baseCost
+        ? options.costOverride
+        : baseCost;
     return {
-      cost: definition.cost,
+      cost,
       victory: definition.victoryPoints,
       valor: definition.valor,
     };

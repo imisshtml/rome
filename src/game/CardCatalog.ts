@@ -272,20 +272,21 @@ export function getStartingDeckEntries(): PoolEntry[] {
 }
 
 export function getGalleryPoolEntries(): PoolEntry[] {
-  const entries: PoolEntry[] = [];
+  const qtyById = new Map<string, number>();
   for (const raw of factionsPack.cards) {
     if (raw.deck_source !== 'gallery') continue;
     if ('recruit' in raw && raw.recruit) continue;
     const id = factionDefinitionId(raw);
-    entries.push({ definitionId: id, qty: raw.deck_qty ?? 1 });
+    qtyById.set(id, (qtyById.get(id) ?? 0) + (raw.deck_qty ?? 1));
   }
   for (const raw of eventsPack.cards) {
-    entries.push({
-      definitionId: slugToId(raw.id),
-      qty: EVENT_DECK_QTY,
-    });
+    const id = slugToId(raw.id);
+    qtyById.set(id, (qtyById.get(id) ?? 0) + EVENT_DECK_QTY);
   }
-  return entries;
+  return Array.from(qtyById.entries()).map(([definitionId, qty]) => ({
+    definitionId,
+    qty,
+  }));
 }
 
 /** Recruit pile — 10 copies each of the three faction recruit cards. */

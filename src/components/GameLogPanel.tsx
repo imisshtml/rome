@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { CardInstance } from '../types/cardTypes';
 import { GameAction, PlayerState } from '../types/gameTypes';
 import { getLogPreviewCard, getLogPreviewCardFromOutcome } from '../utils/cardLogUtils';
-import { GalleryEventPlayerOutcome } from '../types/gameTypes';
+import { GalleryEventPlayerOutcome, GalleryEventDecreeOutcome } from '../types/gameTypes';
 
 const MAX_VISIBLE_LOG_LINES = 48;
 
@@ -69,9 +69,22 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
           {playerName} bought a card
         </Text>
       );
+    case 'GALLERY_EVENT_FLIPPED':
+      return (
+        <Text style={styles.line} numberOfLines={3}>
+          Event:{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'Gallery event'
+          )}{' '}
+          occurred{effect ? ` — ${effect}` : ''}
+        </Text>
+      );
     case 'RESOLVE_GALLERY_EVENT':
       if (cardName) {
         const outcomes = action.payload?.eventOutcomes ?? [];
+        const decreeOutcomes = action.payload?.eventDecreeOutcomes ?? [];
         if (outcomes.length > 0) {
           return (
             <View style={styles.outcomeBlock}>
@@ -98,6 +111,27 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
                   </Text>
                 );
               })}
+            </View>
+          );
+        }
+        if (decreeOutcomes.length > 0) {
+          return (
+            <View style={styles.outcomeBlock}>
+              <Text style={styles.line} numberOfLines={2}>
+                Event:{' '}
+                <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+              </Text>
+              {decreeOutcomes.map((outcome: GalleryEventDecreeOutcome, idx) => (
+                <Text key={`${outcome.playerId}-${outcome.cardName}-${idx}`} style={styles.subLine} numberOfLines={2}>
+                  {outcome.playerName}:{' '}
+                  {outcome.result === 'drawn'
+                    ? 'drew'
+                    : outcome.result === 'destroyed'
+                      ? 'destroyed'
+                      : 'kept on deck'}{' '}
+                  {outcome.cardName} ({outcome.cost}c)
+                </Text>
+              ))}
             </View>
           );
         }
@@ -252,6 +286,7 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
     case 'GAIN_CARD_PICK':
     case 'COPY_CARD_PICK':
     case 'PLACE_DESTROYED_ON_MARKET_PICK':
+    case 'ANY_DISCARD_DESTROY_PICK':
       return (
         <Text style={styles.line} numberOfLines={2}>
           {playerName}{' '}
@@ -259,7 +294,9 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
             ? 'copied'
             : action.type === 'PLACE_DESTROYED_ON_MARKET_PICK'
               ? 'placed on market deck'
-              : 'gained'}{' '}
+              : action.type === 'ANY_DISCARD_DESTROY_PICK'
+                ? 'destroyed'
+                : 'gained'}{' '}
           {cardName ? (
             <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
           ) : (

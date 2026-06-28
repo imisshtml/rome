@@ -15,12 +15,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { CardInstance } from '../types/cardTypes';
-import { GalleryEventPlayerOutcome } from '../types/gameTypes';
-import { getCardDefinition } from '../game/CardDefinitions';
 import {
-  eventHandChoiceDestroys,
-  GALLERY_EVENT_DISPLAY_MS,
-} from '../game/EventResolver';
+  GalleryEventPlayerOutcome,
+  GalleryEventDecreeOutcome,
+  PendingEventHandChoice,
+} from '../types/gameTypes';
+import { getCardDefinition } from '../game/CardDefinitions';
+import { GALLERY_EVENT_DISPLAY_MS } from '../game/EventResolver';
+import { handCardValidForEventChoice } from '../game/EventResolver';
 import { CardFace } from './CardFace';
 import CardPreviewModal from './CardPreviewModal';
 
@@ -28,13 +30,18 @@ interface GalleryEventModalProps {
   event: CardInstance | null;
   visible: boolean;
   pendingDiscardPlayerIds: string[];
+  pendingItemPlayerIds?: string[];
+  localEventHandChoice?: PendingEventHandChoice | null;
   pendingOptionalPlayerIds?: string[];
   localPlayerId: string;
   localHand: CardInstance[];
+  localItemsInPlay?: CardInstance[];
   onResolve: () => void;
   onDiscardCard: (card: CardInstance) => void;
+  onLoseItem?: (card: CardInstance) => void;
   onSkipOptional?: () => void;
   eventOutcomes?: GalleryEventPlayerOutcome[];
+  eventDecreeOutcomes?: GalleryEventDecreeOutcome[];
 }
 
 const CARD_W = 96;
@@ -87,13 +94,18 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
   event,
   visible,
   pendingDiscardPlayerIds,
+  pendingItemPlayerIds = [],
+  localEventHandChoice = null,
   pendingOptionalPlayerIds = [],
   localPlayerId,
   localHand,
+  localItemsInPlay = [],
   onResolve,
   onDiscardCard,
+  onLoseItem,
   onSkipOptional,
   eventOutcomes = [],
+  eventDecreeOutcomes = [],
 }) => {
   const [continueReady, setContinueReady] = useState(false);
   const [eventZoomOpen, setEventZoomOpen] = useState(false);
@@ -107,6 +119,7 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
 
     const mustRespond =
       pendingDiscardPlayerIds.includes(localPlayerId) ||
+      pendingItemPlayerIds.includes(localPlayerId) ||
       pendingOptionalPlayerIds.includes(localPlayerId);
 
     if (mustRespond) {
@@ -125,6 +138,7 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
     event?.instanceId,
     localPlayerId,
     pendingDiscardPlayerIds,
+    pendingItemPlayerIds,
     pendingOptionalPlayerIds,
   ]);
 
@@ -132,11 +146,30 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
 
   const definition = event.definition ?? getCardDefinition(event.definitionId);
   const mustRequiredDiscard = pendingDiscardPlayerIds.includes(localPlayerId);
+  const mustLoseItem = pendingItemPlayerIds.includes(localPlayerId);
   const mustOptionalDiscard = pendingOptionalPlayerIds.includes(localPlayerId);
   const waitingOnDiscards =
-    pendingDiscardPlayerIds.length > 0 || pendingOptionalPlayerIds.length > 0;
+    pendingDiscardPlayerIds.length > 0 ||
+    pendingItemPlayerIds.length > 0 ||
+    pendingOptionalPlayerIds.length > 0;
   const canContinue = !waitingOnDiscards && continueReady;
-  const destroys = eventHandChoiceDestroys(event);
+  const handChoiceKind = localEventHandChoice?.kind;
+  const remainingHandChoices = localEventHandChoice?.remaining ?? 1;
+  const selectableHand = handChoiceKind
+    ? localHand.filter((card) => handCardValidForEventChoice(card, handChoiceKind))
+    : localHand;
+  const requiredPrompt =
+    handChoiceKind === 'destroy_charity_or_gratia'
+      ? `Choose a Charity or Gratia to destroy${
+          remainingHandChoices > 1 ? ` (${remainingHandChoices} remaining)` : ''
+        }`
+      : handChoiceKind === 'destroy'
+        ? `Choose a card to destroy from your hand${
+            remainingHandChoices > 1 ? ` (${remainingHandChoices} remaining)` : ''
+          }`
+        : `Choose a card to discard${
+            remainingHandChoices > 1 ? ` (${remainingHandChoices} remaining)` : ''
+          }`;
   const optionalCoinReward =
     typeof event.definition?.effectLegacy?.optional_discard_for_coins ===
     'number'
@@ -174,17 +207,13 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
 
             {mustRequiredDiscard ? (
               <>
-                <Text style={styles.prompt}>
-                  {destroys
-                    ? 'Choose a card to destroy from your hand'
-                    : 'Choose a card to discard'}
-                </Text>
+                <Text style={styles.prompt}>{requiredPrompt}</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.handRow}
                 >
-                  {localHand.map((card) => (
+                  {selectableHand.map((card) => (
                     <Pressable
                       key={card.instanceId}
                       onPress={() => onDiscardCard(card)}
@@ -198,6 +227,34 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
                         width={CARD_W}
                         height={CARD_H}
                         chosenFaction={card.chosenFaction}
+                      />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </>
+            ) : mustLoseItem ? (
+              <>
+                <Text style={styles.prompt}>
+                  Choose an Item to lose (returned to the Market deck)
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.handRow}
+                >
+                  {localItemsInPlay.map((card) => (
+                    <Pressable
+                      key={card.instanceId}
+                      onPress={() => onLoseItem?.(card)}
+                      style={styles.handCardBtn}
+                    >
+                      <CardFace
+                        definition={
+                          card.definition ?? getCardDefinition(card.definitionId)
+                        }
+                        faceUp={card.faceUp}
+                        width={CARD_W}
+                        height={CARD_H}
                       />
                     </Pressable>
                   ))}
@@ -241,9 +298,12 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
             ) : waitingOnDiscards ? (
               <Text style={styles.hint}>
                 Waiting for{' '}
-                {pendingDiscardPlayerIds.length + pendingOptionalPlayerIds.length}{' '}
+                {pendingDiscardPlayerIds.length +
+                  pendingItemPlayerIds.length +
+                  pendingOptionalPlayerIds.length}{' '}
                 player
                 {pendingDiscardPlayerIds.length +
+                  pendingItemPlayerIds.length +
                   pendingOptionalPlayerIds.length ===
                 1
                   ? ''
@@ -256,6 +316,23 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
                   <Text key={outcome.cardInstanceId} style={styles.outcomeLine}>
                     {outcome.playerName}: {outcome.cardName} ({outcome.cost}c) +{' '}
                     {outcome.gratiaCount} Gratia
+                  </Text>
+                ))}
+              </View>
+            ) : eventDecreeOutcomes.length > 0 ? (
+              <View style={styles.outcomeList}>
+                {eventDecreeOutcomes.map((outcome, idx) => (
+                  <Text
+                    key={`${outcome.playerId}-${outcome.cardName}-${idx}`}
+                    style={styles.outcomeLine}
+                  >
+                    {outcome.playerName}:{' '}
+                    {outcome.result === 'drawn'
+                      ? 'drew'
+                      : outcome.result === 'destroyed'
+                        ? 'destroyed'
+                        : 'kept on deck'}{' '}
+                    {outcome.cardName} ({outcome.cost}c)
                   </Text>
                 ))}
               </View>

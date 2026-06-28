@@ -65,9 +65,39 @@ export function getOptionalBlockDestroySpec(
   };
 }
 
+export function getOptionalBlockFollowUp(
+  card: CardInstance
+): Record<string, unknown> | null {
+  const opt = getRawEffects(card).optional;
+  if (!opt || typeof opt !== 'object') return null;
+  const block = { ...(opt as RawEffects) };
+  delete block.destroy_cards;
+  delete block.destroy_from;
+  if (Object.keys(block).length === 0) return null;
+  return block;
+}
+
+export function getReplayFavorFromDiscardSpec(
+  card: CardInstance
+): { removeFromGame: boolean } | null {
+  const raw = getRawEffects(card).replay_favor_from_discard;
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    removeFromGame: (raw as { remove_from_game?: boolean }).remove_from_game === true,
+  };
+}
+
 export function getGalleryDestroyCount(card: CardInstance): number {
   const raw = getRawEffects(card);
   return (raw.destroy_gallery_cards as number | undefined) ?? 0;
+}
+
+export function getDestroyEpicCount(card: CardInstance): number {
+  return (getRawEffects(card).destroy_epic_cards as number | undefined) ?? 0;
+}
+
+export function isUpToGalleryDestroyText(card: CardInstance): boolean {
+  return /\bup to\b/i.test(card.definition.text ?? '');
 }
 
 export function hasDestroyHandForCoins(card: CardInstance): boolean {
@@ -117,7 +147,7 @@ export function canFulfillPlayDestroyRequirements(
     return false;
   }
 
-  if (hasAnyDiscardDestroy(card) && !anyPlayerHasDiscardTarget(state)) {
+  if (hasAnyDiscardDestroy(card) && !anyOpponentHasDiscardTarget(state, player.id)) {
     return false;
   }
 
@@ -137,4 +167,11 @@ export function anyPlayerHasDiscardTarget(state: {
   players: PlayerState[];
 }): boolean {
   return state.players.some((p) => p.discard.length > 0);
+}
+
+export function anyOpponentHasDiscardTarget(
+  state: { players: PlayerState[] },
+  playerId: string
+): boolean {
+  return state.players.some((p) => p.id !== playerId && p.discard.length > 0);
 }

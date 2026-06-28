@@ -6,14 +6,94 @@ import {
   getLookAtTopCount,
   listEligibleDestroyedGainCards,
   listEligibleMarketCopyCards,
+  listEligibleInPlayCopyCards,
   listEligibleMarketGainCards,
   shouldDeferGalleryRefill,
   wantsGainBandingBonusChoice,
+  wantsOwnDeckLookOnly,
+  cardWithOnGainAsPlayEffects,
 } from '../utils/effectFlowUtils';
 import { getRawEffects } from '../utils/playDestroyUtils';
 import { isGalleryEventCard } from './CardCatalog';
+import { refillPlayerDeckFromDiscard } from '../utils/deckCycleUtils';
 
 type GalleryAvailableFn = (state: GameState, instanceId: string) => boolean;
+
+type DrawCardsFn = (player: PlayerState, count: number) => PlayerState;
+
+function mergeFavorReturns(state: GameState, favorReturns: CardInstance[]): GameState {
+  if (favorReturns.length === 0) return state;
+  return {
+    ...state,
+    flavorDeck: [...state.flavorDeck, ...favorReturns],
+  };
+}
+
+function prepareDeckLookView(
+  player: PlayerState,
+  lookCount: number
+): { player: PlayerState; favorReturns: CardInstance[]; viewed: CardInstance[] } {
+  const refilled = refillPlayerDeckFromDiscard(player);
+  const mergedPlayer = { ...player, ...refilled.player };
+  const viewed = mergedPlayer.deck
+    .slice(0, Math.min(lookCount, mergedPlayer.deck.length))
+    .map((card) => ({ ...card, faceUp: true }));
+  return {
+    player: mergedPlayer,
+    favorReturns: refilled.favorReturns,
+    viewed,
+  };
+}
+
+function beginDeckLookPick(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance,
+  viewed: CardInstance[],
+  targetPlayerId: string
+): GameState {
+  const player = state.players[playerIdx];
+  if (viewed.length < 2) {
+    return state;
+  }
+  return {
+    ...state,
+    pendingDeckLookPick: {
+      playerId: player.id,
+      sourceCardName: card.definition.name,
+      sourceCardInstanceId: card.instanceId,
+      lookCount: viewed.length,
+      phase: 'keep_top',
+      targetPlayerId,
+      viewedCards: viewed,
+    },
+  };
+}
+
+export function applyOnGainEffects(
+  state: GameState,
+  playerIdx: number,
+  gainedCard: CardInstance,
+  drawCards: DrawCardsFn,
+  isGalleryAvailable: GalleryAvailableFn
+): GameState {
+  const onGain = getRawEffects(gainedCard).on_gain as
+    | Record<string, unknown>
+    | undefined;
+  if (!onGain) return state;
+
+  let next = state;
+  const drawCount = (onGain.draw_cards as number) ?? 0;
+  if (drawCount > 0) {
+    const player = drawCards(next.players[playerIdx], drawCount);
+    next = { ...next, players: [...next.players] };
+    next.players[playerIdx] = player;
+  }
+
+  const playStub = cardWithOnGainAsPlayEffects(gainedCard);
+  next = beginInteractivePlayPicks(next, playerIdx, playStub, isGalleryAvailable);
+  return next;
+}
 
 export function beginInteractivePlayPicks(
   state: GameState,
@@ -24,6 +104,14 @@ export function beginInteractivePlayPicks(
   const player = state.players[playerIdx];
   const lookCount = getLookAtTopCount(card);
   if (lookCount > 0) {
+    if (wantsOwnDeckLookOnly(card)) {
+      const prepared = prepareDeckLookView(player, lookCount);
+      let next = { ...state, players: [...state.players] };
+      next.players[playerIdx] = prepared.player;
+      next = mergeFavorReturns(next, prepared.favorReturns);
+      return beginDeckLookPick(next, playerIdx, card, prepared.viewed, player.id);
+    }
+
     return {
       ...state,
       pendingDeckLookPick: {
@@ -37,6 +125,25 @@ export function beginInteractivePlayPicks(
   }
 
   const copySpec = getCopyCardSpec(card);
+  if (copySpec?.source === 'in_play') {
+    const eligible = listEligibleInPlayCopyCards(
+      state,
+      copySpec,
+      card.instanceId
+    );
+    if (eligible.length > 0) {
+      return {
+        ...state,
+        pendingCopyCardPick: {
+          playerId: player.id,
+          sourceCardName: card.definition.name,
+          sourceCardInstanceId: card.instanceId,
+          maxCost: copySpec.maxCost,
+          copySource: 'in_play',
+        },
+      };
+    }
+  }
   if (copySpec?.source === 'market') {
     const eligible = listEligibleMarketCopyCards(
       state,
@@ -51,6 +158,7 @@ export function beginInteractivePlayPicks(
           sourceCardName: card.definition.name,
           sourceCardInstanceId: card.instanceId,
           maxCost: copySpec.maxCost,
+          copySource: 'market',
         },
       };
     }
@@ -68,6 +176,7 @@ export function beginInteractivePlayPicks(
           sourceCardInstanceId: card.instanceId,
           maxCost: gainSpec.maxCost,
           cardType: gainSpec.type,
+          gainFaction: gainSpec.faction,
           gainSource: 'destroyed_pile',
         },
       };
@@ -90,6 +199,7 @@ export function beginInteractivePlayPicks(
           sourceCardInstanceId: card.instanceId,
           maxCost: gainSpec.maxCost,
           cardType: gainSpec.type,
+          gainFaction: gainSpec.faction,
           gainSource: gainSpec.source === 'market_or_epic' ? 'market_or_epic' : 'market',
           thenDiscard: discardAfter > 0 ? discardAfter : undefined,
         },
@@ -168,6 +278,25 @@ export function gainMarketCardToPlayer(
         ...(next.galleryPurchasedBy ?? {}),
         [gained.instanceId]: state.players[playerIdx].id,
       },
+    };
+  } else if (state.recruitCard?.instanceId === cardInstanceId) {
+    gained = {
+      ...state.recruitCard,
+      location: 'DISCARD',
+      ownerId: state.players[playerIdx].id,
+    };
+    const recruitDeck = [...(state.recruitDeck ?? [])];
+    next = {
+      ...next,
+      recruitCard:
+        recruitDeck.length > 0
+          ? {
+              ...recruitDeck.shift()!,
+              location: 'RECRUIT' as const,
+              faceUp: true,
+            }
+          : null,
+      recruitDeck,
     };
   } else if (epicIdx !== -1) {
     gained = {

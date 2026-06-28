@@ -14,6 +14,11 @@ import {
   favorIsOptional,
   PendingFavorDestroyPick,
 } from '../game/FavorResolver';
+
+interface PendingArenaWagerPick {
+  beneficiaryId: string;
+  sourceCardName?: string;
+}
 import { CardFace } from './CardFace';
 
 interface FavorRevealModalProps {
@@ -26,10 +31,15 @@ interface FavorRevealModalProps {
   localDiscard: CardInstance[];
   localPlayArea: CardInstance[];
   pendingDestroyPick: PendingFavorDestroyPick | null;
+  pendingArenaWagerPick: PendingArenaWagerPick | null;
   onResolve: () => void;
   onAccept: () => void;
   onDecline: () => void;
   onDestroyCard: (card: CardInstance, sourceZone: 'hand' | 'discard' | 'play_area') => void;
+  onArenaWagerPick: (
+    card: CardInstance,
+    sourceZone: 'hand' | 'play_area'
+  ) => void;
 }
 
 const CARD_W = 96;
@@ -45,10 +55,12 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
   localDiscard,
   localPlayArea,
   pendingDestroyPick,
+  pendingArenaWagerPick,
   onResolve,
   onAccept,
   onDecline,
   onDestroyCard,
+  onArenaWagerPick,
 }) => {
   const [continueReady, setContinueReady] = useState(false);
 
@@ -58,7 +70,7 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
       return;
     }
 
-    if (favorIsOptional(favor) || pendingDestroyPick) {
+    if (favorIsOptional(favor) || pendingDestroyPick || pendingArenaWagerPick) {
       setContinueReady(false);
       return;
     }
@@ -66,7 +78,7 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
     setContinueReady(false);
     const timer = setTimeout(() => setContinueReady(true), FAVOR_DISPLAY_MS);
     return () => clearTimeout(timer);
-  }, [visible, favor?.instanceId, pendingDestroyPick]);
+  }, [visible, favor?.instanceId, pendingDestroyPick, pendingArenaWagerPick]);
 
   if (!favor) return null;
 
@@ -77,6 +89,20 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
     pendingDestroyPick != null &&
     pendingDestroyPick.playerId === localPlayerId &&
     pendingDestroyPick.remaining > 0;
+  const mustArenaWagerPick =
+    pendingArenaWagerPick != null &&
+    pendingArenaWagerPick.beneficiaryId === localPlayerId;
+
+  const arenaWagerCards: {
+    card: CardInstance;
+    zone: 'hand' | 'play_area';
+  }[] = [];
+  if (mustArenaWagerPick) {
+    arenaWagerCards.push(
+      ...localHand.map((card) => ({ card, zone: 'hand' as const })),
+      ...localPlayArea.map((card) => ({ card, zone: 'play_area' as const }))
+    );
+  }
 
   const destroyCards: { card: CardInstance; zone: 'hand' | 'discard' | 'play_area' }[] =
     [];
@@ -96,8 +122,9 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
     }
   }
 
-  const showOptionalChoice = optional && isBeneficiary && !pendingDestroyPick;
-  const canContinue = !optional && !mustDestroy && continueReady;
+  const showOptionalChoice =
+    optional && isBeneficiary && !pendingDestroyPick && !pendingArenaWagerPick;
+  const canContinue = !optional && !mustDestroy && !mustArenaWagerPick && continueReady;
 
   return (
     <Modal
@@ -125,7 +152,46 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
             <Text style={styles.effectText}>{definition.text}</Text>
           ) : null}
 
-          {mustDestroy ? (
+          {mustArenaWagerPick ? (
+            <>
+              <Text style={styles.prompt}>
+                Choose a card from your hand or in play
+                {pendingArenaWagerPick?.sourceCardName
+                  ? ` (${pendingArenaWagerPick.sourceCardName})`
+                  : ''}
+              </Text>
+              <Text style={styles.hintSmall}>
+                Opponents reveal a random hand card. Highest valor + cost + VP
+                wins.
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.handRow}
+              >
+                {arenaWagerCards.map(({ card, zone }) => (
+                  <Pressable
+                    key={card.instanceId}
+                    onPress={() => onArenaWagerPick(card, zone)}
+                    style={styles.handCardBtn}
+                  >
+                    <CardFace
+                      definition={
+                        card.definition ?? getCardDefinition(card.definitionId)
+                      }
+                      faceUp={card.faceUp}
+                      width={CARD_W}
+                      height={CARD_H}
+                      chosenFaction={card.chosenFaction}
+                    />
+                    {zone !== 'hand' ? (
+                      <Text style={styles.zoneTag}>In play</Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          ) : mustDestroy ? (
             <>
               <Text style={styles.prompt}>
                 Choose a card to destroy
@@ -177,6 +243,10 @@ export const FavorRevealModal: React.FC<FavorRevealModalProps> = ({
           ) : optional && !isBeneficiary ? (
             <Text style={styles.hint}>
               Waiting for {beneficiaryName} to decide…
+            </Text>
+          ) : mustArenaWagerPick && !isBeneficiary ? (
+            <Text style={styles.hint}>
+              Waiting for {beneficiaryName} to choose a wager card…
             </Text>
           ) : mustDestroy && !isBeneficiary ? (
             <Text style={styles.hint}>
@@ -306,6 +376,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     marginBottom: 16,
+  },
+  hintSmall: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 14,
   },
   continueBtn: {
     borderWidth: 2,

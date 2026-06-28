@@ -1,6 +1,17 @@
 import type { CardDefinition, CardInstance } from '../types/cardTypes';
-import type { GameState, PlayerState, GalleryEventPlayerOutcome } from '../types/gameTypes';
+import type {
+  EventHandChoiceKind,
+  GameState,
+  PendingEventHandChoice,
+  PendingEventItemChoice,
+  PlayerState,
+  GalleryEventPlayerOutcome,
+  GalleryEventDecreeOutcome,
+} from '../types/gameTypes';
 import { addToDestroyedPile } from '../utils/destroyedPileUtils';
+import { refillPlayerDeckFromDiscard } from '../utils/deckCycleUtils';
+import { isCharityCard } from '../utils/cardFactionUtils';
+import { isGratiaCard } from '../utils/effectFlowUtils';
 import { GRATIA_SUPPLY, isGalleryEventCard } from './CardCatalog';
 
 export const GALLERY_ROW_SIZE = 6;
@@ -26,21 +37,143 @@ function getEventLegacy(
   return definition.effectLegacy ?? {};
 }
 
-export function eventRequiresPlayerHandChoice(event: CardInstance): boolean {
+export function getEventHandChoiceSpec(
+  event: CardInstance
+): { count: number; kind: EventHandChoiceKind } | null {
   const legacy = getEventLegacy(event.definition);
+  if (
+    typeof legacy.all_players_discard === 'number' &&
+    legacy.all_players_discard > 0
+  ) {
+    return { count: legacy.all_players_discard, kind: 'discard' };
+  }
+  if (
+    typeof legacy.all_players_destroy_from_hand === 'number' &&
+    legacy.all_players_destroy_from_hand > 0
+  ) {
+    return { count: legacy.all_players_destroy_from_hand, kind: 'destroy' };
+  }
+  if (
+    typeof legacy.all_players_destroy_charity_or_gratia === 'number' &&
+    legacy.all_players_destroy_charity_or_gratia > 0
+  ) {
+    return {
+      count: legacy.all_players_destroy_charity_or_gratia,
+      kind: 'destroy_charity_or_gratia',
+    };
+  }
+  return null;
+}
+
+export function getPendingEventHandChoicePlayerIds(
+  state: GameState
+): string[] {
+  return (state.pendingEventHandChoices ?? [])
+    .filter((choice) => choice.remaining > 0)
+    .map((choice) => choice.playerId);
+}
+
+export function getPendingEventItemChoicePlayerIds(state: GameState): string[] {
+  return (state.pendingEventItemChoices ?? []).map((choice) => choice.playerId);
+}
+
+export function getPendingEventHandChoiceForPlayer(
+  state: GameState,
+  playerId: string
+): PendingEventHandChoice | null {
   return (
-    (typeof legacy.all_players_destroy_from_hand === 'number' &&
-      legacy.all_players_destroy_from_hand > 0) ||
-    (typeof legacy.all_players_discard === 'number' &&
-      legacy.all_players_discard > 0)
+    (state.pendingEventHandChoices ?? []).find(
+      (choice) => choice.playerId === playerId && choice.remaining > 0
+    ) ?? null
   );
 }
 
+export function handCardValidForEventChoice(
+  card: CardInstance,
+  kind: EventHandChoiceKind
+): boolean {
+  if (kind === 'destroy_charity_or_gratia') {
+    return isCharityCard(card) || isGratiaCard(card);
+  }
+  return true;
+}
+
+export function playerHasValidEventHandChoice(
+  player: PlayerState,
+  kind: EventHandChoiceKind
+): boolean {
+  return player.hand.some((card) => handCardValidForEventChoice(card, kind));
+}
+
+function shuffleSupply(cards: CardInstance[]): CardInstance[] {
+  const next = [...cards];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+function returnItemsToGallerySupply(
+  state: GameState,
+  items: CardInstance[]
+): GameState {
+  if (items.length === 0) return state;
+  const returned = items.map((item) => ({
+    ...item,
+    location: 'GALLERY' as const,
+    faceUp: false,
+  }));
+  return {
+    ...state,
+    gallerySupply: shuffleSupply([...(state.gallerySupply ?? []), ...returned]),
+  };
+}
+
+function applyAutomaticRequisitionLosses(
+  state: GameState
+): {
+  state: GameState;
+  pendingItemChoices: PendingEventItemChoice[];
+  returnedItems: CardInstance[];
+} {
+  let next = state;
+  const pendingItemChoices: PendingEventItemChoice[] = [];
+  const returnedItems: CardInstance[] = [];
+  const players = next.players.map((player) => {
+    const items = [...player.itemsInPlay];
+    if (items.length === 0) {
+      return player;
+    }
+    if (items.length === 1) {
+      returnedItems.push({ ...items[0], ownerId: player.id });
+      return { ...player, itemsInPlay: [] };
+    }
+    pendingItemChoices.push({ playerId: player.id });
+    return player;
+  });
+
+  next = { ...next, players };
+  if (returnedItems.length > 0) {
+    next = returnItemsToGallerySupply(next, returnedItems);
+  }
+  return { state: next, pendingItemChoices, returnedItems };
+}
+
+export function eventRequiresPlayerHandChoice(event: CardInstance): boolean {
+  return getEventHandChoiceSpec(event) != null;
+}
+
 export function eventHandChoiceDestroys(event: CardInstance): boolean {
+  const spec = getEventHandChoiceSpec(event);
+  return spec?.kind === 'destroy' || spec?.kind === 'destroy_charity_or_gratia';
+}
+
+export function eventRequiresItemChoice(event: CardInstance): boolean {
   const legacy = getEventLegacy(event.definition);
   return (
-    typeof legacy.all_players_destroy_from_hand === 'number' &&
-    legacy.all_players_destroy_from_hand > 0
+    typeof legacy.all_players_lose_item === 'number' &&
+    legacy.all_players_lose_item > 0
   );
 }
 
@@ -69,6 +202,39 @@ function drawRandomGallerySupplyCard(
   };
 }
 
+function isTriumphEligibleSupplyCard(card: CardInstance): boolean {
+  if (isGalleryEventCard(card)) return false;
+  const type = card.definition.type;
+  if (type === 'Item') return true;
+  if (type === 'Gladiator' || type === 'Action') return true;
+  if (type === 'Basic' && card.definition.faction !== 'Favor') return true;
+  return false;
+}
+
+function drawFactionOrItemFromGallerySupply(
+  state: GameState
+): { state: GameState; card: CardInstance | null } {
+  let next = state;
+  let supply = [...(next.gallerySupply ?? [])];
+  if (supply.length === 0) return { state, card: null };
+
+  const maxAttempts = supply.length * 3 + 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (supply.length === 0) {
+      return { state: { ...next, gallerySupply: supply }, card: null };
+    }
+    const idx = Math.floor(Math.random() * supply.length);
+    const [drawn] = supply.splice(idx, 1);
+    next = { ...next, gallerySupply: supply };
+    if (isTriumphEligibleSupplyCard(drawn)) {
+      return { state: next, card: drawn };
+    }
+    supply = [...supply, drawn];
+    next = { ...next, gallerySupply: supply };
+  }
+  return { state: next, card: null };
+}
+
 function applyTriumphOfRome(
   state: GameState,
   createCard: CreateCardFn
@@ -82,7 +248,7 @@ function applyTriumphOfRome(
   }));
 
   for (let i = 0; i < players.length; i++) {
-    const drawn = drawRandomGallerySupplyCard(next);
+    const drawn = drawFactionOrItemFromGallerySupply(next);
     next = drawn.state;
     if (!drawn.card) continue;
 
@@ -140,13 +306,26 @@ function applySenateDecreeFromLegacy(
       : 4;
 
   const destroyedCards: CardInstance[] = [];
+  const decreeOutcomes: GalleryEventDecreeOutcome[] = [];
+  const favorReturns: CardInstance[] = [];
 
   const players = state.players.map((p) => {
     let deck = [...p.deck];
     let hand = [...p.hand];
-    for (let i = 0; i < revealCount && deck.length > 0; i++) {
+    let discard = [...p.discard];
+
+    for (let i = 0; i < revealCount; i++) {
+      if (deck.length === 0) {
+        const refilled = refillPlayerDeckFromDiscard({ deck, discard });
+        favorReturns.push(...refilled.favorReturns);
+        deck = [...refilled.player.deck];
+        discard = [...refilled.player.discard];
+      }
+      if (deck.length === 0) break;
+
       const revealed = deck.shift()!;
       const cost = revealed.definition?.cost ?? 0;
+      const cardName = revealed.definition?.name ?? 'Card';
       if (cost >= drawThreshold) {
         hand.push({
           ...revealed,
@@ -154,16 +333,50 @@ function applySenateDecreeFromLegacy(
           faceUp: true,
           ownerId: p.id,
         });
+        decreeOutcomes.push({
+          playerId: p.id,
+          playerName: p.name,
+          cardName,
+          cost,
+          result: 'drawn',
+        });
       } else if (cost <= destroyThreshold) {
         destroyedCards.push({ ...revealed, ownerId: p.id });
+        decreeOutcomes.push({
+          playerId: p.id,
+          playerName: p.name,
+          cardName,
+          cost,
+          result: 'destroyed',
+        });
       } else {
         deck.unshift(revealed);
+        decreeOutcomes.push({
+          playerId: p.id,
+          playerName: p.name,
+          cardName,
+          cost,
+          result: 'kept',
+        });
       }
     }
-    return { ...p, deck, hand };
+    return { ...p, deck, hand, discard };
   });
 
-  return addToDestroyedPile({ ...state, players }, destroyedCards);
+  return {
+    ...addToDestroyedPile(
+      {
+        ...state,
+        players,
+        flavorDeck:
+          favorReturns.length > 0
+            ? [...state.flavorDeck, ...favorReturns]
+            : state.flavorDeck,
+      },
+      destroyedCards
+    ),
+    galleryEventDecreeOutcomes: decreeOutcomes,
+  };
 }
 
 /** Immediate gallery event effects (not interactive player choices). */
@@ -235,7 +448,7 @@ export function applyInstantGalleryEventEffects(
     typeof legacy.reveal_top_cards === 'number' ||
     (legacy.reveal_top_card && typeof legacy.draw_if_cost_gte === 'number')
   ) {
-    next = applySenateDecreeFromLegacy({ ...next, players }, legacy);
+    next = applySenateDecreeFromLegacy(next, legacy);
     players = next.players;
   }
 
@@ -297,7 +510,8 @@ export function eventCoinFlowActive(state: GameState): boolean {
   return (
     state.pendingGalleryEvent != null ||
     (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0 ||
-    (state.pendingEventDiscards?.length ?? 0) > 0 ||
+    getPendingEventHandChoicePlayerIds(state).length > 0 ||
+    getPendingEventItemChoicePlayerIds(state).length > 0 ||
     state.deferredTurnEnd != null ||
     state.phase === 'CLEANUP'
   );
@@ -368,14 +582,34 @@ export function beginGalleryEventResolution(
     };
   }
 
+  if (eventRequiresItemChoice(event)) {
+    const applied = applyAutomaticRequisitionLosses(next);
+    next = applied.state;
+    if (applied.pendingItemChoices.length === 0) {
+      return next;
+    }
+    return {
+      ...next,
+      pendingEventItemChoices: applied.pendingItemChoices,
+    };
+  }
+
   if (eventRequiresPlayerHandChoice(event)) {
-    const pendingEventDiscards = next.players
-      .filter((p) => p.hand.length > 0)
-      .map((p) => p.id);
-    if (pendingEventDiscards.length === 0) {
+    const spec = getEventHandChoiceSpec(event);
+    if (!spec) {
       return { ...next, pendingGalleryEvent: null };
     }
-    return { ...next, pendingEventDiscards };
+    const pendingEventHandChoices = next.players
+      .filter((p) => playerHasValidEventHandChoice(p, spec.kind))
+      .map((p) => ({
+        playerId: p.id,
+        remaining: spec.count,
+        kind: spec.kind,
+      }));
+    if (pendingEventHandChoices.length === 0) {
+      return { ...next, pendingGalleryEvent: null };
+    }
+    return { ...next, pendingEventHandChoices };
   }
 
   if (eventIsImperialTax(event)) {
@@ -401,6 +635,74 @@ export function beginGalleryEventResolution(
     gainFlavorCard,
     createCard
   );
+}
+
+type GalleryRefillDeps = {
+  drawCards: DrawCardsFn;
+  gainFlavorCard: GainFlavorFn;
+  createCard: CreateCardFn;
+};
+
+/** Remove event cards incorrectly sitting in the market row and resolve them. */
+export function ejectStrayGalleryEvents(
+  state: GameState,
+  deps: GalleryRefillDeps
+): GameState {
+  const stray = (state.galleryCards ?? []).filter((c) => isGalleryEventCard(c));
+  if (stray.length === 0) return state;
+
+  let next: GameState = {
+    ...state,
+    galleryCards: state.galleryCards.filter((c) => !isGalleryEventCard(c)),
+  };
+
+  for (const event of stray) {
+    next = beginGalleryEventResolution(
+      next,
+      { ...event, faceUp: true },
+      deps.drawCards,
+      deps.gainFlavorCard,
+      deps.createCard
+    );
+    if (galleryRefillPaused(next)) break;
+  }
+
+  return next;
+}
+
+/** Draw from gallery supply into the market row, resolving flipped events. */
+export function fillGalleryRowFromSupply(
+  state: GameState,
+  maxDraws: number,
+  deps: GalleryRefillDeps
+): GameState {
+  let next = state;
+  let draws = 0;
+
+  while (
+    draws < maxDraws &&
+    next.galleryCards.length < GALLERY_ROW_SIZE &&
+    (next.gallerySupply?.length ?? 0) > 0
+  ) {
+    if (galleryRefillPaused(next)) break;
+
+    const { state: afterDraw, flippedEvent } = drawGallerySupplyCard(next);
+    next = afterDraw;
+    draws += 1;
+
+    if (flippedEvent) {
+      next = beginGalleryEventResolution(
+        next,
+        flippedEvent,
+        deps.drawCards,
+        deps.gainFlavorCard,
+        deps.createCard
+      );
+      if (galleryRefillPaused(next)) break;
+    }
+  }
+
+  return next;
 }
 
 /** Draw the next supply card into gallery, or return a flipped event. */
@@ -438,7 +740,8 @@ export function drawGallerySupplyCard(state: GameState): {
 export function galleryRefillPaused(state: GameState): boolean {
   return (
     state.pendingGalleryEvent != null ||
-    (state.pendingEventDiscards?.length ?? 0) > 0 ||
+    getPendingEventHandChoicePlayerIds(state).length > 0 ||
+    getPendingEventItemChoicePlayerIds(state).length > 0 ||
     (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
   );
 }
@@ -447,8 +750,39 @@ export function clearPendingGalleryEventFlow(state: GameState): GameState {
   return {
     ...state,
     pendingGalleryEvent: null,
+    pendingEventHandChoices: [],
     pendingEventDiscards: [],
+    pendingEventItemChoices: [],
     pendingEventOptionalDiscards: null,
     galleryEventOutcomes: null,
   };
+}
+
+export function finishEventItemLossPick(
+  state: GameState,
+  playerIdx: number,
+  itemInstanceId: string
+): GameState {
+  const player = state.players[playerIdx];
+  const itemIdx = player.itemsInPlay.findIndex(
+    (c) => c.instanceId === itemInstanceId
+  );
+  if (itemIdx === -1) return state;
+
+  const removed = player.itemsInPlay[itemIdx];
+  const players = [...state.players];
+  players[playerIdx] = {
+    ...player,
+    itemsInPlay: player.itemsInPlay.filter((_, i) => i !== itemIdx),
+  };
+
+  let next = returnItemsToGallerySupply(state, [{ ...removed, ownerId: player.id }]);
+  next = {
+    ...next,
+    players,
+    pendingEventItemChoices: (next.pendingEventItemChoices ?? []).filter(
+      (choice) => choice.playerId !== player.id
+    ),
+  };
+  return next;
 }

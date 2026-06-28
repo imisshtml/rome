@@ -16,6 +16,7 @@ interface GalleryCardProps {
   purchased?: boolean;
   /** Highlight as valid destroy target (gallery destroy pick). */
   destroyTarget?: boolean;
+  costOverride?: number | null;
   onPress?: (card: CardInstance) => void;
   onLongPress?: (card: CardInstance) => void;
 }
@@ -27,6 +28,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
   disabled,
   purchased = false,
   destroyTarget = false,
+  costOverride,
   onPress,
   onLongPress,
 }) => {
@@ -45,6 +47,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
         onPress={onPress}
         onLongPress={onLongPress}
         hoverPreview={!purchased}
+        costOverride={costOverride}
       />
       {purchased ? (
         <>

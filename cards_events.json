@@ -3,13 +3,12 @@
   "cards": [
     {
       "id": "event_bread_and_circuses",
-      "name": "Bread and Circuses",
+      "name": "Celebrations",
       "image": "event_celebrations.jpg",
-      "effect_text": "All players gain 1 Coin on their next turn.",
+      "effect_text": "All players gain a Favor.",
       "effect_keywords": [],
       "effect_legacy": {
-        "all_players_gain_coins": 1,
-        "next_turn": true
+        "all_players_gain_favor": 1
       }
     },
     {
@@ -28,10 +27,10 @@
       "id": "event_barbarian_incursion",
       "name": "Barbarian Incursion",
       "image": "event_incursion.jpg",
-      "effect_text": "Each player may discard a card. Players that do gain 2 Coins.",
+      "effect_text": "Each player discards 2 cards from hand.",
       "effect_keywords": [],
       "effect_legacy": {
-        "optional_discard_for_coins": 2
+        "all_players_discard": 2
       }
     },
     {
@@ -76,34 +75,23 @@
       }
     },
     {
-      "id": "event_slave_revolt",
-      "name": "Slave Revolt",
-      "image": "event_incursion.jpg",
-      "effect_text": "Destroy the lowest-cost card in the Gallery and replace it. If there is a tie, destroy all cards that tied.",
+      "id": "event_requisition",
+      "name": "Requisition",
+      "image": "event_requisition.jpg",
+      "effect_text": "Each player loses 1 Item they have in play. It is shuffled into the Market.",
       "effect_keywords": [],
       "effect_legacy": {
-        "destroy_lowest_gallery_card": true
+        "all_players_lose_item": 1
       }
     },
     {
-      "id": "event_imperial_tax",
-      "name": "Imperial Tax",
-      "image": "event_famine.jpg",
-      "effect_text": "Each player loses 1 Coins on their next turn.",
+      "id": "event_due",
+      "name": "Caeser's Due",
+      "image": "event_due.jpg",
+      "effect_text": "Each player destroys a Charity or Gratia in hand.",
       "effect_keywords": [],
       "effect_legacy": {
-        "all_players_lose_coins": 1,
-        "next_turn": true
-      }
-    },
-    {
-      "id": "event_military_tribute",
-      "name": "Military Tribute",
-      "image": "event_triumph.jpg",
-      "effect_text": "Each player gains a Favor.",
-      "effect_keywords": [],
-      "effect_legacy": {
-        "all_players_gain_favor": 1
+        "all_players_destroy_charity_or_gratia": 1
       }
     }
   ]

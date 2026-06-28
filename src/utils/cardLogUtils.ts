@@ -23,11 +23,14 @@ export function summarizeCardPlayEffect(definition: CardDefinition): string {
   if (effects.draw_cards) {
     parts.push(`Draw ${effects.draw_cards} card${effects.draw_cards === 1 ? '' : 's'}`);
   }
-  const extended = effects as typeof effects & { gain_gratia?: number };
+  const extended = effects as typeof effects & {
+    gain_gratia?: number;
+    arena_wager?: boolean;
+  };
   if (extended.gain_gratia) {
     parts.push(`Gain ${extended.gain_gratia} Gratia`);
   }
-  if (effects.consult_augur) parts.push('Consult the Augur');
+  if (extended.arena_wager) parts.push('Arena Wager');
   if (effects.gain_imperial_favor) {
     parts.push(`Gain ${effects.gain_imperial_favor} Imperial Favor`);
   }

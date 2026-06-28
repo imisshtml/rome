@@ -65,6 +65,7 @@ export type CardLocation =
   | 'ARENA_COMMIT'
   | 'EPIC_ROW'
   | 'FLAVOR_DECK'
+  | 'FLAVOR_DISCARD'
   | 'DISFAVOR_DECK'
   | 'ARENA_DECK'
   | 'RECRUIT'

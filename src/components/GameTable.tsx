@@ -55,7 +55,14 @@ import BandingBonusModal from './BandingBonusModal';
 import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
 import ArenaLossModal from './ArenaLossModal';
 import GalleryEventModal from './GalleryEventModal';
+import {
+  getPendingEventHandChoiceForPlayer,
+  getPendingEventHandChoicePlayerIds,
+  getPendingEventItemChoicePlayerIds,
+  handCardValidForEventChoice,
+} from '../game/EventResolver';
 import FavorRevealModal from './FavorRevealModal';
+import ArenaWagerResultModal from './ArenaWagerResultModal';
 import CardDestroyPickModal from './CardDestroyPickModal';
 import OrEffectChoiceModal from './OrEffectChoiceModal';
 import AnyDiscardDestroyModal from './AnyDiscardDestroyModal';
@@ -67,14 +74,21 @@ import { useTutorial } from '../context/TutorialContext';
 import { getValorInPlay } from '../utils/combatStatsUtils';
 import { requiresFactionChoiceOnPlay } from '../utils/cardFactionUtils';
 import {
+  getEffectivePurchaseCost,
+  getTurnEpicDiscount,
+} from '../utils/purchaseCostUtils';
+import {
   isCoinOnlyPlayCard,
   listEligibleDestroyedGainCards,
   listEligibleDestroyedPlaceCards,
+  listEligibleInPlayCopyCards,
   listEligibleMarketCopyCards,
   listEligibleMarketGainCards,
+  listEligiblePlaceOnDeckCards,
 } from '../utils/effectFlowUtils';
 import MarketPickModal from './MarketPickModal';
 import DeckLookModal from './DeckLookModal';
+import DeckTopRevealModal from './DeckTopRevealModal';
 import GainBandingBonusPickModal from './GainBandingBonusPickModal';
 import { Faction } from '../types/cardTypes';
 import {
@@ -283,10 +297,17 @@ export const GameTable: React.FC = () => {
   const carryCoins = localPlayer?.carryCoins ?? 0;
   const inActiveGame =
     state.status === 'active' && state.phase !== 'PREGAME';
+  const pendingEventHandChoicePlayerIds = getPendingEventHandChoicePlayerIds(state);
+  const pendingEventItemChoicePlayerIds = getPendingEventItemChoicePlayerIds(state);
+  const localEventHandChoice = localPlayer
+    ? getPendingEventHandChoiceForPlayer(state, localPlayer.id)
+    : null;
+
   const galleryEventFlow =
     state.pendingGalleryEvent != null ||
     (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0 ||
-    (state.pendingEventDiscards?.length ?? 0) > 0 ||
+    pendingEventHandChoicePlayerIds.length > 0 ||
+    pendingEventItemChoicePlayerIds.length > 0 ||
     state.phase === 'CLEANUP';
   const coinsInPlay = !inActiveGame
     ? 0
@@ -353,7 +374,8 @@ export const GameTable: React.FC = () => {
 
   const handleResolveGalleryEvent = useCallback(() => {
     if (!localPlayer || !state.pendingGalleryEvent) return;
-    if ((state.pendingEventDiscards?.length ?? 0) > 0) return;
+    if (pendingEventHandChoicePlayerIds.length > 0) return;
+    if (pendingEventItemChoicePlayerIds.length > 0) return;
     if ((state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0) {
       return;
     }
@@ -362,7 +384,8 @@ export const GameTable: React.FC = () => {
     dispatchAction,
     localPlayer,
     state.pendingGalleryEvent,
-    state.pendingEventDiscards,
+    pendingEventHandChoicePlayerIds,
+    pendingEventItemChoicePlayerIds,
     state.pendingEventOptionalDiscards,
   ]);
 
@@ -370,6 +393,14 @@ export const GameTable: React.FC = () => {
     if (!localPlayer) return;
     dispatchAction('EVENT_SKIP_GALLERY_CHOICE');
   }, [dispatchAction, localPlayer]);
+
+  const handleEventLoseItem = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('EVENT_LOSE_ITEM', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
 
   const handleEventDiscardCard = useCallback(
     (card: CardInstance) => {
@@ -380,9 +411,20 @@ export const GameTable: React.FC = () => {
   );
 
   const handleResolveFavor = useCallback(() => {
-    if (!state.pendingFavorReveal || state.pendingFavorDestroyPick) return;
+    if (
+      !state.pendingFavorReveal ||
+      state.pendingFavorDestroyPick ||
+      state.pendingFavorArenaWagerPick
+    ) {
+      return;
+    }
     dispatchAction('RESOLVE_FAVOR');
-  }, [dispatchAction, state.pendingFavorReveal, state.pendingFavorDestroyPick]);
+  }, [
+    dispatchAction,
+    state.pendingFavorReveal,
+    state.pendingFavorDestroyPick,
+    state.pendingFavorArenaWagerPick,
+  ]);
 
   const handleAcceptFavor = useCallback(() => {
     if (!localPlayer || !state.pendingFavorReveal) return;
@@ -410,6 +452,21 @@ export const GameTable: React.FC = () => {
     [dispatchAction, localPlayer]
   );
 
+  const handleArenaWagerPick = useCallback(
+    (card: CardInstance, sourceZone: 'hand' | 'play_area') => {
+      if (!localPlayer) return;
+      dispatchAction('FAVOR_ARENA_WAGER_PICK', {
+        cardInstanceId: card.instanceId,
+        sourceZone: sourceZone === 'hand' ? 'HAND' : 'PLAY_AREA',
+      });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleDismissArenaWagerResult = useCallback(() => {
+    dispatchAction('DISMISS_ARENA_WAGER_RESULT');
+  }, [dispatchAction]);
+
   const pendingBandingBonus =
     state.pendingBandingBonus?.playerId === localPlayer?.id
       ? state.pendingBandingBonus
@@ -430,6 +487,11 @@ export const GameTable: React.FC = () => {
       ? state.pendingGalleryDestroyPick
       : null;
 
+  const pendingEpicDestroyPick =
+    state.pendingEpicDestroyPick?.playerId === localPlayer?.id
+      ? state.pendingEpicDestroyPick
+      : null;
+
   const pendingAnyDiscardDestroyPick =
     state.pendingAnyDiscardDestroyPick?.playerId === localPlayer?.id
       ? state.pendingAnyDiscardDestroyPick
@@ -445,9 +507,37 @@ export const GameTable: React.FC = () => {
       ? state.pendingOnGainDestroyPick
       : null;
 
-  const pendingForcedDiscard =
-    state.pendingForcedOpponentDiscards?.targetPlayerId === localPlayer?.id
+  const pendingForcedOpponentFlow =
+    state.pendingForcedOpponentDiscards?.controllerId === localPlayer?.id &&
+    state.pendingForcedOpponentDiscards.controllerPicks
       ? state.pendingForcedOpponentDiscards
+      : null;
+
+  const pendingForcedDiscard =
+    state.pendingForcedOpponentDiscards?.targetPlayerId === localPlayer?.id &&
+    !state.pendingForcedOpponentDiscards?.controllerPicks
+      ? state.pendingForcedOpponentDiscards
+      : null;
+
+  const pendingPlaceCardOnDeckPick =
+    state.pendingPlaceCardOnDeckPick?.playerId === localPlayer?.id
+      ? state.pendingPlaceCardOnDeckPick
+      : null;
+
+  const placeOnDeckPickCards =
+    pendingPlaceCardOnDeckPick && localPlayer
+      ? listEligiblePlaceOnDeckCards(localPlayer, {
+          source: 'discard',
+          faction: pendingPlaceCardOnDeckPick.faction,
+          anyFaction: pendingPlaceCardOnDeckPick.anyFaction,
+          position: pendingPlaceCardOnDeckPick.position,
+          optional: pendingPlaceCardOnDeckPick.optional ?? false,
+        })
+      : [];
+
+  const pendingFavorReplayPick =
+    state.pendingFavorReplayPick?.playerId === localPlayer?.id
+      ? state.pendingFavorReplayPick
       : null;
 
   const pendingGainCardPick =
@@ -465,6 +555,11 @@ export const GameTable: React.FC = () => {
       ? state.pendingDeckLookPick
       : null;
 
+  const pendingDeckTopRevealPick =
+    state.pendingDeckTopRevealPick?.playerId === localPlayer?.id
+      ? state.pendingDeckTopRevealPick
+      : null;
+
   const pendingGainBandingBonusPick =
     state.pendingGainBandingBonusPick?.playerId === localPlayer?.id
       ? state.pendingGainBandingBonusPick
@@ -480,20 +575,38 @@ export const GameTable: React.FC = () => {
       ? state.pendingArenaLoss
       : null;
 
-  const forcedDiscardTarget = pendingForcedDiscard ? localPlayer : null;
+  const forcedDiscardTarget = pendingForcedDiscard
+    ? localPlayer
+    : pendingForcedOpponentFlow?.targetPlayerId
+      ? state.players.find((p) => p.id === pendingForcedOpponentFlow.targetPlayerId) ??
+        null
+      : null;
+
+  const forcedDiscardOpponentCandidates =
+    pendingForcedOpponentFlow?.phase === 'choose_opponent'
+      ? (pendingForcedOpponentFlow.opponentCandidateIds ?? [])
+          .map((id) => state.players.find((p) => p.id === id))
+          .filter((p): p is PlayerState => p != null)
+      : [];
 
   const coinCardsInHand = (localPlayer?.hand ?? []).filter(isCoinOnlyPlayCard);
   const destroyPickPending =
+    pendingForcedOpponentFlow ||
+    pendingPlaceCardOnDeckPick ||
     pendingCardDestroyPick ||
     pendingGalleryDestroyPick ||
+    pendingEpicDestroyPick ||
     pendingAnyDiscardDestroyPick ||
     pendingOrEffectChoice ||
     pendingOnGainDestroyPick ||
+    pendingFavorReplayPick ||
     pendingGainCardPick ||
     pendingCopyCardPick ||
     pendingDeckLookPick ||
+    pendingDeckTopRevealPick ||
     pendingGainBandingBonusPick ||
-    pendingPlaceDestroyedOnMarketPick;
+    pendingPlaceDestroyedOnMarketPick ||
+    pendingPlaceCardOnDeckPick;
 
   const canPlayAllCoins =
     canInteract &&
@@ -534,16 +647,45 @@ export const GameTable: React.FC = () => {
 
   const handleForcedOpponentDiscard = useCallback(
     (card: CardInstance) => {
-      if (!localPlayer || !pendingForcedDiscard) return;
-      dispatchAction('DISCARD_CARD', { cardInstanceId: card.instanceId });
+      if (!localPlayer) return;
+      dispatchAction('FORCE_OPPONENT_DISCARD', { cardInstanceId: card.instanceId });
     },
-    [dispatchAction, localPlayer, pendingForcedDiscard]
+    [dispatchAction, localPlayer]
   );
+
+  const handleChooseForceDiscardTarget = useCallback(
+    (playerId: string) => {
+      if (!localPlayer) return;
+      dispatchAction('CHOOSE_FORCE_DISCARD_TARGET', { targetPlayerId: playerId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handlePlaceCardOnDeckPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('PLACE_CARD_ON_DECK_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipPlaceCardOnDeck = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('PLACE_CARD_ON_DECK_SKIP');
+  }, [dispatchAction, localPlayer]);
 
   const handleGainCardPick = useCallback(
     (card: CardInstance) => {
       if (!localPlayer) return;
       dispatchAction('GAIN_CARD_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleFavorReplayPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('FAVOR_REPLAY_PICK', { cardInstanceId: card.instanceId });
     },
     [dispatchAction, localPlayer]
   );
@@ -587,6 +729,14 @@ export const GameTable: React.FC = () => {
     [dispatchAction, localPlayer]
   );
 
+  const handleDeckTopRevealResolve = useCallback(
+    (choice: 'destroy' | 'return') => {
+      if (!localPlayer) return;
+      dispatchAction('DECK_TOP_REVEAL_RESOLVE', { deckTopRevealChoice: choice });
+    },
+    [dispatchAction, localPlayer]
+  );
+
   const handleChooseGainBandingBonus = useCallback(
     (faction: 'Ludus' | 'Legion' | 'Senate') => {
       if (!localPlayer) return;
@@ -611,6 +761,7 @@ export const GameTable: React.FC = () => {
                 : 'market',
             maxCost: pendingGainCardPick.maxCost,
             type: pendingGainCardPick.cardType,
+            faction: pendingGainCardPick.gainFaction,
           },
           (id) => !state.galleryPurchasedBy?.[id]
         )
@@ -621,11 +772,17 @@ export const GameTable: React.FC = () => {
     : [];
 
   const copyPickCards = pendingCopyCardPick
-    ? listEligibleMarketCopyCards(
-        state,
-        { source: 'market', maxCost: pendingCopyCardPick.maxCost },
-        (id) => !state.galleryPurchasedBy?.[id]
-      )
+    ? pendingCopyCardPick.copySource === 'in_play'
+      ? listEligibleInPlayCopyCards(
+          state,
+          { source: 'in_play', maxCost: pendingCopyCardPick.maxCost },
+          pendingCopyCardPick.sourceCardInstanceId
+        )
+      : listEligibleMarketCopyCards(
+          state,
+          { source: 'market', maxCost: pendingCopyCardPick.maxCost },
+          (id) => !state.galleryPurchasedBy?.[id]
+        )
     : [];
 
   const handleArenaLossDisfavor = useCallback(() => {
@@ -671,6 +828,10 @@ export const GameTable: React.FC = () => {
 
   const handlePlayAreaCardPress = useCallback(
     (card: CardInstance) => {
+      if (pendingCopyCardPick?.copySource === 'in_play') {
+        handleCopyCardPick(card);
+        return;
+      }
       if (pendingCardDestroyPick?.fromZones.includes('play_area')) {
         dispatchAction('CARD_DESTROY_PICK', {
           cardInstanceId: card.instanceId,
@@ -680,7 +841,7 @@ export const GameTable: React.FC = () => {
       }
       setPreviewCard(card);
     },
-    [dispatchAction, pendingCardDestroyPick]
+    [dispatchAction, pendingCardDestroyPick, pendingCopyCardPick, handleCopyCardPick]
   );
 
   const handleCardDestroyPick = useCallback(
@@ -708,6 +869,19 @@ export const GameTable: React.FC = () => {
     (card: CardInstance) => {
       if (!localPlayer) return;
       dispatchAction('GALLERY_DESTROY_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipGalleryDestroy = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('GALLERY_DESTROY_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const handleEpicDestroyPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('EPIC_DESTROY_PICK', { cardInstanceId: card.instanceId });
     },
     [dispatchAction, localPlayer]
   );
@@ -750,7 +924,21 @@ export const GameTable: React.FC = () => {
     pendingOrEffectChoice?.branches.map((branch) => {
       const parts: string[] = [];
       if (branch.discard_hand) parts.push('Discard your hand');
-      if ((branch.destroy_cards as number) > 0) parts.push('Destroy a card');
+      if (branch.destroy_self) {
+        parts.push(
+          (branch.draw_cards as number) > 0
+            ? 'Destroy this, '
+            : (branch.gain_imperial_favor as number) > 0 ||
+                (branch.gain_favor as number) > 0
+              ? 'Destroy this for a Favor'
+              : (branch.gain_coins as number) > 0
+                ? 'Destroy this for +2 Coins'
+                : 'Destroy this'
+        );
+      }
+      if ((branch.destroy_cards as number) > 0 && !branch.destroy_self) {
+        parts.push('Destroy a card');
+      }
       if ((branch.draw_cards as number) > 0) {
         parts.push(`Draw ${branch.draw_cards}`);
       }
@@ -834,6 +1022,10 @@ export const GameTable: React.FC = () => {
         }
         return;
       }
+      if (pendingEpicDestroyPick && card.location === 'EPIC_ROW') {
+        handleEpicDestroyPick(card);
+        return;
+      }
       if (pendingGainCardPick) {
         if (!state.galleryPurchasedBy?.[card.instanceId]) {
           handleGainCardPick(card);
@@ -861,7 +1053,7 @@ export const GameTable: React.FC = () => {
       lastMarketTapRef.current = { id: card.instanceId, at: now };
       setPreviewCard(card);
     },
-    [canInteract, handleBuyCard, pendingGalleryDestroyPick, pendingGainCardPick, pendingCopyCardPick, handleGalleryDestroyPick, handleGainCardPick, handleCopyCardPick, state.galleryPurchasedBy]
+    [canInteract, handleBuyCard, pendingGalleryDestroyPick, pendingEpicDestroyPick, pendingGainCardPick, pendingCopyCardPick, handleGalleryDestroyPick, handleEpicDestroyPick, handleGainCardPick, handleCopyCardPick, state.galleryPurchasedBy]
   );
 
   const handlePreviewPurchase = useCallback(() => {
@@ -875,7 +1067,7 @@ export const GameTable: React.FC = () => {
     if (!canInteract) return 'Not your turn';
     if (pendingBandingBonus) return 'Resolve banding bonus first';
     if (pendingHandDiscard || destroyPickPending || pendingForcedDiscard || pendingArenaLoss) return undefined;
-    const cost = previewCard.definition?.cost ?? 0;
+    const cost = getEffectivePurchaseCost(state, previewCard);
     if (state.turnCoins < cost) {
       return `Need ${cost} coins (${state.turnCoins} available)`;
     }
@@ -891,7 +1083,7 @@ export const GameTable: React.FC = () => {
     !destroyPickPending &&
     !pendingForcedDiscard &&
     !pendingArenaLoss &&
-    state.turnCoins >= (previewCard.definition?.cost ?? 0);
+    state.turnCoins >= getEffectivePurchaseCost(state, previewCard);
 
   const handleLogCardPreview = useCallback((card: CardInstance) => {
     setPreviewCard(card);
@@ -1204,9 +1396,15 @@ export const GameTable: React.FC = () => {
                           key={card.instanceId}
                           card={card}
                           size={layout.galleryCardSize}
+                          costOverride={
+                            getTurnEpicDiscount(state) > 0
+                              ? getEffectivePurchaseCost(state, card)
+                              : undefined
+                          }
                           onPress={handleMarketCardPress}
-                          onLongPress={(c) => isMainActive && handleBuyCard(c)}
-                          disabled={!isMainActive}
+                          onLongPress={(c) => isMainActive && !pendingEpicDestroyPick && handleBuyCard(c)}
+                          disabled={!isMainActive && !pendingEpicDestroyPick}
+                          destroyTarget={!!pendingEpicDestroyPick}
                         />
                       ))}
                     </View>
@@ -1297,6 +1495,11 @@ export const GameTable: React.FC = () => {
                   showBandingKey={showBandingKey}
                   playArea={
                     isTurnPlayerLocal ? (localPlayer?.playArea ?? []) : []
+                  }
+                  turnPlayedCards={
+                    isTurnPlayerLocal
+                      ? (localPlayer?.turnPlayedCards ?? [])
+                      : []
                   }
                   claimedBandingFactions={
                     isTurnPlayerLocal ? (state.turnBandingClaimed ?? []) : []
@@ -1436,7 +1639,11 @@ export const GameTable: React.FC = () => {
       <AnyDiscardDestroyModal
         visible={pendingAnyDiscardDestroyPick != null}
         sourceCardName={pendingAnyDiscardDestroyPick?.sourceCardName}
-        players={state.players}
+        players={state.players.filter(
+          (p) =>
+            !pendingAnyDiscardDestroyPick?.opponentsOnly ||
+            p.id !== localPlayer?.id
+        )}
         onDestroyCard={handleAnyDiscardDestroyPick}
       />
       <OrEffectChoiceModal
@@ -1454,15 +1661,47 @@ export const GameTable: React.FC = () => {
       />
       <BandingBonusModal
         pending={pendingBandingBonus}
-        visible={pendingBandingBonus !== null}
+        visible={pendingBandingBonus !== null && !destroyPickPending}
         onAccept={handleAcceptBanding}
         onDecline={handleDeclineBanding}
       />
       <ForcedOpponentDiscardModal
-        pending={pendingForcedDiscard}
+        pending={pendingForcedOpponentFlow ?? pendingForcedDiscard}
         targetPlayer={forcedDiscardTarget}
-        visible={pendingForcedDiscard !== null && forcedDiscardTarget !== null}
+        opponentCandidates={forcedDiscardOpponentCandidates}
+        visible={
+          (pendingForcedOpponentFlow != null || pendingForcedDiscard != null) &&
+          (pendingForcedOpponentFlow?.phase === 'choose_opponent' ||
+            forcedDiscardTarget != null)
+        }
         onChoose={handleForcedOpponentDiscard}
+        onChooseOpponent={handleChooseForceDiscardTarget}
+      />
+      <MarketPickModal
+        visible={pendingPlaceCardOnDeckPick != null && placeOnDeckPickCards.length > 0}
+        title="Place on Deck"
+        subtitle={
+          pendingPlaceCardOnDeckPick?.optional
+            ? `Optional — ${pendingPlaceCardOnDeckPick.sourceCardName ?? 'choose a card'}`
+            : pendingPlaceCardOnDeckPick?.sourceCardName
+        }
+        cards={placeOnDeckPickCards}
+        onChoose={handlePlaceCardOnDeckPick}
+        onSkip={
+          pendingPlaceCardOnDeckPick?.optional
+            ? handleSkipPlaceCardOnDeck
+            : undefined
+        }
+      />
+      <MarketPickModal
+        visible={
+          pendingFavorReplayPick != null &&
+          (state.flavorDiscard?.length ?? 0) > 0
+        }
+        title="Replay a Favor"
+        subtitle={pendingFavorReplayPick?.sourceCardName}
+        cards={state.flavorDiscard ?? []}
+        onChoose={handleFavorReplayPick}
       />
       <MarketPickModal
         visible={pendingGainCardPick != null && gainPickCards.length > 0}
@@ -1474,6 +1713,37 @@ export const GameTable: React.FC = () => {
         subtitle={pendingGainCardPick?.sourceCardName}
         cards={gainPickCards}
         onChoose={handleGainCardPick}
+      />
+      <MarketPickModal
+        visible={
+          pendingGalleryDestroyPick != null &&
+          state.galleryCards.some(
+            (c) => !state.galleryPurchasedBy?.[c.instanceId]
+          )
+        }
+        title="Destroy Gallery Card"
+        subtitle={
+          pendingGalleryDestroyPick?.optional
+            ? `${pendingGalleryDestroyPick.sourceCardName ?? 'Effect'} — up to ${(pendingGalleryDestroyPick.remaining ?? 0) + (pendingGalleryDestroyPick.destroyedSoFar ?? 0)} (${pendingGalleryDestroyPick.remaining} left)`
+            : pendingGalleryDestroyPick?.sourceCardName
+        }
+        cards={state.galleryCards.filter(
+          (c) => !state.galleryPurchasedBy?.[c.instanceId]
+        )}
+        onChoose={handleGalleryDestroyPick}
+        onSkip={
+          pendingGalleryDestroyPick?.optional
+            ? handleSkipGalleryDestroy
+            : undefined
+        }
+        skipLabel="Done"
+      />
+      <MarketPickModal
+        visible={pendingEpicDestroyPick != null && state.epicCards.length > 0}
+        title="Destroy an Epic"
+        subtitle={pendingEpicDestroyPick?.sourceCardName}
+        cards={state.epicCards}
+        onChoose={handleEpicDestroyPick}
       />
       <MarketPickModal
         visible={
@@ -1496,7 +1766,11 @@ export const GameTable: React.FC = () => {
       />
       <MarketPickModal
         visible={pendingCopyCardPick != null && copyPickCards.length > 0}
-        title="Copy Market Card"
+        title={
+          pendingCopyCardPick?.copySource === 'in_play'
+            ? 'Copy Card In Play'
+            : 'Copy Market Card'
+        }
         subtitle={pendingCopyCardPick?.sourceCardName}
         cards={copyPickCards}
         onChoose={handleCopyCardPick}
@@ -1507,6 +1781,11 @@ export const GameTable: React.FC = () => {
         visible={pendingDeckLookPick != null}
         onChoosePlayer={handleDeckLookChoosePlayer}
         onKeepTop={handleDeckLookKeepTop}
+      />
+      <DeckTopRevealModal
+        pending={pendingDeckTopRevealPick}
+        visible={pendingDeckTopRevealPick != null}
+        onResolve={handleDeckTopRevealResolve}
       />
       <GainBandingBonusPickModal
         pending={pendingGainBandingBonusPick}
@@ -1524,16 +1803,21 @@ export const GameTable: React.FC = () => {
       <GalleryEventModal
         event={state.pendingGalleryEvent ?? null}
         visible={state.pendingGalleryEvent != null}
-        pendingDiscardPlayerIds={state.pendingEventDiscards ?? []}
+        pendingDiscardPlayerIds={pendingEventHandChoicePlayerIds}
+        pendingItemPlayerIds={pendingEventItemChoicePlayerIds}
+        localEventHandChoice={localEventHandChoice}
         pendingOptionalPlayerIds={
           state.pendingEventOptionalDiscards?.pendingPlayerIds ?? []
         }
         localPlayerId={localPlayer?.id ?? ''}
         localHand={localPlayer?.hand ?? []}
+        localItemsInPlay={localPlayer?.itemsInPlay ?? []}
         onResolve={handleResolveGalleryEvent}
         onDiscardCard={handleEventDiscardCard}
+        onLoseItem={handleEventLoseItem}
         onSkipOptional={handleSkipGalleryOptional}
         eventOutcomes={state.galleryEventOutcomes ?? []}
+        eventDecreeOutcomes={state.galleryEventDecreeOutcomes ?? []}
       />
       <FavorRevealModal
         favor={state.pendingFavorReveal?.card ?? null}
@@ -1548,10 +1832,17 @@ export const GameTable: React.FC = () => {
         localDiscard={localPlayer?.discard ?? []}
         localPlayArea={localPlayer?.playArea ?? []}
         pendingDestroyPick={state.pendingFavorDestroyPick ?? null}
+        pendingArenaWagerPick={state.pendingFavorArenaWagerPick ?? null}
         onResolve={handleResolveFavor}
         onAccept={handleAcceptFavor}
         onDecline={handleDeclineFavor}
         onDestroyCard={handleFavorDestroyCard}
+        onArenaWagerPick={handleArenaWagerPick}
+      />
+      <ArenaWagerResultModal
+        result={state.lastArenaWagerResult ?? null}
+        visible={state.lastArenaWagerResult != null}
+        onDismiss={handleDismissArenaWagerResult}
       />
       <ArenaChallengeModal
         visible={arenaModalOpen}

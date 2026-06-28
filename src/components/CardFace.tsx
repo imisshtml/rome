@@ -42,6 +42,8 @@ interface CardFaceProps {
   faceUp: boolean;
   width: number;
   height: number;
+  /** Override displayed coin cost (e.g. epic discount). */
+  costOverride?: number | null;
   /** Multiplier on stat badge size (e.g. zoom previews). */
   badgeScale?: number;
   /** Spy morph — overrides definition faction for faction icon. */
@@ -193,10 +195,11 @@ export const CardFace: React.FC<CardFaceProps> = ({
   height,
   badgeScale = 1,
   chosenFaction,
+  costOverride,
   style,
 }) => {
   const layout = useMemo(() => badgeLayout(width, badgeScale), [width, badgeScale]);
-  const stats = getCardStatDisplay(definition);
+  const stats = getCardStatDisplay(definition, { costOverride });
   const displayFaction = useMemo(
     () => getCardDisplayFaction(definition, chosenFaction),
     [definition, chosenFaction]

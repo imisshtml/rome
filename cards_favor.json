@@ -59,6 +59,7 @@
     "effect_text": "Gain a Legion card costing 5 or less.",
     "effects": {
       "gain_card": {
+        "type": "faction",
         "faction": "legion",
         "max_cost": 5,
         "source": "market"
@@ -153,9 +154,9 @@
     "name": "Arena Wager",
     "image": "favor_wager.jpg",
     "deck_qty": 2,
-    "effect_text": "Consult the Augur.",
+    "effect_text": "Select a card your own in play or from hand, then select a random card from each opponent's hand and reveal them all. The highest total valor + cost + victory points wins. Winner gains 1 Gratia per player in the wager, the others gain 1 disfavor.",
     "effects": {
-      "consult_augur": true
+      "arena_wager": true
     }
   },
   {

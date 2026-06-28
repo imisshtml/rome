@@ -44,6 +44,8 @@ export const CARD_IMAGES: Record<string, ImageSourcePropType> = {
   'event_plague.jpg': require('./events/event_plague.jpg'),
   'event_proclamation.jpg': require('./events/event_proclamation.jpg'),
   'event_triumph.jpg': require('./events/event_triumph.jpg'),
+  'event_due.jpg': require('./events/event_due.jpg'),
+  'event_requisition.jpg': require('./events/event_requisition.jpg'),
   'favor_advice.jpg': require('./favor/favor_advice.jpg'),
   'favor_black_market.jpg': require('./favor/favor_black_market.jpg'),
   'favor_boast.jpg': require('./favor/favor_boast.jpg'),
@@ -141,6 +143,7 @@ export const CARD_IMAGES: Record<string, ImageSourcePropType> = {
   'senate_tribune.jpg': require('./senate/senate_tribune.jpg'),
   'senate_voice.jpg': require('./senate/senate_voice.jpg'),
   'senate_vote.jpg': require('./senate/senate_vote.jpg'),
+  'senate_damnatio.jpg': require('./senate/senate_damnatio.jpg'),
 };
 
 export function getCardImage(filename?: string | null): ImageSourcePropType | undefined {

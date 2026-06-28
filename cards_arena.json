@@ -9,8 +9,8 @@
       "tier": "easy",
       "valor_required": 5,
       "reward_vp": 3,
-      "effect_text": "Completing this challenge opens the Arena.",
-      "effect_text_win": "Gain 3 Victory Points",
+      "effect_text": "Completing this challenge opens the Arena. Fail and gain 1 Disfavor.",
+      "effect_text_win": "",
       "effect_text_loss": "Gain 1 Disfavor",
       "effects": {
         "gain_vp": 3,

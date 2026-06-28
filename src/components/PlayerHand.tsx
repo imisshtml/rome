@@ -22,6 +22,7 @@ interface PlayerHandProps {
   canPlayAllCharity?: boolean;
   onPlayAllCharity?: () => void;
   playArea?: CardInstance[];
+  turnPlayedCards?: CardInstance[];
   claimedBandingFactions?: BandingFaction[];
   showBandingKey?: boolean;
   /** Applied only to the card row — faction key / charity btn stay fixed. */
@@ -42,6 +43,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   canPlayAllCharity = false,
   onPlayAllCharity,
   playArea = [],
+  turnPlayedCards = [],
   claimedBandingFactions = [],
   showBandingKey = false,
   cardsContainerStyle,
@@ -102,6 +104,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <View style={styles.bandingInner} pointerEvents="none">
             <BandingKeyChart
               playArea={playArea}
+              turnPlayedCards={turnPlayedCards}
               claimedFactions={claimedBandingFactions}
             />
           </View>
