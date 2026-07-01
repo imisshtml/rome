@@ -453,14 +453,13 @@ export function applyInstantGalleryEventEffects(
   }
 
   if (typeof legacy.temporary_max_purchase_cost === 'number') {
-    const nextPlayerId =
-      state.deferredTurnEnd?.nextPlayerIdx != null
-        ? (state.players[state.deferredTurnEnd.nextPlayerIdx]?.id ?? null)
-        : null;
+    // Restrict each player for exactly one of their upcoming turns.
     next = {
       ...next,
       purchaseCostCap: legacy.temporary_max_purchase_cost,
-      purchaseCostCapActiveForPlayerId: nextPlayerId,
+      purchaseCostCapActiveForPlayerId: null,
+      purchaseCostCapTurnsRemaining: next.players.length,
+      purchaseCostCapSourceCardId: event.definitionId ?? null,
     };
   }
 

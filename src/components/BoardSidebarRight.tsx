@@ -11,6 +11,7 @@ import { GameAction, GamePhase, PHASE_LABELS, PlayerState } from '../types/gameT
 import { costIcon, valorIcon, victoryIcon, turnButtonBg } from '../assets/images';
 import GameLogPanel from './GameLogPanel';
 import TutorialTarget from './TutorialTarget';
+import TurnTimerRing from './TurnTimerRing';
 
 const STAT_ICON_GAP = 2;
 const SIDEBAR_H_PAD = 4;
@@ -45,6 +46,9 @@ interface BoardSidebarRightProps {
   mainPhaseButtonLabel?: string;
   /** Shown under coin stat when coins are banked for a future turn */
   coinsHint?: string;
+  /** Wall-clock ms the active turn started; drives the End Turn countdown. */
+  turnStartMs?: number;
+  turnDurationMs?: number;
   onEndPhase: () => void;
   onPlayerReady?: () => void;
   onPreviewLogCard?: (card: CardInstance) => void;
@@ -71,6 +75,8 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   totalPlayers,
   mainPhaseButtonLabel,
   coinsHint,
+  turnStartMs,
+  turnDurationMs,
   onEndPhase,
   onPreviewLogCard,
 }) => {
@@ -81,6 +87,8 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
   const iconSize = iconSizeForSidebar(width);
   const buttonSize = phaseButtonSize(width);
   const canPressEndTurn = !isPregame && isLocalTurn && phase === 'MAIN';
+  const showTurnTimer =
+    !isPregame && isLocalTurn && phase === 'MAIN' && !!turnStartMs && !!turnDurationMs;
 
   return (
     <View style={[styles.sidebar, { width }]}>
@@ -132,6 +140,17 @@ export const BoardSidebarRight: React.FC<BoardSidebarRightProps> = ({
             imageStyle={styles.buttonBgImage}
             resizeMode="contain"
           >
+            {showTurnTimer ? (
+              <View style={styles.timerSlot}>
+                <TurnTimerRing
+                  key={turnStartMs}
+                  startMs={turnStartMs!}
+                  durationMs={turnDurationMs!}
+                  size={34}
+                  showLabel
+                />
+              </View>
+            ) : null}
             <Text style={styles.buttonText}>{buttonLabel}</Text>
           </ImageBackground>
         </Pressable>
@@ -241,9 +260,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   buttonBg: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 6,
     overflow: 'hidden',
+  },
+  timerSlot: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buttonBgImage: {
     borderRadius: 6,

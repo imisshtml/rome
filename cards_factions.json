@@ -703,23 +703,21 @@
       "victory_points": 1,
       "victory_formula": null,
       "deck_qty": 1,
-      "timing": "on_gain",
+      "timing": "on_play",
       "effect_text": "Draw 1 card. Then gain a Faction card costing 5 or less from the Market for free.",
       "effect_keywords": [
         "draw",
-        "on_gain",
+        "on_play",
         "gain"
       ],
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "on_gain": {
-          "draw_cards": 1,
-          "gain_card": {
-            "max_cost": 5,
-            "source": "market",
-            "type": "faction"
-          }
+        "draw_cards": 1,
+        "gain_card": {
+          "max_cost": 5,
+          "source": "market",
+          "type": "faction"
         }
       }
     },
@@ -1073,7 +1071,7 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_item": {
+        "gain_card": {
           "max_cost": 4,
           "source": "market",
           "type": "item"
@@ -1227,8 +1225,10 @@
       "effects": {
         "gain_coins": 1,
         "conditional": {
-          "if_played_faction": "Senate",
-          "gain_coins": 3
+          "if_played_factions": [
+            "Senate"
+          ],
+          "gain_coins": 2
         }
       }
     },
@@ -1468,7 +1468,7 @@
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "+2 Coins OR gain an Item card costing 4 or less from the Gallery.",
+      "effect_text": "+2 Coins OR gain an Item card costing 5 or less from the Gallery.",
       "effect_keywords": [
         "coins",
         "item"
@@ -1479,7 +1479,7 @@
         "gain_coins": 2,
         "or_effects": [
           {
-            "gain_item": {
+            "gain_card": {
               "max_cost": 4,
               "source": "market",
               "type": "item"
@@ -1499,7 +1499,7 @@
       "banding_bonus": "Gain +2 Coins",
       "cost": 5,
       "valor": 1,
-      "victory_points": 2,
+      "victory_points": 0,
       "victory_formula": "1 VP per Senate card in deck",
       "deck_qty": 1,
       "timing": "main",
@@ -1570,7 +1570,7 @@
       "status": "prototype",
       "effects": {
         "gain_coins": 2,
-        "gain_item": {
+        "gain_card": {
           "max_cost": 5,
           "source": "market",
           "type": "item"
@@ -2151,7 +2151,7 @@
       "victory_formula": null,
       "deck_qty": 1,
       "timing": "main",
-      "effect_text": "Gain a Favor. Then gain a card from the Destroyed Pile costing 3 or less..",
+      "effect_text": "Gain a Favor. Then gain a card from the Destroyed Pile costing 3 or less.",
       "effect_keywords": [
         "favor",
         "gain",
@@ -2162,7 +2162,7 @@
       "effects": {
         "gain_favor": 1,
         "gain_card": {
-          "max_cost": 5,
+          "max_cost": 3,
           "source": "destroyed_pile"
         }
       }
@@ -2456,7 +2456,7 @@
       "effects": {
         "gain_card": {
           "max_cost": 5,
-          "source": "gallery"
+          "source": "market"
         }
       }
     },
@@ -2833,9 +2833,8 @@
       "rules_notes": "",
       "status": "prototype",
       "effects": {
-        "gain_coins": 4,
-        "destroy_gallery_cards": 1,
-        "then_gain_coins": 5
+        "gain_coins": 9,
+        "destroy_gallery_cards": 1
       }
     },
     {
@@ -3009,7 +3008,7 @@
       "status": "prototype",
       "effects": {
         "copy_card": {
-          "source": "market_or_epic_tier"
+          "source": "market_or_epic"
         }
       }
     },

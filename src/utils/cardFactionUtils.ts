@@ -49,3 +49,15 @@ export function getCardEffectiveFaction(card: CardInstance): Faction {
   if (fixed) return fixed;
   return card.definition.faction;
 }
+
+/**
+ * Whether a card counts as an owned faction card (Legion/Ludus/Senate). Basic
+ * cards (Charity/Gratia) carry a Ludus faction tag for display but must NOT
+ * count toward faction membership (Secutor top-deck, deck_vp_per_faction, etc.).
+ */
+export function countsAsFactionMember(card: CardInstance): boolean {
+  if (card.chosenFaction) return true;
+  if (card.definition.effects?.counts_as_faction) return true;
+  const type = card.definition.type;
+  return type === 'Gladiator' || type === 'Action';
+}

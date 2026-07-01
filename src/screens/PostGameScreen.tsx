@@ -11,6 +11,7 @@ import { useGameState } from '../store/useGameStore';
 import { useMultiplayer } from '../network/MultiplayerProvider';
 import { buildPostGameSummary } from '../game/postGame';
 import type { PostGameCardRow } from '../game/postGame';
+import { useSafeViewportSize } from '../utils/safeViewport';
 
 function formatVp(value: number): string {
   if (value > 0) return `+${value}`;
@@ -41,6 +42,10 @@ export const PostGameScreen: React.FC = () => {
   const { leaveToLanding } = useMultiplayer();
   const summary = useMemo(() => buildPostGameSummary(state), [state]);
   const insets = useSafeAreaInsets();
+  // Bind to an explicit viewport height. On web the flex:1 ancestor chain
+  // collapses to content height, which leaves the ScrollView unbounded and
+  // therefore unscrollable — so we size it like the board layout does.
+  const { height: viewportH } = useSafeViewportSize();
 
   const winner = summary.players.find((p) => p.id === summary.winnerId);
 
@@ -49,6 +54,10 @@ export const PostGameScreen: React.FC = () => {
       style={[
         styles.root,
         {
+          height: viewportH,
+          flexGrow: 0,
+          flexShrink: 0,
+          flexBasis: 'auto',
           paddingTop: insets.top,
           paddingBottom: insets.bottom,
           paddingLeft: insets.left,
@@ -56,7 +65,11 @@ export const PostGameScreen: React.FC = () => {
         },
       ]}
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator
+      >
         <Text style={styles.title}>Game Over</Text>
         {winner ? (
           <Text style={styles.winnerLine}>
@@ -153,6 +166,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0f1a',
   },
+  scrollView: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
   scroll: {
     padding: 20,
     paddingTop: 24,
@@ -160,6 +177,7 @@ const styles = StyleSheet.create({
     maxWidth: 560,
     width: '100%',
     alignSelf: 'center',
+    flexGrow: 1,
   },
   title: {
     color: '#F1C40F',

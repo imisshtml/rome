@@ -72,8 +72,7 @@ export function favorResolutionPaused(state: GameState): boolean {
   return (
     state.pendingFavorReveal != null ||
     state.pendingFavorDestroyPick != null ||
-    state.pendingFavorArenaWagerPick != null ||
-    state.pendingFavorReplayPick != null
+    state.pendingFavorArenaWagerPick != null
   );
 }
 

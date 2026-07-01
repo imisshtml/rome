@@ -1,7 +1,7 @@
 import type { CardInstance, Faction } from '../types/cardTypes';
 import type { GameState, PlayerState } from '../types/gameTypes';
 import { GRATIA_SUPPLY, isGalleryEventCard } from '../game/CardCatalog';
-import { getCardEffectiveFaction, isCharityCard } from './cardFactionUtils';
+import { getCardEffectiveFaction, isCharityCard, countsAsFactionMember } from './cardFactionUtils';
 import { getCardsPlayedThisTurn } from './bandingUtils';
 import { getRawEffects } from './playDestroyUtils';
 
@@ -14,10 +14,12 @@ export type GainCardSpec = {
 
 export type ConditionalPlayEffect = {
   if_played_factions: string[];
+  if_arena_defeated_this_turn?: boolean;
   draw_cards?: number;
   gain_coins?: number;
   gain_favor?: number;
   gain_imperial_favor?: number;
+  gain_vp?: number;
 };
 
 export function capCoinGainForPlayer(
@@ -61,7 +63,7 @@ function parseGainCardSpec(raw: unknown): GainCardSpec | null {
 }
 
 export type CopyCardSpec = {
-  source: 'market' | 'in_play';
+  source: 'market' | 'in_play' | 'market_or_epic';
   maxCost?: number;
 };
 
@@ -75,15 +77,20 @@ export function getConditionalPlayEffect(
   const raw = getRawEffects(card).conditional as
     | Record<string, unknown>
     | undefined;
-  const factions = raw?.if_played_factions;
-  if (!Array.isArray(factions) || factions.length === 0) return null;
+  if (!raw) return null;
+  const factions = raw.if_played_factions;
+  const factionList = Array.isArray(factions) ? factions.map(String) : [];
+  const arenaDefeated = raw.if_arena_defeated_this_turn === true;
+  if (factionList.length === 0 && !arenaDefeated) return null;
   return {
-    if_played_factions: factions.map(String),
-    draw_cards: (raw?.draw_cards as number | undefined) ?? undefined,
-    gain_coins: (raw?.gain_coins as number | undefined) ?? undefined,
-    gain_favor: (raw?.gain_favor as number | undefined) ?? undefined,
+    if_played_factions: factionList,
+    if_arena_defeated_this_turn: arenaDefeated,
+    draw_cards: (raw.draw_cards as number | undefined) ?? undefined,
+    gain_coins: (raw.gain_coins as number | undefined) ?? undefined,
+    gain_favor: (raw.gain_favor as number | undefined) ?? undefined,
     gain_imperial_favor:
-      (raw?.gain_imperial_favor as number | undefined) ?? undefined,
+      (raw.gain_imperial_favor as number | undefined) ?? undefined,
+    gain_vp: (raw.gain_vp as number | undefined) ?? undefined,
   };
 }
 
@@ -113,7 +120,12 @@ export function getCopyCardSpec(card: CardInstance): CopyCardSpec | null {
   const raw = getRawEffects(card).copy_card;
   if (!raw) return null;
   if (raw === true) return { source: 'in_play' };
-  if (typeof raw === 'object') return raw as CopyCardSpec;
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const source = (obj.source as CopyCardSpec['source']) ?? 'in_play';
+    const maxCost = (obj.maxCost ?? obj.max_cost) as number | undefined;
+    return { source, maxCost };
+  }
   return null;
 }
 
@@ -126,6 +138,10 @@ export function wantsOwnDeckLookOnly(card: CardInstance): boolean {
   return (
     raw.reorder_top_cards === true || raw.look_at_own_deck_only === true
   );
+}
+
+export function wantsDeckReorder(card: CardInstance): boolean {
+  return getRawEffects(card).reorder_top_cards === true;
 }
 
 export function getOnGainEffects(
@@ -351,13 +367,21 @@ export function listEligibleMarketCopyCards(
   isGalleryAvailable: (instanceId: string) => boolean
 ): CardInstance[] {
   const maxCost = spec.maxCost ?? Infinity;
-  if (spec.source !== 'market') return [];
+  if (spec.source !== 'market' && spec.source !== 'market_or_epic') return [];
 
-  return state.galleryCards.filter((card) => {
+  const gallery = state.galleryCards.filter((card) => {
     if (!isGalleryAvailable(card.instanceId)) return false;
     if (isGalleryEventCard(card)) return false;
     return (card.definition.cost ?? 0) <= maxCost;
   });
+
+  if (spec.source === 'market_or_epic') {
+    const epics = state.epicCards.filter(
+      (card) => (card.definition.cost ?? 0) <= maxCost
+    );
+    return [...gallery, ...epics];
+  }
+  return gallery;
 }
 
 export function listEligibleInPlayCopyCards(
@@ -415,6 +439,7 @@ export function listEligiblePlaceOnDeckCards(
   spec: NonNullable<ReturnType<typeof getPlaceCardOnDeckSpec>>
 ): CardInstance[] {
   return player.discard.filter((card) => {
+    if (!countsAsFactionMember(card)) return false;
     if (spec.anyFaction || !spec.faction) {
       const faction = getCardEffectiveFaction(card);
       return faction === 'Legion' || faction === 'Ludus' || faction === 'Senate';
@@ -440,6 +465,7 @@ export function countFactionCardsInDeck(
   faction: string
 ): number {
   return cards.filter((c) => {
+    if (!countsAsFactionMember(c)) return false;
     if (c.definition.faction === faction) return true;
     return getCardEffectiveFaction(c) === faction;
   }).length;

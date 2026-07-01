@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ interface DeckLookModalProps {
   visible: boolean;
   onChoosePlayer: (playerId: string) => void;
   onKeepTop: (card: CardInstance) => void;
+  onReorder: (orderedInstanceIds: string[]) => void;
 }
 
 const CARD_W = 88;
@@ -29,13 +30,41 @@ export const DeckLookModal: React.FC<DeckLookModalProps> = ({
   visible,
   onChoosePlayer,
   onKeepTop,
+  onReorder,
 }) => {
+  const [order, setOrder] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (pending?.phase === 'reorder') {
+      setOrder((pending.viewedCards ?? []).map((c) => c.instanceId));
+    } else {
+      setOrder([]);
+    }
+  }, [pending?.phase, pending?.viewedCards, pending?.sourceCardInstanceId]);
+
   if (!pending) return null;
 
   const targetPlayer =
-    pending.phase === 'keep_top' && pending.targetPlayerId
+    (pending.phase === 'keep_top' || pending.phase === 'reorder') &&
+    pending.targetPlayerId
       ? players.find((p) => p.id === pending.targetPlayerId)
       : null;
+
+  const viewedById = new Map(
+    (pending.viewedCards ?? []).map((c) => [c.instanceId, c])
+  );
+
+  const moveCard = (instanceId: string, direction: -1 | 1) => {
+    setOrder((prev) => {
+      const idx = prev.indexOf(instanceId);
+      if (idx === -1) return prev;
+      const nextIdx = idx + direction;
+      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[idx], copy[nextIdx]] = [copy[nextIdx], copy[idx]];
+      return copy;
+    });
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -47,7 +76,8 @@ export const DeckLookModal: React.FC<DeckLookModalProps> = ({
           {pending.phase === 'choose_deck' ? (
             <>
               <Text style={styles.body}>
-                Choose a player whose deck to look at (top {pending.lookCount} cards).
+                Choose a player whose deck to look at (top {pending.lookCount}{' '}
+                cards).
               </Text>
               <View style={styles.playerList}>
                 {players.map((p) => (
@@ -61,11 +91,71 @@ export const DeckLookModal: React.FC<DeckLookModalProps> = ({
                 ))}
               </View>
             </>
+          ) : pending.phase === 'reorder' ? (
+            <>
+              <Text style={styles.body}>
+                {targetPlayer?.name ?? 'Your'} deck — left is top. Use arrows to
+                reorder, then confirm.
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.row}
+              >
+                {order.map((instanceId, index) => {
+                  const card = viewedById.get(instanceId);
+                  if (!card) return null;
+                  return (
+                    <View key={instanceId} style={styles.reorderCol}>
+                      <Text style={styles.orderLabel}>
+                        {index === 0 ? 'Top' : `#${index + 1}`}
+                      </Text>
+                      <CardFace
+                        definition={
+                          card.definition ?? getCardDefinition(card.definitionId)
+                        }
+                        faceUp
+                        width={CARD_W}
+                        height={CARD_H}
+                      />
+                      <View style={styles.arrowRow}>
+                        <Pressable
+                          style={[
+                            styles.arrowBtn,
+                            index === 0 && styles.arrowBtnDisabled,
+                          ]}
+                          disabled={index === 0}
+                          onPress={() => moveCard(instanceId, -1)}
+                        >
+                          <Text style={styles.arrowText}>◀</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[
+                            styles.arrowBtn,
+                            index === order.length - 1 && styles.arrowBtnDisabled,
+                          ]}
+                          disabled={index === order.length - 1}
+                          onPress={() => moveCard(instanceId, 1)}
+                        >
+                          <Text style={styles.arrowText}>▶</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+              <Pressable
+                style={styles.confirmBtn}
+                onPress={() => onReorder(order)}
+              >
+                <Text style={styles.confirmBtnText}>Confirm order</Text>
+              </Pressable>
+            </>
           ) : (
             <>
               <Text style={styles.body}>
                 {targetPlayer?.name ?? 'Player'}&apos;s deck — tap the card to
-                keep on top; the other goes to the bottom.
+                keep on top; the others go to the bottom.
               </Text>
               <ScrollView
                 horizontal
@@ -161,6 +251,49 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  reorderCol: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  orderLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  arrowRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  arrowBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.45)',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  arrowBtnDisabled: {
+    opacity: 0.35,
+  },
+  arrowText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  confirmBtn: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.55)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(212,175,55,0.12)',
+  },
+  confirmBtnText: {
+    color: '#f1c40f',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });
 

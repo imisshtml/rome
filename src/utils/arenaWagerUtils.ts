@@ -1,5 +1,6 @@
 import type { CardInstance } from '../types/cardTypes';
 import type { GameState, PlayerState } from '../types/gameTypes';
+import { getCardEffectiveVictoryPoints } from '../game/postGame';
 import { getRawEffects } from './playDestroyUtils';
 
 export type ArenaWagerEntry = {
@@ -23,9 +24,15 @@ export function favorIsArenaWager(card: CardInstance): boolean {
   return getRawEffects(card).arena_wager === true;
 }
 
-export function scoreArenaWagerCard(card: CardInstance): number {
+export function scoreArenaWagerCard(
+  card: CardInstance,
+  player?: PlayerState
+): number {
   const def = card.definition;
-  return (def.valor ?? 0) + (def.cost ?? 0) + (def.victoryPoints ?? 0);
+  const vp = player
+    ? getCardEffectiveVictoryPoints(card, player)
+    : (def.victoryPoints ?? 0);
+  return (def.valor ?? 0) + (def.cost ?? 0) + vp;
 }
 
 export function beneficiaryHasArenaWagerTargets(player: PlayerState): boolean {
@@ -67,7 +74,7 @@ export function buildArenaWagerEntries(
       playerName: beneficiary.name,
       card: { ...ownCard, faceUp: true },
       sourceZone: ownPick.sourceZone,
-      score: scoreArenaWagerCard(ownCard),
+      score: scoreArenaWagerCard(ownCard, beneficiary),
       randomPick: false,
     },
   ];
@@ -89,7 +96,7 @@ export function buildArenaWagerEntries(
       playerName: opponent.name,
       card: { ...card, faceUp: true },
       sourceZone: 'HAND',
-      score: scoreArenaWagerCard(card),
+      score: scoreArenaWagerCard(card, opponent),
       randomPick: true,
     });
   }
@@ -123,12 +130,12 @@ export function pickBestArenaWagerOwnCard(
     ...player.hand.map((card) => ({
       card,
       sourceZone: 'HAND' as const,
-      score: scoreArenaWagerCard(card),
+      score: scoreArenaWagerCard(card, player),
     })),
     ...player.playArea.map((card) => ({
       card,
       sourceZone: 'PLAY_AREA' as const,
-      score: scoreArenaWagerCard(card),
+      score: scoreArenaWagerCard(card, player),
     })),
   ];
   if (candidates.length === 0) return null;

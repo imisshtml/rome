@@ -7,8 +7,13 @@ type DrawCardsFn = (player: PlayerState, count: number) => PlayerState;
 type ExtendedPlayEffects = CardEffects & {
   discard_hand?: boolean;
   discount_faction_cost?: number;
+  discount_item_cost?: number;
   gain_favor?: number;
   gain_valor_per_arena_challenger?: number;
+  next_card_to_hand?: boolean;
+  may_purchase_from_destroyed_pile?: boolean;
+  gain_gratia_on_arena_victory?: number;
+  beast_arena_valor_bonus?: number;
 };
 
 /** Applies immediate on-play effects. Choice/interaction effects are not resolved here yet. */
@@ -24,14 +29,23 @@ export function applyStructuredPlayEffects(
     state.players[playerIdx],
     fx.gain_coins
   );
+  // Coins/valor are turn-scoped for the active player. When an effect benefits a
+  // non-active player (e.g. a Favor granted to everyone via an event), route the
+  // coins to that player's carry pool so they receive them on their own turn.
+  const isActivePlayer = state.players[playerIdx].id === state.turnPlayerId;
   let next: GameState = {
     ...state,
-    turnCoins: state.turnCoins + cappedCoins,
-    turnValor: state.turnValor + fx.gain_valor,
+    turnCoins: isActivePlayer ? state.turnCoins + cappedCoins : state.turnCoins,
+    turnValor: isActivePlayer ? state.turnValor + fx.gain_valor : state.turnValor,
   };
 
   let player: PlayerState = { ...next.players[playerIdx] };
   let playerChanged = false;
+
+  if (!isActivePlayer && cappedCoins > 0) {
+    player.carryCoins = (player.carryCoins ?? 0) + cappedCoins;
+    playerChanged = true;
+  }
 
   if (effects.gain_vp) {
     player.victoryPoints += effects.gain_vp;
@@ -74,6 +88,37 @@ export function applyStructuredPlayEffects(
       ...next,
       turnFactionDiscount:
         (next.turnFactionDiscount ?? 0) + fx.discount_faction_cost,
+    };
+  }
+
+  if (fx.discount_item_cost) {
+    next = {
+      ...next,
+      turnItemDiscount: (next.turnItemDiscount ?? 0) + fx.discount_item_cost,
+    };
+  }
+
+  if (fx.next_card_to_hand) {
+    next = { ...next, turnNextGainToHand: true };
+  }
+
+  if (fx.may_purchase_from_destroyed_pile) {
+    next = { ...next, turnPurchaseFromDestroyed: true };
+  }
+
+  if (fx.gain_gratia_on_arena_victory) {
+    next = {
+      ...next,
+      turnGratiaOnArenaVictory:
+        (next.turnGratiaOnArenaVictory ?? 0) + fx.gain_gratia_on_arena_victory,
+    };
+  }
+
+  if (fx.beast_arena_valor_bonus) {
+    next = {
+      ...next,
+      turnArenaValorBonus:
+        (next.turnArenaValorBonus ?? 0) + fx.beast_arena_valor_bonus,
     };
   }
 

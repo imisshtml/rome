@@ -11,13 +11,34 @@ import {
   shouldDeferGalleryRefill,
   wantsGainBandingBonusChoice,
   wantsOwnDeckLookOnly,
+  wantsDeckReorder,
   cardWithOnGainAsPlayEffects,
 } from '../utils/effectFlowUtils';
 import { getRawEffects } from '../utils/playDestroyUtils';
 import { isGalleryEventCard } from './CardCatalog';
 import { refillPlayerDeckFromDiscard } from '../utils/deckCycleUtils';
+import { favorResolutionPaused } from './FavorResolver';
+import type { PendingGainCardPick } from '../types/gameTypes';
 
 type GalleryAvailableFn = (state: GameState, instanceId: string) => boolean;
+
+function shouldDeferGainCardPick(state: GameState): boolean {
+  return (
+    favorResolutionPaused(state) ||
+    state.pendingFavorReveal != null ||
+    (state.pendingFavorQueue?.length ?? 0) > 0
+  );
+}
+
+function setGainCardPickOrDefer(
+  state: GameState,
+  pick: PendingGainCardPick
+): GameState {
+  if (shouldDeferGainCardPick(state)) {
+    return { ...state, deferredGainCardPick: pick };
+  }
+  return { ...state, pendingGainCardPick: pick };
+}
 
 type DrawCardsFn = (player: PlayerState, count: number) => PlayerState;
 
@@ -53,7 +74,11 @@ function beginDeckLookPick(
   targetPlayerId: string
 ): GameState {
   const player = state.players[playerIdx];
-  if (viewed.length < 2) {
+  const reorder = wantsDeckReorder(card);
+  if (!reorder && viewed.length < 2) {
+    return state;
+  }
+  if (reorder && viewed.length < 1) {
     return state;
   }
   return {
@@ -63,7 +88,7 @@ function beginDeckLookPick(
       sourceCardName: card.definition.name,
       sourceCardInstanceId: card.instanceId,
       lookCount: viewed.length,
-      phase: 'keep_top',
+      phase: reorder ? 'reorder' : 'keep_top',
       targetPlayerId,
       viewedCards: viewed,
     },
@@ -144,7 +169,7 @@ export function beginInteractivePlayPicks(
       };
     }
   }
-  if (copySpec?.source === 'market') {
+  if (copySpec?.source === 'market' || copySpec?.source === 'market_or_epic') {
     const eligible = listEligibleMarketCopyCards(
       state,
       copySpec,
@@ -158,7 +183,7 @@ export function beginInteractivePlayPicks(
           sourceCardName: card.definition.name,
           sourceCardInstanceId: card.instanceId,
           maxCost: copySpec.maxCost,
-          copySource: 'market',
+          copySource: copySpec.source,
         },
       };
     }
@@ -168,18 +193,15 @@ export function beginInteractivePlayPicks(
   if (gainSpec?.source === 'destroyed_pile') {
     const eligible = listEligibleDestroyedGainCards(state, gainSpec);
     if (eligible.length > 0) {
-      return {
-        ...state,
-        pendingGainCardPick: {
-          playerId: player.id,
-          sourceCardName: card.definition.name,
-          sourceCardInstanceId: card.instanceId,
-          maxCost: gainSpec.maxCost,
-          cardType: gainSpec.type,
-          gainFaction: gainSpec.faction,
-          gainSource: 'destroyed_pile',
-        },
-      };
+      return setGainCardPickOrDefer(state, {
+        playerId: player.id,
+        sourceCardName: card.definition.name,
+        sourceCardInstanceId: card.instanceId,
+        maxCost: gainSpec.maxCost,
+        cardType: gainSpec.type,
+        gainFaction: gainSpec.faction,
+        gainSource: 'destroyed_pile',
+      });
     }
   }
 
@@ -191,19 +213,16 @@ export function beginInteractivePlayPicks(
     );
     if (eligible.length > 0) {
       const discardAfter = (getRawEffects(card).discard_cards as number) ?? 0;
-      return {
-        ...state,
-        pendingGainCardPick: {
-          playerId: player.id,
-          sourceCardName: card.definition.name,
-          sourceCardInstanceId: card.instanceId,
-          maxCost: gainSpec.maxCost,
-          cardType: gainSpec.type,
-          gainFaction: gainSpec.faction,
-          gainSource: gainSpec.source === 'market_or_epic' ? 'market_or_epic' : 'market',
-          thenDiscard: discardAfter > 0 ? discardAfter : undefined,
-        },
-      };
+      return setGainCardPickOrDefer(state, {
+        playerId: player.id,
+        sourceCardName: card.definition.name,
+        sourceCardInstanceId: card.instanceId,
+        maxCost: gainSpec.maxCost,
+        cardType: gainSpec.type,
+        gainFaction: gainSpec.faction,
+        gainSource: gainSpec.source === 'market_or_epic' ? 'market_or_epic' : 'market',
+        thenDiscard: discardAfter > 0 ? discardAfter : undefined,
+      });
     }
   }
 
@@ -413,6 +432,23 @@ export function reorderDeckKeepTop(
     ...player,
     deck: [kept, ...rest, ...others],
   };
+}
+
+export function applyDeckTopOrder(
+  player: PlayerState,
+  viewedCards: CardInstance[],
+  orderedInstanceIds: string[]
+): PlayerState {
+  if (orderedInstanceIds.length !== viewedCards.length) return player;
+  const byId = new Map(viewedCards.map((c) => [c.instanceId, c]));
+  const ordered: CardInstance[] = [];
+  for (const id of orderedInstanceIds) {
+    const card = byId.get(id);
+    if (!card) return player;
+    ordered.push({ ...card, faceUp: false });
+  }
+  const rest = player.deck.slice(viewedCards.length);
+  return { ...player, deck: [...ordered, ...rest] };
 }
 
 export function galleryDestroyRefillImmediate(card: CardInstance): boolean {

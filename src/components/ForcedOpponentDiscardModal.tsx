@@ -41,12 +41,18 @@ export const ForcedOpponentDiscardModal: React.FC<ForcedOpponentDiscardModalProp
       <View style={styles.backdrop}>
         <View style={styles.panel}>
           <Text style={styles.title}>
-            {choosingOpponent ? 'Choose Opponent' : 'Forced Discard'}
+            {choosingOpponent
+              ? 'Choose Opponent'
+              : pending.destroyToPile
+                ? 'Destroy from Hand'
+                : 'Forced Discard'}
           </Text>
           {choosingOpponent ? (
             <>
               <Text style={styles.body}>
-                Look at an opponent&apos;s hand and force them to discard 1 card
+                {pending.destroyToPile
+                  ? 'Choose an opponent whose hand you will inspect'
+                  : 'Look at an opponent\u2019s hand and force them to discard 1 card'}
                 {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
               </Text>
               <View style={styles.opponentList}>
@@ -68,7 +74,8 @@ export const ForcedOpponentDiscardModal: React.FC<ForcedOpponentDiscardModalProp
               <Text style={styles.subtitle}>{targetPlayer.name}&apos;s hand</Text>
               <Text style={styles.body}>
                 Choose {pending.remainingForTarget} card
-                {pending.remainingForTarget === 1 ? '' : 's'} to discard
+                {pending.remainingForTarget === 1 ? '' : 's'} to{' '}
+                {pending.destroyToPile ? 'destroy' : 'discard'}
                 {pending.sourceCardName ? ` (${pending.sourceCardName})` : ''}
               </Text>
 

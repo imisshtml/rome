@@ -17,6 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSetAtom } from 'jotai';
 import {
   useGameState,
   useDispatchAction,
@@ -24,6 +25,7 @@ import {
   useHoveredZone,
   useLocalPlayer,
   useIsLocalTurn,
+  hoverPreviewAtom,
 } from '../store/useGameStore';
 import { getArenaChallengeStats, getArenaChallengeTotalValor, getCurrentPlayer } from '../game/GameEngine';
 import { getArenaMaxCommit } from '../utils/arenaUtils';
@@ -53,6 +55,7 @@ import ArenaChallengeModal, { ArenaModalStep } from './ArenaChallengeModal';
 import FactionChoiceModal from './FactionChoiceModal';
 import BandingBonusModal from './BandingBonusModal';
 import ForcedOpponentDiscardModal from './ForcedOpponentDiscardModal';
+import BriberyModal from './BriberyModal';
 import ArenaLossModal from './ArenaLossModal';
 import GalleryEventModal from './GalleryEventModal';
 import {
@@ -97,11 +100,18 @@ import {
   isPurchasableMarketCard,
 } from '../game/CardDefinitions';
 import { FullBleedBackground } from './FullBleedBackground';
+import {
+  getCurrentCrowdFrenzyReplacement,
+  listCrowdFrenzyMarketCards,
+} from '../utils/crowdFrenzyUtils';
+import { isActivatableItem } from '../utils/itemUtils';
 import { gameBackground } from '../assets/images';
 
 const ZONE_LAYOUTS = new Map<string, LayoutRectangle>();
 const MARKET_LOCATIONS: CardLocation[] = ['GALLERY', 'EPIC_ROW', 'RECRUIT'];
 const DOUBLE_TAP_MS = 400;
+/** Per-player turn budget before the turn auto-passes. */
+const TURN_DURATION_MS = 2 * 60 * 1000;
 
 function isBuyableMarketCard(
   card: CardInstance | null,
@@ -126,6 +136,7 @@ export const GameTable: React.FC = () => {
   const dispatch = useDispatchAction();
   const [draggedCard, setDraggedCard] = useDraggedCard();
   const [, setHoveredZone] = useHoveredZone();
+  const setHoverPreview = useSetAtom(hoverPreviewAtom);
   const isPregame = state.phase === 'PREGAME' && state.status === 'active';
   const layout = useBoardLayout(!isPregame);
   const [previewCard, setPreviewCard] = useState<CardInstance | null>(null);
@@ -134,6 +145,19 @@ export const GameTable: React.FC = () => {
   const [arenaModalOpen, setArenaModalOpen] = useState(false);
   const [arenaModalStep, setArenaModalStep] = useState<ArenaModalStep>('prompt');
   const [factionChoiceCard, setFactionChoiceCard] = useState<CardInstance | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 3200);
+  }, []);
+  useEffect(
+    () => () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    },
+    []
+  );
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [tableScreenRect, setTableScreenRect] = useState({ x: 0, y: 0 });
   const tableRef = useRef<View>(null);
@@ -195,14 +219,42 @@ export const GameTable: React.FC = () => {
     : false;
   const readyCount = state.readyPlayerIds.length;
 
+  // "The Crowd has roared in favor of X" — one-shot banner at game start.
+  const announcedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const msg = state.gameStartAnnouncement;
+    if (msg && announcedRef.current !== msg) {
+      announcedRef.current = msg;
+      showNotice(msg);
+    }
+  }, [state.gameStartAnnouncement, showNotice]);
+
+  // Per-turn countdown. Stamp the clock synchronously the moment the active
+  // turn changes so the auto-pass effect never reads a stale start time (a
+  // lagging value made the next player's turn auto-skip immediately).
+  const turnKey = `${state.turnPlayerId}:${state.turnNumber}`;
+  const turnClockRef = useRef<{ key: string; startMs: number }>({
+    key: turnKey,
+    startMs: Date.now(),
+  });
+  if (turnClockRef.current.key !== turnKey) {
+    turnClockRef.current = { key: turnKey, startMs: Date.now() };
+  }
+  const turnStartMs = turnClockRef.current.startMs;
+  const turnTimerStartMs = isMainActive ? turnStartMs : undefined;
+
   const valorInPlay =
     localPlayer && isMainActive && isLocalTurn
       ? getValorInPlay(localPlayer, state.turnValor)
       : localPlayer
         ? getValorInPlay(localPlayer)
         : 0;
+  const arenaDefeatedThisTurn = state.turnArenaDefeated === true;
   const canChallengeArena =
-    canInteract && !!state.arenaCard && !state.arenaChallenge;
+    canInteract &&
+    !!state.arenaCard &&
+    !state.arenaChallenge &&
+    !arenaDefeatedThisTurn;
   const mandatoryArenaPending =
     !!localPlayer &&
     isLocalTurn &&
@@ -323,6 +375,12 @@ export const GameTable: React.FC = () => {
   const victoryPoints = localPlayer ? getPlayerTotalVp(localPlayer) : 0;
   const destroyedCount = state.destroyedPile?.length ?? 0;
 
+  const favorRevealBeneficiary = state.pendingFavorReveal
+    ? state.players.find((p) => p.id === state.pendingFavorReveal!.playerId)
+    : null;
+  const showFavorRevealModal =
+    state.pendingFavorReveal != null && favorRevealBeneficiary?.isAI !== true;
+
   const dispatchAction = useCallback(
     (type: GameAction['type'], payload?: GameAction['payload']) => {
       if (!localPlayer) return;
@@ -335,6 +393,14 @@ export const GameTable: React.FC = () => {
     },
     [dispatch, localPlayer]
   );
+
+  // Auto-pass the turn when the local player's 2 minutes run out.
+  useEffect(() => {
+    if (!isMainActive || !isLocalTurn) return;
+    const remaining = Math.max(0, TURN_DURATION_MS - (Date.now() - turnStartMs));
+    const id = setTimeout(() => dispatchAction('END_PHASE'), remaining);
+    return () => clearTimeout(id);
+  }, [isMainActive, isLocalTurn, turnStartMs, dispatchAction]);
 
   const playCard = useCallback(
     (card: CardInstance, chosenFaction?: Faction) => {
@@ -555,6 +621,29 @@ export const GameTable: React.FC = () => {
       ? state.pendingDeckLookPick
       : null;
 
+  const pendingCrowdFrenzyPick =
+    state.pendingCrowdFrenzyPick?.playerId === localPlayer?.id
+      ? state.pendingCrowdFrenzyPick
+      : null;
+
+  const pendingItemDeckPeek =
+    state.pendingItemDeckPeek?.playerId === localPlayer?.id
+      ? state.pendingItemDeckPeek
+      : null;
+
+  const currentCrowdFrenzyReplacement = pendingCrowdFrenzyPick
+    ? getCurrentCrowdFrenzyReplacement(pendingCrowdFrenzyPick)
+    : null;
+
+  const crowdFrenzyPickCards =
+    currentCrowdFrenzyReplacement != null
+      ? listCrowdFrenzyMarketCards(
+          state,
+          currentCrowdFrenzyReplacement.targetCost,
+          (s, id) => !(s.galleryPurchasedBy ?? {})[id]
+        )
+      : [];
+
   const pendingDeckTopRevealPick =
     state.pendingDeckTopRevealPick?.playerId === localPlayer?.id
       ? state.pendingDeckTopRevealPick
@@ -574,6 +663,57 @@ export const GameTable: React.FC = () => {
     state.pendingArenaLoss?.playerId === localPlayer?.id
       ? state.pendingArenaLoss
       : null;
+
+  const pendingReturnCardToHandPick =
+    state.pendingReturnCardToHandPick?.playerId === localPlayer?.id
+      ? state.pendingReturnCardToHandPick
+      : null;
+
+  const returnToHandPickCards =
+    pendingReturnCardToHandPick && localPlayer
+      ? localPlayer.discard.filter(
+          (c) =>
+            !pendingReturnCardToHandPick.excludeType ||
+            c.definition.type?.toLowerCase() !==
+              pendingReturnCardToHandPick.excludeType.toLowerCase()
+        )
+      : [];
+
+  const pendingBriberyPick =
+    state.pendingBriberyPick?.playerId === localPlayer?.id
+      ? state.pendingBriberyPick
+      : null;
+
+  const briberyOpponentCandidates =
+    pendingBriberyPick != null
+      ? state.players.filter((p) =>
+          pendingBriberyPick.opponentCandidateIds.includes(p.id)
+        )
+      : [];
+
+  const briberyRevealedCard =
+    pendingBriberyPick?.revealedCardInstanceId && pendingBriberyPick.opponentId
+      ? (state.players
+          .find((p) => p.id === pendingBriberyPick.opponentId)
+          ?.hand.find(
+            (c) => c.instanceId === pendingBriberyPick.revealedCardInstanceId
+          ) ?? null)
+      : null;
+
+  const pendingRevealFavorsPick =
+    state.pendingRevealFavorsPick?.playerId === localPlayer?.id
+      ? state.pendingRevealFavorsPick
+      : null;
+
+  const pendingFlipMarketPick =
+    state.pendingFlipMarketPick?.playerId === localPlayer?.id
+      ? state.pendingFlipMarketPick
+      : null;
+
+  const flipMarketPickCards =
+    pendingFlipMarketPick != null
+      ? state.galleryCards.filter((c) => c.faceUp !== false)
+      : [];
 
   const forcedDiscardTarget = pendingForcedDiscard
     ? localPlayer
@@ -603,9 +743,14 @@ export const GameTable: React.FC = () => {
     pendingGainCardPick ||
     pendingCopyCardPick ||
     pendingDeckLookPick ||
+    pendingCrowdFrenzyPick ||
     pendingDeckTopRevealPick ||
     pendingGainBandingBonusPick ||
     pendingPlaceDestroyedOnMarketPick ||
+    pendingReturnCardToHandPick ||
+    pendingBriberyPick ||
+    pendingRevealFavorsPick ||
+    pendingFlipMarketPick ||
     pendingPlaceCardOnDeckPick;
 
   const canPlayAllCoins =
@@ -729,6 +874,82 @@ export const GameTable: React.FC = () => {
     [dispatchAction, localPlayer]
   );
 
+  const handleDeckLookReorder = useCallback(
+    (orderedInstanceIds: string[]) => {
+      if (!localPlayer) return;
+      dispatchAction('DECK_LOOK_REORDER', { cardInstanceIds: orderedInstanceIds });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleCrowdFrenzyPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('CROWD_FRENZY_GAIN_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleCrowdFrenzySkip = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('CROWD_FRENZY_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const handleItemPeekDraw = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('ITEM_PEEK_DRAW');
+  }, [dispatchAction, localPlayer]);
+
+  const handleItemPeekSkip = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('ITEM_PEEK_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const interactivePromptOpen =
+    showFavorRevealModal ||
+    pendingCrowdFrenzyPick != null ||
+    pendingItemDeckPeek != null ||
+    pendingDeckLookPick != null ||
+    pendingDeckTopRevealPick != null ||
+    pendingGainCardPick != null ||
+    pendingCopyCardPick != null ||
+    pendingFavorReplayPick != null ||
+    state.pendingFavorDestroyPick?.playerId === localPlayer?.id ||
+    state.pendingFavorArenaWagerPick?.beneficiaryId === localPlayer?.id ||
+    state.pendingGalleryEvent != null ||
+    pendingReturnCardToHandPick != null ||
+    pendingBriberyPick != null ||
+    pendingRevealFavorsPick != null ||
+    pendingFlipMarketPick != null ||
+    pendingGainBandingBonusPick != null ||
+    pendingPlaceDestroyedOnMarketPick != null ||
+    pendingPlaceCardOnDeckPick != null ||
+    pendingCardDestroyPick != null ||
+    pendingGalleryDestroyPick != null ||
+    pendingEpicDestroyPick != null ||
+    pendingAnyDiscardDestroyPick != null ||
+    pendingOrEffectChoice != null ||
+    pendingOnGainDestroyPick != null ||
+    pendingForcedDiscard != null ||
+    pendingForcedOpponentFlow != null ||
+    pendingArenaLoss != null ||
+    pendingBandingBonus != null ||
+    pendingHandDiscard != null ||
+    state.lastArenaWagerResult != null;
+
+  useEffect(() => {
+    if (!interactivePromptOpen) return;
+    setPreviewCard(null);
+    setHoverPreview(null);
+    setDraggedCard(null);
+    setHoveredZone(null);
+  }, [
+    interactivePromptOpen,
+    setHoverPreview,
+    setDraggedCard,
+    setHoveredZone,
+  ]);
+
   const handleDeckTopRevealResolve = useCallback(
     (choice: 'destroy' | 'return') => {
       if (!localPlayer) return;
@@ -744,6 +965,58 @@ export const GameTable: React.FC = () => {
     },
     [dispatchAction, localPlayer]
   );
+
+  const handleReturnCardToHandPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('RETURN_CARD_TO_HAND_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipReturnCardToHand = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('RETURN_CARD_TO_HAND_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const handleBriberyChooseOpponent = useCallback(
+    (opponentId: string) => {
+      if (!localPlayer) return;
+      dispatchAction('BRIBERY_CHOOSE_OPPONENT', { targetPlayerId: opponentId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleBriberyPlay = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('BRIBERY_PLAY_REVEALED');
+  }, [dispatchAction, localPlayer]);
+
+  const handleBriberySkip = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('BRIBERY_SKIP');
+  }, [dispatchAction, localPlayer]);
+
+  const handleRevealFavorsPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('REVEAL_FAVORS_PICK', { cardInstanceIds: [card.instanceId] });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleFlipMarketPick = useCallback(
+    (card: CardInstance) => {
+      if (!localPlayer) return;
+      dispatchAction('FLIP_MARKET_PICK', { cardInstanceId: card.instanceId });
+    },
+    [dispatchAction, localPlayer]
+  );
+
+  const handleSkipFlipMarket = useCallback(() => {
+    if (!localPlayer) return;
+    dispatchAction('FLIP_MARKET_SKIP');
+  }, [dispatchAction, localPlayer]);
 
   const gainPickCards = pendingGainCardPick
     ? pendingGainCardPick.gainSource === 'destroyed_pile'
@@ -780,7 +1053,13 @@ export const GameTable: React.FC = () => {
         )
       : listEligibleMarketCopyCards(
           state,
-          { source: 'market', maxCost: pendingCopyCardPick.maxCost },
+          {
+            source:
+              pendingCopyCardPick.copySource === 'market_or_epic'
+                ? 'market_or_epic'
+                : 'market',
+            maxCost: pendingCopyCardPick.maxCost,
+          },
           (id) => !state.galleryPurchasedBy?.[id]
         )
     : [];
@@ -842,6 +1121,17 @@ export const GameTable: React.FC = () => {
       setPreviewCard(card);
     },
     [dispatchAction, pendingCardDestroyPick, pendingCopyCardPick, handleCopyCardPick]
+  );
+
+  const handleItemActivate = useCallback(
+    (card: CardInstance) => {
+      if (localPlayer && isTurnPlayerLocal && isActivatableItem(card) && !card.tapped) {
+        dispatchAction('USE_ITEM', { cardInstanceId: card.instanceId });
+        return;
+      }
+      setPreviewCard(card);
+    },
+    [dispatchAction, localPlayer, isTurnPlayerLocal]
   );
 
   const handleCardDestroyPick = useCallback(
@@ -1009,9 +1299,18 @@ export const GameTable: React.FC = () => {
   const handleBuyCard = useCallback(
     (card: CardInstance) => {
       if (!canInteract) return;
+      if (
+        state.purchaseCostCap != null &&
+        (card.definition.cost ?? 0) > state.purchaseCostCap
+      ) {
+        showNotice(
+          `Grain Shortage: can't gain cards costing more than ${state.purchaseCostCap} this turn`
+        );
+        return;
+      }
       dispatchAction('BUY_CARD', { cardInstanceId: card.instanceId });
     },
-    [canInteract, dispatchAction]
+    [canInteract, dispatchAction, state.purchaseCostCap, showNotice]
   );
 
   const handleMarketCardPress = useCallback(
@@ -1230,6 +1529,11 @@ export const GameTable: React.FC = () => {
       overlayColor="rgba(8, 8, 18, 0.62)"
     >
       <View ref={tableRef} style={styles.tableForeground} onLayout={measureTable}>
+      {notice ? (
+        <View style={styles.noticeBanner} pointerEvents="none">
+          <Text style={styles.noticeText}>{notice}</Text>
+        </View>
+      ) : null}
       {/* Opponents bar */}
       <View style={[styles.opponentsBar, { height: layout.opponentsBarH }]}>
         <TutorialTarget targetKey="tutorial_opponents" style={styles.opponentsBarContent}>
@@ -1241,6 +1545,8 @@ export const GameTable: React.FC = () => {
               turnValor={state.turnValor}
               barHeight={layout.opponentsBarH}
               onPressOpponent={handleOpponentPress}
+              turnStartMs={turnTimerStartMs}
+              turnDurationMs={TURN_DURATION_MS}
             />
           ) : (
             <Text style={styles.opponentsPlaceholder}>Opponents</Text>
@@ -1366,16 +1672,30 @@ export const GameTable: React.FC = () => {
                       contentCenter
                     >
                       {state.arenaCard ? (
-                        <Pressable onPress={handleArenaPress} disabled={!state.arenaCard}>
-                          <Card
-                            card={state.arenaCard}
-                            width={layout.arenaCardW}
-                            height={layout.arenaCardH}
-                            sizeMode="landscape"
-                            hoverPreview
-                            onPress={handleArenaPress}
-                            onLongPress={handleCardPreview}
-                          />
+                        <Pressable
+                          onPress={arenaDefeatedThisTurn ? undefined : handleArenaPress}
+                          disabled={!state.arenaCard || arenaDefeatedThisTurn}
+                        >
+                          <View
+                            style={
+                              arenaDefeatedThisTurn ? styles.arenaDefeated : undefined
+                            }
+                          >
+                            <Card
+                              card={state.arenaCard}
+                              width={layout.arenaCardW}
+                              height={layout.arenaCardH}
+                              sizeMode="landscape"
+                              hoverPreview={!arenaDefeatedThisTurn}
+                              onPress={arenaDefeatedThisTurn ? undefined : handleArenaPress}
+                              onLongPress={handleCardPreview}
+                            />
+                            {arenaDefeatedThisTurn ? (
+                              <View style={styles.arenaDefeatedOverlay} pointerEvents="none">
+                                <Text style={styles.arenaDefeatedLabel}>Defeated</Text>
+                              </View>
+                            ) : null}
+                          </View>
                         </Pressable>
                       ) : (
                         <Text style={styles.emptyText}>No Arena</Text>
@@ -1469,6 +1789,55 @@ export const GameTable: React.FC = () => {
                   </View>
                 )}
               </View>
+              {(localPlayer?.itemsInPlay.length ?? 0) > 0 ? (
+                <View style={styles.itemsInPlayOverlay} pointerEvents="box-none">
+                  <Text style={styles.itemsInPlayLabel}>Items</Text>
+                  <View style={styles.itemsInPlayRow}>
+                    {localPlayer?.itemsInPlay.map((card) => (
+                      <Card
+                        key={card.instanceId}
+                        card={card}
+                        width={layout.handCardW * 0.7}
+                        height={layout.handCardH * 0.7}
+                        sizeMode="full"
+                        draggable={false}
+                        rotated={!!card.tapped}
+                        onPress={handleItemActivate}
+                        onLongPress={handleCardPreview}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+              {state.purchaseCostCap != null && state.purchaseCostCapSourceCardId ? (
+                <View style={styles.activeEventOverlay} pointerEvents="box-none">
+                  <Text style={styles.activeEventLabel}>In Effect</Text>
+                  <Pressable
+                    onPress={() => {
+                      const def = getCardDefinition(
+                        state.purchaseCostCapSourceCardId!
+                      );
+                      setPreviewCard({
+                        instanceId: `active_effect_${state.purchaseCostCapSourceCardId}`,
+                        definitionId: def.id,
+                        definition: def,
+                        location: 'GALLERY',
+                        ownerId: 'market',
+                        faceUp: true,
+                      });
+                    }}
+                  >
+                    <CardFace
+                      definition={getCardDefinition(
+                        state.purchaseCostCapSourceCardId
+                      )}
+                      faceUp
+                      width={layout.handCardW * 0.7}
+                      height={layout.handCardH * 0.7}
+                    />
+                  </Pressable>
+                </View>
+              ) : null}
             </DropZone>
             </TutorialTarget>
 
@@ -1540,6 +1909,8 @@ export const GameTable: React.FC = () => {
                 : 'Next turn'
               : undefined
           }
+          turnStartMs={turnTimerStartMs}
+          turnDurationMs={TURN_DURATION_MS}
           onEndPhase={handleEndPhase}
           onPlayerReady={handlePlayerReady}
           onPreviewLogCard={handleLogCardPreview}
@@ -1694,17 +2065,65 @@ export const GameTable: React.FC = () => {
         }
       />
       <MarketPickModal
-        visible={
-          pendingFavorReplayPick != null &&
-          (state.flavorDiscard?.length ?? 0) > 0
-        }
+        visible={pendingFavorReplayPick != null}
         title="Replay a Favor"
         subtitle={pendingFavorReplayPick?.sourceCardName}
         cards={state.flavorDiscard ?? []}
         onChoose={handleFavorReplayPick}
       />
       <MarketPickModal
-        visible={pendingGainCardPick != null && gainPickCards.length > 0}
+        visible={pendingReturnCardToHandPick != null && returnToHandPickCards.length > 0}
+        title="Return a Card to Hand"
+        subtitle={
+          pendingReturnCardToHandPick?.optional
+            ? `Optional — ${pendingReturnCardToHandPick.sourceCardName ?? 'choose a card'}`
+            : pendingReturnCardToHandPick?.sourceCardName
+        }
+        cards={returnToHandPickCards}
+        onChoose={handleReturnCardToHandPick}
+        onSkip={
+          pendingReturnCardToHandPick?.optional ? handleSkipReturnCardToHand : undefined
+        }
+      />
+      <BriberyModal
+        pending={pendingBriberyPick}
+        visible={pendingBriberyPick != null}
+        opponentCandidates={briberyOpponentCandidates}
+        revealedCard={briberyRevealedCard}
+        onChooseOpponent={handleBriberyChooseOpponent}
+        onPlay={handleBriberyPlay}
+        onSkip={handleBriberySkip}
+      />
+      <MarketPickModal
+        visible={pendingRevealFavorsPick != null && (pendingRevealFavorsPick?.revealed.length ?? 0) > 0}
+        title="Choose a Favor to Keep"
+        subtitle={
+          pendingRevealFavorsPick
+            ? `${pendingRevealFavorsPick.sourceCardName ?? 'Reveal Favors'} — keep ${pendingRevealFavorsPick.pick}`
+            : undefined
+        }
+        cards={pendingRevealFavorsPick?.revealed ?? []}
+        onChoose={handleRevealFavorsPick}
+      />
+      <MarketPickModal
+        visible={pendingFlipMarketPick != null && flipMarketPickCards.length > 0}
+        title="Flip a Market Card Face Down"
+        subtitle={
+          pendingFlipMarketPick
+            ? `${pendingFlipMarketPick.sourceCardName ?? 'Flip'} — ${pendingFlipMarketPick.remaining} left`
+            : undefined
+        }
+        cards={flipMarketPickCards}
+        onChoose={handleFlipMarketPick}
+        onSkip={handleSkipFlipMarket}
+        skipLabel="Done"
+      />
+      <MarketPickModal
+        visible={
+          pendingGainCardPick != null &&
+          gainPickCards.length > 0 &&
+          state.pendingFavorReveal == null
+        }
         title={
           pendingGainCardPick?.gainSource === 'destroyed_pile'
             ? 'Gain from Destroyed Pile'
@@ -1781,6 +2200,37 @@ export const GameTable: React.FC = () => {
         visible={pendingDeckLookPick != null}
         onChoosePlayer={handleDeckLookChoosePlayer}
         onKeepTop={handleDeckLookKeepTop}
+        onReorder={handleDeckLookReorder}
+      />
+      <MarketPickModal
+        visible={
+          pendingCrowdFrenzyPick != null && currentCrowdFrenzyReplacement != null
+        }
+        title="Crowd Frenzy"
+        subtitle={
+          currentCrowdFrenzyReplacement
+            ? `Pick a ${currentCrowdFrenzyReplacement.targetCost}c card for ${currentCrowdFrenzyReplacement.targetPlayerName} (replacing ${currentCrowdFrenzyReplacement.destroyedCard.definition.name})`
+            : undefined
+        }
+        cards={crowdFrenzyPickCards}
+        onChoose={handleCrowdFrenzyPick}
+        onSkip={handleCrowdFrenzySkip}
+        skipLabel="No matching card — skip"
+      />
+      <MarketPickModal
+        visible={pendingItemDeckPeek != null}
+        title={pendingItemDeckPeek?.sourceCardName ?? 'Reveal'}
+        subtitle={
+          pendingItemDeckPeek?.canDraw
+            ? 'Top of your deck — draw it, or leave it on top.'
+            : 'Top of your deck — too expensive to draw, leave it on top.'
+        }
+        cards={
+          pendingItemDeckPeek?.canDraw ? [pendingItemDeckPeek.revealedCard] : []
+        }
+        onChoose={handleItemPeekDraw}
+        onSkip={handleItemPeekSkip}
+        skipLabel="Leave on top"
       />
       <DeckTopRevealModal
         pending={pendingDeckTopRevealPick}
@@ -1818,6 +2268,7 @@ export const GameTable: React.FC = () => {
         onSkipOptional={handleSkipGalleryOptional}
         eventOutcomes={state.galleryEventOutcomes ?? []}
         eventDecreeOutcomes={state.galleryEventDecreeOutcomes ?? []}
+        sourceLabel={state.pendingGalleryEventSourceLabel ?? null}
       />
       <FavorRevealModal
         favor={state.pendingFavorReveal?.card ?? null}
@@ -1826,7 +2277,7 @@ export const GameTable: React.FC = () => {
           state.players.find((p) => p.id === state.pendingFavorReveal?.playerId)
             ?.name ?? 'Player'
         }
-        visible={state.pendingFavorReveal != null}
+        visible={showFavorRevealModal}
         localPlayerId={localPlayer?.id ?? ''}
         localHand={localPlayer?.hand ?? []}
         localDiscard={localPlayer?.discard ?? []}
@@ -1960,6 +2411,26 @@ const styles = StyleSheet.create({
     minHeight: 0,
     minWidth: 0,
   },
+  arenaDefeated: {
+    opacity: 0.4,
+    position: 'relative',
+  },
+  arenaDefeatedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 8,
+  },
+  arenaDefeatedLabel: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowRadius: 3,
+  },
   mainRow: {
     flexDirection: 'row',
     minHeight: 0,
@@ -2019,6 +2490,61 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  itemsInPlayOverlay: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    alignItems: 'flex-start',
+    gap: 2,
+    zIndex: 20,
+  },
+  itemsInPlayRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  activeEventOverlay: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    alignItems: 'flex-start',
+    gap: 2,
+    zIndex: 20,
+  },
+  activeEventLabel: {
+    color: '#E8A33D',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  noticeBanner: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(120,30,30,0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(241,196,15,0.6)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxWidth: 420,
+    zIndex: 1000,
+  },
+  noticeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  itemsInPlayLabel: {
+    color: '#D7CCB0',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   handZoneShell: {
     overflow: 'hidden',

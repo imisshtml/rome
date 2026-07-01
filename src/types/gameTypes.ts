@@ -51,11 +51,25 @@ export type GameActionType =
   | 'PLACE_DESTROYED_ON_MARKET_SKIP'
   | 'DECK_LOOK_CHOOSE_PLAYER'
   | 'DECK_LOOK_KEEP_TOP'
+  | 'DECK_LOOK_REORDER'
   | 'DECK_TOP_REVEAL_RESOLVE'
   | 'CHOOSE_GAIN_BANDING_BONUS'
   | 'RESOLVE_ARENA_LOSS'
   | 'DISMISS_ARENA_RESULT'
   | 'DISMISS_ARENA_WAGER_RESULT'
+  | 'RETURN_CARD_TO_HAND_PICK'
+  | 'RETURN_CARD_TO_HAND_SKIP'
+  | 'REVEAL_FAVORS_PICK'
+  | 'FLIP_MARKET_PICK'
+  | 'FLIP_MARKET_SKIP'
+  | 'CROWD_FRENZY_GAIN_PICK'
+  | 'CROWD_FRENZY_SKIP'
+  | 'USE_ITEM'
+  | 'ITEM_PEEK_DRAW'
+  | 'ITEM_PEEK_SKIP'
+  | 'BRIBERY_CHOOSE_OPPONENT'
+  | 'BRIBERY_PLAY_REVEALED'
+  | 'BRIBERY_SKIP'
   | 'DEBUG_SPAWN_CARD'
   | 'GALLERY_EVENT_FLIPPED';
 
@@ -90,6 +104,14 @@ export interface PendingForcedOpponentDiscards {
   /** Only one opponent is targeted (not all opponents) */
   singleTarget?: boolean;
   opponentCandidateIds?: string[];
+  /** Spoils of Victory — destroy to destroyed pile instead of discard */
+  destroyToPile?: boolean;
+}
+
+/** Interactive favor effects (deck look, etc.) run after the favor reveal dismisses. */
+export interface PendingFavorFollowUp {
+  playerId: string;
+  card: CardInstance;
 }
 
 export interface PendingPlaceCardOnDeckPick {
@@ -111,6 +133,54 @@ export interface PendingGainCardPick {
   gainFaction?: Faction;
   thenDiscard?: number;
   gainSource?: 'market' | 'market_or_epic' | 'destroyed_pile';
+}
+
+/** Put a card from discard into hand (Supply Wagon, Germanicus). */
+export interface PendingReturnCardToHandPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  /** Exclude this card type from eligibility (e.g. 'Epic'). */
+  excludeType?: string;
+  optional?: boolean;
+}
+
+/**
+ * Bribery: controller picks an opponent, a random card from that opponent's hand
+ * is revealed, and the controller may play it (destroyed at end of turn).
+ */
+export interface PendingBriberyPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  phase: 'choose_opponent' | 'play_choice';
+  /** Opponents with at least one card in hand. */
+  opponentCandidateIds: string[];
+  /** Chosen opponent (set once phase === 'play_choice'). */
+  opponentId?: string;
+  /** The revealed card from the opponent's hand the controller may play. */
+  revealedCardInstanceId?: string;
+}
+
+/** Reveal N favors, keep some, discard the rest (Praeco, Vestal Priestess). */
+export interface PendingRevealFavorsPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  /** Favor cards drawn from the favor deck and still selectable. */
+  revealed: CardInstance[];
+  /** How many of the revealed favors the player still gets to keep. */
+  pick: number;
+  /** Favors selected so far (resolved once selection completes). */
+  kept?: CardInstance[];
+}
+
+/** Flip up to N market cards face down until the player's next turn (Sententia). */
+export interface PendingFlipMarketPick {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  remaining: number;
 }
 
 export interface PendingDeckTopRevealPick {
@@ -137,7 +207,7 @@ export interface PendingCopyCardPick {
   sourceCardName?: string;
   sourceCardInstanceId?: string;
   maxCost?: number;
-  copySource?: 'market' | 'in_play';
+  copySource?: 'market' | 'in_play' | 'market_or_epic';
 }
 
 export interface PendingDeckLookPick {
@@ -145,9 +215,31 @@ export interface PendingDeckLookPick {
   sourceCardName?: string;
   sourceCardInstanceId?: string;
   lookCount: number;
-  phase: 'choose_deck' | 'keep_top';
+  phase: 'choose_deck' | 'keep_top' | 'reorder';
   targetPlayerId?: string;
   viewedCards?: CardInstance[];
+}
+
+/** Centurion Baton — reveal deck top; owner may draw it if cheap enough. */
+export interface PendingItemDeckPeek {
+  playerId: string;
+  sourceCardName?: string;
+  sourceCardInstanceId?: string;
+  revealedCard: CardInstance;
+  canDraw: boolean;
+}
+
+/** Crowd Frenzy — destroy each deck top, then controller picks market replacements. */
+export interface PendingCrowdFrenzyPick {
+  playerId: string;
+  sourceCardName?: string;
+  replacements: Array<{
+    targetPlayerId: string;
+    targetPlayerName: string;
+    destroyedCard: CardInstance;
+    targetCost: number;
+  }>;
+  currentIndex: number;
 }
 
 export interface PendingGainBandingBonusPick {
@@ -289,7 +381,13 @@ export interface PlayerState {
 export interface GameState {
   id: string;
   status?: GameStatus;
+  /** Optimistic-concurrency counter (server-managed). */
   version?: number;
+  /**
+   * State shape version. Bumped only for STRUCTURAL changes that an old snapshot
+   * can't satisfy by defaulting a new optional field. See src/game/stateMigrations.ts.
+   */
+  schemaVersion?: number;
   players: PlayerState[];
   arenaCard: CardInstance | null;
   arenaDeck: CardInstance[];
@@ -319,6 +417,12 @@ export interface GameState {
   turnPlayerId: string;
   phase: GamePhase;
   turnNumber: number;
+  /**
+   * One-shot banner shown to all players at game start, e.g.
+   * "The Crowd has roared in favor of X to begin the games!".
+   * Set on activation, cleared after the first turn passes.
+   */
+  gameStartAnnouncement?: string | null;
   actionLog: GameAction[];
   /** Player ids who clicked Ready during pregame */
   readyPlayerIds: string[];
@@ -345,6 +449,22 @@ export interface GameState {
   turnEpicDiscount?: number;
   /** Faction cards cost this much less for the active player this turn (Commander). */
   turnFactionDiscount?: number;
+  /** Item cards cost this much less for the active player this turn (Voice of Rome). */
+  turnItemDiscount?: number;
+  /** Extra Arena valor for the active player's challenge this turn (Bestiarii). */
+  turnArenaValorBonus?: number;
+  /** Next card gained this turn goes to hand instead of discard (Senator, The Republic). */
+  turnNextGainToHand?: boolean;
+  /** Active player may buy from the destroyed pile this turn (Lanista). */
+  turnPurchaseFromDestroyed?: boolean;
+  /** Arena was defeated this turn by the active player (Colosseum, Noblewoman). */
+  turnArenaDefeated?: boolean;
+  /** Grant this many Gratia if the active player defeats the Arena this turn (Noblewoman). */
+  turnGratiaOnArenaVictory?: number;
+  /** Cards flipped face-down in market, restored at the flipping player's next turn start. */
+  flippedMarketCardIds?: string[];
+  /** Owner of the active market flip (cards restored when their next turn begins). */
+  flippedMarketByPlayerId?: string | null;
   /** Gallery slots to refill at end of turn (deferred destroy effects). */
   deferredGalleryRefillSlots?: number;
   /** Epic slots to refill at end of turn (Damnatio, etc.). */
@@ -393,6 +513,8 @@ export interface GameState {
   } | null;
   /** Favor replayed via Legendary — remove from game after resolving. */
   pendingFavorReplayRemovalId?: string | null;
+  /** Oracle's Warning etc. — interactive picks deferred until favor reveal finishes. */
+  pendingFavorFollowUp?: PendingFavorFollowUp | null;
   /** Revealed Arena Wager outcome (shown before dismiss) */
   lastArenaWagerResult?: ArenaWagerResult | null;
   /** Active player must destroy cards for a played card effect (e.g. War Banner) */
@@ -408,6 +530,14 @@ export interface GameState {
     rewardCoinsFromCost?: boolean;
     /** Retiarius-style optional block: draw/favor after destroy */
     optionalBlockFollowUp?: Record<string, unknown>;
+    /** Flamma: only Crowd Disfavor cards are valid targets */
+    disfavorOnly?: boolean;
+    /** Flamma: draw this many cards per card destroyed */
+    drawPerDestroyed?: number;
+    /** Unstoppable Legion: after destroying, gain a market card costing destroyed+offset */
+    dynamicGainOffset?: number;
+    /** Highest cost destroyed so far (for dynamic gain). */
+    destroyedMaxCost?: number;
   } | null;
   /** Pick cards in the Gallery row to destroy */
   pendingGalleryDestroyPick?: {
@@ -466,22 +596,38 @@ export interface GameState {
   pendingForcedOpponentDiscards?: PendingForcedOpponentDiscards | null;
   /** Pick a market card to gain (Black Market Deal, Encampment, etc.) */
   pendingGainCardPick?: PendingGainCardPick | null;
+  /** Medicus — gain pick deferred until favor / deck-look prompts finish */
+  deferredGainCardPick?: PendingGainCardPick | null;
   /** Pick a market card to copy (Veteran) */
   pendingCopyCardPick?: PendingCopyCardPick | null;
   /** Put a card from discard on top/bottom of deck (Statesman, Veteran) */
   pendingPlaceCardOnDeckPick?: PendingPlaceCardOnDeckPick | null;
   /** Look at / reorder top of a deck (Tribune) */
   pendingDeckLookPick?: PendingDeckLookPick | null;
+  /** Crowd Frenzy — replace destroyed deck tops from market */
+  pendingCrowdFrenzyPick?: PendingCrowdFrenzyPick | null;
+  /** Centurion Baton — reveal deck top, optionally draw it */
+  pendingItemDeckPeek?: PendingItemDeckPeek | null;
   /** Executioner — reveal each player's deck top; destroy or return */
   pendingDeckTopRevealPick?: PendingDeckTopRevealPick | null;
   /** Choose a faction banding bonus to gain (Preparation) */
   pendingGainBandingBonusPick?: PendingGainBandingBonusPick | null;
   /** Optional: place a destroyed card onto the market supply deck (Patron) */
   pendingPlaceDestroyedOnMarketPick?: PendingPlaceDestroyedOnMarketPick | null;
+  /** Put a card from discard into hand (Supply Wagon, Germanicus) */
+  pendingReturnCardToHandPick?: PendingReturnCardToHandPick | null;
+  /** Bribery — pick opponent, reveal a random hand card, optionally play it */
+  pendingBriberyPick?: PendingBriberyPick | null;
+  /** Reveal favors and keep some (Praeco, Vestal Priestess) */
+  pendingRevealFavorsPick?: PendingRevealFavorsPick | null;
+  /** Flip up to N market cards face down (Sententia) */
+  pendingFlipMarketPick?: PendingFlipMarketPick | null;
   /** Names of gallery cards destroyed by the current event (Slave Revolt log) */
   lastEventGalleryDestroyNames?: string[] | null;
   /** Extra arena valor from sabotage cards played as hinder */
   arenaSabotageValorByPlayerId?: Record<string, number>;
+  /** Number of sabotages cancelled by support responses this challenge (Rudiarii). */
+  arenaSabotagesCancelled?: number;
   /** Turn pass paused until gallery refill + events finish */
   deferredTurnEnd?: {
     endingPlayerId: string;
@@ -499,6 +645,12 @@ export interface GameState {
   purchaseCostCap?: number | null;
   /** Clears purchaseCostCap when this player's turn ends. */
   purchaseCostCapActiveForPlayerId?: string | null;
+  /** How many upcoming turns the purchase cap remains in effect (1 per player). */
+  purchaseCostCapTurnsRemaining?: number | null;
+  /** Card definition id of the event enforcing the purchase cap (Grain Shortage). */
+  purchaseCostCapSourceCardId?: string | null;
+  /** Label shown as the header for a pending gallery event (e.g. "Ivory Dice"). */
+  pendingGalleryEventSourceLabel?: string | null;
   /** Set when status is finished */
   winnerId?: string | null;
 }

@@ -53,6 +53,13 @@ export interface CardInstance {
   faceUp: boolean;
   /** Spy / morph — faction chosen when played; used for banding until discarded. */
   chosenFaction?: Faction | null;
+  /** Item permanent that has been tapped (rotated) to use its activated effect this turn. */
+  tapped?: boolean;
+  /**
+   * Bribery: a card temporarily borrowed from an opponent's hand and played this
+   * turn. It is destroyed (not returned) at end of turn instead of being discarded.
+   */
+  borrowedFromPlayerId?: string;
 }
 
 export type CardLocation =

@@ -139,8 +139,17 @@ export function canFulfillPlayDestroyRequirements(
   if (hasOrEffectChoice(card)) return true;
 
   const spec = getHandDiscardDestroySpec(card);
-  if (spec && !spec.optional && !playerCanFulfillHandDiscardDestroy(player, spec)) {
-    return false;
+  if (spec && !spec.optional) {
+    const playerForCheck =
+      spec.fromZones.includes('hand')
+        ? {
+            ...player,
+            hand: player.hand.filter((c) => c.instanceId !== card.instanceId),
+          }
+        : player;
+    if (!playerHasDestroyTargetsInZones(playerForCheck, spec.fromZones)) {
+      return false;
+    }
   }
 
   if (hasDestroyHandForCoins(card) && player.hand.length === 0) {

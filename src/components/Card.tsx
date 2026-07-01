@@ -36,6 +36,10 @@ export interface CardProps {
   hoverPreview?: boolean;
   /** Display cost badge override (epic discount). */
   costOverride?: number | null;
+  /** Rotate 90° to the right to indicate a tapped item. */
+  rotated?: boolean;
+  /** Hide the effect text on the inline face (still shown in hover preview). */
+  hideEffectText?: boolean;
 }
 
 const SPRING_CONFIG = { damping: 32, stiffness: 320 };
@@ -56,6 +60,8 @@ export const Card: React.FC<CardProps> = ({
   sizeMode,
   hoverPreview = true,
   costOverride,
+  rotated = false,
+  hideEffectText = false,
 }) => {
   const definition =
     card.definition ?? getCardDefinition(card.definitionId);
@@ -153,11 +159,17 @@ export const Card: React.FC<CardProps> = ({
     Gesture.Exclusive(longPressGesture, tapGesture)
   );
 
+  const rotation = useSharedValue(rotated ? 90 : 0);
+  useEffect(() => {
+    rotation.value = withSpring(rotated ? 90 : 0, SPRING_CONFIG);
+  }, [rotated, rotation]);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
       { translateY: translateY.value },
       { scale: scale.value },
+      { rotate: `${rotation.value}deg` },
     ],
     zIndex: zIdx.value,
     shadowOpacity: shadowOpacity.value,
@@ -201,6 +213,7 @@ export const Card: React.FC<CardProps> = ({
           height={height}
           chosenFaction={displayChosenFaction}
           costOverride={costOverride}
+          hideEffectText={hideEffectText}
           style={
             displayChosenFaction
               ? {

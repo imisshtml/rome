@@ -46,6 +46,8 @@ interface CardFaceProps {
   costOverride?: number | null;
   /** Multiplier on stat badge size (e.g. zoom previews). */
   badgeScale?: number;
+  /** Hide the effect text overlay (e.g. tiny opponent item chips). */
+  hideEffectText?: boolean;
   /** Spy morph — overrides definition faction for faction icon. */
   chosenFaction?: Faction | null;
   style?: ViewStyle;
@@ -197,6 +199,7 @@ export const CardFace: React.FC<CardFaceProps> = ({
   chosenFaction,
   costOverride,
   style,
+  hideEffectText = false,
 }) => {
   const layout = useMemo(() => badgeLayout(width, badgeScale), [width, badgeScale]);
   const stats = getCardStatDisplay(definition, { costOverride });
@@ -237,6 +240,7 @@ export const CardFace: React.FC<CardFaceProps> = ({
 
       {faceUp ? (
         <View style={styles.overlayLayer} pointerEvents="none">
+          {!hideEffectText ? (
           <View
             style={[styles.bottomGradient, { height: effectLayout.gradientHeight }]}
           >
@@ -263,6 +267,7 @@ export const CardFace: React.FC<CardFaceProps> = ({
               </Text>
             ) : null}
           </View>
+          ) : null}
           {stats.cost != null ? (
             <StatBadge
               icon={costIcon}

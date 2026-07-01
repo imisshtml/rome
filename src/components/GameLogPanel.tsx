@@ -199,6 +199,19 @@ function LogLine({ action, playerName, onPreviewCard }: LogLineProps) {
           for an event
         </Text>
       );
+    case 'FORCE_OPPONENT_DISCARD':
+      return (
+        <Text style={styles.line} numberOfLines={2}>
+          {playerName}{' '}
+          {effect && /^Destroyed/.test(effect) ? 'destroyed' : 'discarded'}{' '}
+          {cardName ? (
+            <CardNameLink name={cardName} action={action} onPreviewCard={onPreviewCard} />
+          ) : (
+            'a card'
+          )}
+          {effect ? ` (${effect})` : ''}
+        </Text>
+      );
     case 'ARENA_RESPOND': {
       const kind = action.payload?.responseType ?? 'pass';
       if ((kind === 'support' || kind === 'hinder') && cardName) {

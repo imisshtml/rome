@@ -2,6 +2,7 @@ import factionsPack from '../../cards_factions.json';
 import arenaPack from '../../cards_arena.json';
 import eventsPack from '../../cards_events.json';
 import favorPack from '../../cards_favor.json';
+import itemsPack from '../../cards_items.json';
 import { CardDefinition, CardInstance, CardType, Faction } from '../types/cardTypes';
 import { CardEffects, mergeCardEffects } from '../types/effectsTypes';
 
@@ -9,6 +10,9 @@ type RawFactionCard = (typeof factionsPack.cards)[number];
 type RawArenaCard = (typeof arenaPack.cards)[number];
 type RawEventCard = (typeof eventsPack.cards)[number];
 type RawFavorCard = (typeof favorPack)[number];
+type RawItemCard = (typeof itemsPack)[number];
+
+const ITEM_DECK_QTY = 1;
 
 export interface PoolEntry {
   definitionId: string;
@@ -224,10 +228,29 @@ export function isGratiaSupplyDefinition(
   return id === GRATIA_SUPPLY.id;
 }
 
+function fromItemCard(raw: RawItemCard): CardDefinition {
+  const hasEffects =
+    raw.effects != null && Object.keys(raw.effects).length > 0;
+  return buildDefinition(slugToId(raw.id), {
+    name: raw.name,
+    cost: raw.cost ?? 0,
+    valor: 0,
+    victoryPoints: raw.victory_points ?? 0,
+    type: 'Item',
+    faction: 'Item',
+    text: raw.effect_text ?? '',
+    image: raw.image,
+    ...(hasEffects
+      ? { effects: mergeCardEffects(raw.effects as Partial<CardEffects>) }
+      : {}),
+  });
+}
+
 const factionDefinitions = factionsPack.cards.map(fromFactionCard);
 const arenaDefinitions = arenaPack.cards.map(fromArenaCard);
 const eventDefinitions = eventsPack.cards.map(fromEventCard);
 const favorDefinitions = favorPack.map(fromFavorCard);
+const itemDefinitions = itemsPack.map(fromItemCard);
 
 export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
   [BASIC_CHARITY.id]: BASIC_CHARITY,
@@ -240,6 +263,7 @@ for (const def of [
   ...arenaDefinitions,
   ...eventDefinitions,
   ...favorDefinitions,
+  ...itemDefinitions,
 ]) {
   CARD_DEFINITIONS[def.id] = def;
 }
@@ -283,10 +307,41 @@ export function getGalleryPoolEntries(): PoolEntry[] {
     const id = slugToId(raw.id);
     qtyById.set(id, (qtyById.get(id) ?? 0) + EVENT_DECK_QTY);
   }
+  for (const raw of itemsPack) {
+    const id = slugToId(raw.id);
+    qtyById.set(id, (qtyById.get(id) ?? 0) + (raw.deck_qty ?? ITEM_DECK_QTY));
+  }
   return Array.from(qtyById.entries()).map(([definitionId, qty]) => ({
     definitionId,
     qty,
   }));
+}
+
+/** Definition ids of all gallery event cards (for random-event effects). */
+export function getGalleryEventDefinitionIds(): string[] {
+  return eventsPack.cards.map((raw) => slugToId(raw.id));
+}
+
+/** Item cards shuffled into the market (gallery) deck. */
+export function getItemPoolEntries(): PoolEntry[] {
+  return itemsPack.map((raw) => ({
+    definitionId: slugToId(raw.id),
+    qty: raw.deck_qty ?? ITEM_DECK_QTY,
+  }));
+}
+
+const ITEM_DEFINITION_IDS = new Set(itemsPack.map((raw) => slugToId(raw.id)));
+
+export function isItemDefinitionId(
+  cardOrId: CardInstance | CardDefinition | string
+): boolean {
+  const id =
+    typeof cardOrId === 'string'
+      ? cardOrId
+      : 'definitionId' in cardOrId
+        ? cardOrId.definitionId
+        : cardOrId.id;
+  return ITEM_DEFINITION_IDS.has(id);
 }
 
 /** Recruit pile — 10 copies each of the three faction recruit cards. */

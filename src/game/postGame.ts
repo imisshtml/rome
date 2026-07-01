@@ -40,6 +40,30 @@ export function getAllPlayerCards(player: PlayerState): CardInstance[] {
   ];
 }
 
+/** One card instance must not appear in multiple zones — dedupe before VP math. */
+export function uniqueCardsByInstance(cards: CardInstance[]): CardInstance[] {
+  const seen = new Set<string>();
+  const out: CardInstance[] = [];
+  for (const card of cards) {
+    if (seen.has(card.instanceId)) continue;
+    seen.add(card.instanceId);
+    out.push(card);
+  }
+  return out;
+}
+
+/** VP from a card's printed value plus deck-wide scaling passives (Spectators, etc.). */
+export function getCardEffectiveVictoryPoints(
+  card: CardInstance,
+  player: PlayerState
+): number {
+  const allCards = uniqueCardsByInstance(getAllPlayerCards(player));
+  const base = card.definition?.victoryPoints ?? 0;
+  const spec = getDeckVpPerFactionPassive(card);
+  if (!spec) return base;
+  return base + countFactionCardsInDeck(allCards, spec.faction) * spec.per;
+}
+
 export function buildCardVpBreakdown(cards: CardInstance[]): PostGameCardRow[] {
   const byDef = new Map<string, PostGameCardRow>();
 
@@ -69,18 +93,19 @@ export function buildCardVpBreakdown(cards: CardInstance[]): PostGameCardRow[] {
 }
 
 export function getScalingPassiveVp(cards: CardInstance[]): number {
+  const unique = uniqueCardsByInstance(cards);
   let total = 0;
-  for (const card of cards) {
+  for (const card of unique) {
     const spec = getDeckVpPerFactionPassive(card);
     if (!spec) continue;
-    const matches = countFactionCardsInDeck(cards, spec.faction);
+    const matches = countFactionCardsInDeck(unique, spec.faction);
     total += matches * spec.per;
   }
   return total;
 }
 
 export function getDeckVpFromCards(player: PlayerState): number {
-  const cards = getAllPlayerCards(player);
+  const cards = uniqueCardsByInstance(getAllPlayerCards(player));
   const baseVp = cards.reduce(
     (sum, card) => sum + (card.definition?.victoryPoints ?? 0),
     0

@@ -283,7 +283,7 @@ export const FACTION_EFFECT_OVERRIDES = {
     reveal_favors: { count: 5, pick: 2, discard_rest: 3 },
   },
   'EPI-017': {
-    copy_card: { source: 'market_or_epic_tier' },
+    copy_card: { source: 'market_or_epic' },
   },
   'EPI-018': {
     gain_coins: 4,

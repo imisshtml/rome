@@ -1,0 +1,202 @@
+[
+  {
+    "id": "wooden_gladius",
+    "name": "Wooden Gladius",
+    "image": "item_gladius.jpg",
+    "deck_qty": 2,
+    "cost": 5,
+    "victory_points": 1,
+    "effect_text": "Gain +2 Valor",
+    "effects": {
+      "item": { "activation": "passive" },
+      "passive": { "arena_valor_bonus": 2 }
+    }
+  },
+  {
+    "id": "round_shield",
+    "name": "Round Shield",
+    "image": "item_shield.jpg",
+    "deck_qty": 2,
+    "cost": 5,
+    "victory_points": 1,
+    "effect_text": "Prevent Sabotage of up to -2 Valor",
+    "effects": {
+      "item": { "activation": "passive" },
+      "passive": { "reduce_sabotage_valor": 2 }
+    }
+  },
+  {
+    "id": "trident_head",
+    "name": "Trident Head",
+    "image": "item_trident.jpg",
+    "deck_qty": 1,
+    "cost": 5,
+    "victory_points": 1,
+    "effect_text": "Tap this to flip a card in the Gallery facedown until your next turn.",
+    "effects": {
+      "item": {
+        "activation": "tap",
+        "tap": { "flip_gallery_facedown": 1 }
+      }
+    }
+  },
+  {
+    "id": "champions_helm",
+    "name": "Champion's Helm",
+    "image": "item_helm.jpg",
+    "deck_qty": 1,
+    "cost": 6,
+    "victory_points": 3,
+    "effect_text": "Destroy this to gain a Ludus card from the Market. Shuffle back into Market Deck.",
+    "effects": {
+      "item": {
+        "activation": "destroy",
+        "destroyed": {
+          "gain_card": { "source": "market", "faction": "Ludus" },
+          "shuffle_back": true
+        }
+      }
+    }
+  },
+  {
+    "id": "signet_ring",
+    "name": "Signet Ring",
+    "image": "item_ring.jpg",
+    "deck_qty": 1,
+    "cost": 6,
+    "victory_points": 3,
+    "effect_text": "Destroy this to gain a Senate card from the Market. Shuffle back into Market Deck.",
+    "effects": {
+      "item": {
+        "activation": "destroy",
+        "destroyed": {
+          "gain_card": { "source": "market", "faction": "Senate" },
+          "shuffle_back": true
+        }
+      }
+    }
+  },
+  {
+    "id": "treasury_keys",
+    "name": "Treasury Keys",
+    "image": "item_keys.jpg",
+    "deck_qty": 1,
+    "cost": 7,
+    "victory_points": 2,
+    "effect_text": "Gain +1 coin each turn.",
+    "effects": {
+      "item": { "activation": "passive" },
+      "passive": { "coins_per_turn": 1 }
+    }
+  },
+  {
+    "id": "legion_standard",
+    "name": "Legion Standard",
+    "image": "item_standard.jpg",
+    "deck_qty": 1,
+    "cost": 6,
+    "victory_points": 3,
+    "effect_text": "Destroy this to gain a Legion card from the Market. Shuffle back into Market Deck.",
+    "effects": {
+      "item": {
+        "activation": "destroy",
+        "destroyed": {
+          "gain_card": { "source": "market", "faction": "Legion" },
+          "shuffle_back": true
+        }
+      }
+    }
+  },
+  {
+    "id": "centurion_baton",
+    "name": "Centurion Baton",
+    "image": "item_baton.jpg",
+    "deck_qty": 2,
+    "cost": 4,
+    "victory_points": 2,
+    "effect_text": "Tap this to reveal the top card of your deck. If it costs 3 or less you may draw it.",
+    "effects": {
+      "item": {
+        "activation": "tap",
+        "tap": { "reveal_top_optional_draw": { "max_cost": 3 } }
+      }
+    }
+  },
+  {
+    "id": "amphora",
+    "name": "Amphora",
+    "image": "item_amphora.jpg",
+    "deck_qty": 2,
+    "cost": 4,
+    "victory_points": 1,
+    "effect_text": "Destroy this, discard your hand, draw 5 cards. Shuffle back into Market Deck.",
+    "effects": {
+      "item": {
+        "activation": "destroy",
+        "destroyed": {
+          "discard_hand_draw": 5,
+          "shuffle_back": true
+        }
+      }
+    }
+  },
+  {
+    "id": "ivory_dice",
+    "name": "Ivory Dice",
+    "image": "item_dice.jpg",
+    "deck_qty": 1,
+    "cost": 4,
+    "victory_points": 1,
+    "effect_text": "At the start of your turn, a random Event occurs.",
+    "effects": {
+      "item": { "activation": "passive" },
+      "passive": { "random_event_turn_start": true }
+    }
+  },
+  {
+    "id": "laurel_crown",
+    "name": "Laurel Crown",
+    "image": "item_crown.jpg",
+    "deck_qty": 1,
+    "cost": 8,
+    "victory_points": 3,
+    "effect_text": "Destroy this to reduce the cost of the next Epic you purchase this turn by 5. Shuffle back into Market Deck.",
+    "effects": {
+      "item": {
+        "activation": "destroy",
+        "destroyed": {
+          "epic_discount": 5,
+          "shuffle_back": true
+        }
+      }
+    }
+  },
+  {
+    "id": "emporers_seal",
+    "name": "Emporer's Seal",
+    "image": "item_seal.jpg",
+    "deck_qty": 2,
+    "cost": 6,
+    "victory_points": 1,
+    "effect_text": "Draw 1 extra card at the end of your turn.",
+    "effects": {
+      "item": { "activation": "passive" },
+      "passive": { "extra_draw_turn_end": 1 }
+    }
+  },
+  {
+    "id": "bloodied_sand",
+    "name": "Bloodied Sand",
+    "image": "item_sand.jpg",
+    "deck_qty": 2,
+    "cost": 9,
+    "victory_points": 2,
+    "effect_text": "Tap this to gain a Favor.",
+    "effects": {
+      "item": {
+        "activation": "tap",
+        "tap": { "gain_favor": 1 }
+      }
+    }
+  }
+]

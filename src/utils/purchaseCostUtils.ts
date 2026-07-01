@@ -9,8 +9,16 @@ export function getTurnFactionDiscount(state: GameState): number {
   return state.turnFactionDiscount ?? 0;
 }
 
+export function getTurnItemDiscount(state: GameState): number {
+  return state.turnItemDiscount ?? 0;
+}
+
 export function isEpicMarketCard(card: CardInstance): boolean {
   return card.definition.type === 'Epic' || card.location === 'EPIC_ROW';
+}
+
+export function isItemMarketCard(card: CardInstance): boolean {
+  return card.definition.type === 'Item';
 }
 
 export function isFactionMarketCard(card: CardInstance): boolean {
@@ -27,6 +35,9 @@ export function getEffectivePurchaseCost(
   const base = card.definition.cost ?? 0;
   if (isEpicMarketCard(card)) {
     return Math.max(0, base - getTurnEpicDiscount(state));
+  }
+  if (isItemMarketCard(card)) {
+    return Math.max(0, base - getTurnItemDiscount(state));
   }
   if (isFactionMarketCard(card)) {
     return Math.max(0, base - getTurnFactionDiscount(state));

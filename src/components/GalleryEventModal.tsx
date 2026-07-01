@@ -42,6 +42,7 @@ interface GalleryEventModalProps {
   onSkipOptional?: () => void;
   eventOutcomes?: GalleryEventPlayerOutcome[];
   eventDecreeOutcomes?: GalleryEventDecreeOutcome[];
+  sourceLabel?: string | null;
 }
 
 const CARD_W = 96;
@@ -106,6 +107,7 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
   onSkipOptional,
   eventOutcomes = [],
   eventDecreeOutcomes = [],
+  sourceLabel,
 }) => {
   const [continueReady, setContinueReady] = useState(false);
   const [eventZoomOpen, setEventZoomOpen] = useState(false);
@@ -186,7 +188,7 @@ export const GalleryEventModal: React.FC<GalleryEventModalProps> = ({
       >
         <View style={styles.backdrop}>
           <View style={styles.panel}>
-            <Text style={styles.title}>Gallery Event</Text>
+            <Text style={styles.title}>{sourceLabel || 'Gallery Event'}</Text>
             <Text style={styles.subtitle}>{definition.name}</Text>
             <Pressable
               style={styles.cardWrap}

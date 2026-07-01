@@ -40,8 +40,16 @@ import {
   isUpToGalleryDestroyText,
   playerCanFulfillHandDiscardDestroy,
 } from '../utils/playDestroyUtils';
-import { skipOrChoiceOnMainPlay, getGainCardSpec, getConditionalPlayEffect, getOptionalPlaceDestroyedOnMarket, getPlaceCardOnDeckSpec, getSabotageArenaBonus, getSabotageDrawCards, isCardEligibleForGainPick, listEligibleDestroyedGainCards, listEligibleDestroyedPlaceCards, listEligibleInPlayCopyCards, listEligibleMarketCopyCards, listEligibleMarketGainCards, listEligiblePlaceOnDeckCards, meetsConditionalPlayedFactions, shouldDeferEpicRefill, capCoinGainForPlayer, wantsDeckTopRevealPick, cardHasOnGainEffects } from '../utils/effectFlowUtils';
+import { skipOrChoiceOnMainPlay, getGainCardSpec, getConditionalPlayEffect, getOptionalPlaceDestroyedOnMarket, getPlaceCardOnDeckSpec, getSabotageArenaBonus, getSabotageDrawCards, isCardEligibleForGainPick, listEligibleDestroyedGainCards, listEligibleDestroyedPlaceCards, listEligibleInPlayCopyCards, listEligibleMarketCopyCards, listEligibleMarketGainCards, listEligiblePlaceOnDeckCards, meetsConditionalPlayedFactions, shouldDeferEpicRefill, capCoinGainForPlayer, wantsDeckTopRevealPick, wantsDeckReorder, cardHasOnGainEffects } from '../utils/effectFlowUtils';
 import { beginDeckTopRevealPick, getCurrentDeckTopRevealPick } from '../utils/deckTopRevealUtils';
+import {
+  advanceCrowdFrenzyAfterResolve,
+  beginCrowdFrenzyPick,
+  gainMarketCardToPlayerDeckTop,
+  getCurrentCrowdFrenzyReplacement,
+  listCrowdFrenzyMarketCards,
+  wantsCrowdFrenzyEffect,
+} from '../utils/crowdFrenzyUtils';
 import {
   applyMassHandRedraw,
   formatMassHandRedrawSummary,
@@ -49,6 +57,7 @@ import {
 import {
   canAffordPurchase,
   getEffectivePurchaseCost,
+  isEpicMarketCard,
 } from '../utils/purchaseCostUtils';
 import {
   beginHandDiscardIfNeeded,
@@ -61,8 +70,10 @@ import {
   peekPlayerDeckTop,
   placeDestroyedCardOnMarketSupply,
   reorderDeckKeepTop,
+  applyDeckTopOrder,
 } from './playEffectFlow';
 import { addToDestroyedPile } from '../utils/destroyedPileUtils';
+import { migrateGameState, CURRENT_SCHEMA_VERSION } from './stateMigrations';
 import {
   isOpeningGamesArena,
   mustEnterArenaBeforeEndTurn,
@@ -119,6 +130,7 @@ import {
   favorNeedsDestroyPick,
   favorResolutionPaused,
   finishFavorResolution,
+  playerHasFavorDestroyTargets,
   processFavorQueue,
 } from './FavorResolver';
 import {
@@ -130,11 +142,22 @@ import {
   getEpicPoolEntries,
   getArenaPoolEntries,
   getFlavorPoolEntries,
+  getGalleryEventDefinitionIds,
   getOpeningGamesArenaDefinitionId,
   isGalleryEventCard,
   isFavorDefinitionId,
   isPurchasableMarketCard,
 } from './CardDefinitions';
+import {
+  getItemActivation,
+  getItemDestroySpec,
+  getItemTapSpec,
+  isActivatableItem,
+  sumItemArenaValorBonus,
+  sumItemCoinsPerTurn,
+  sumItemExtraDrawTurnEnd,
+  itemTriggersRandomEventTurnStart,
+} from '../utils/itemUtils';
 
 export const MAX_PLAYERS = 6;
 export const MIN_PLAYERS = 2;
@@ -398,16 +421,27 @@ function applyOnPlayPassiveEffects(
   card: CardInstance
 ): GameState {
   const passive = getRawEffects(card).passive as Record<string, unknown> | undefined;
-  const cap = passive?.opponent_coin_cap_per_card;
-  if (typeof cap !== 'number' || cap <= 0) return state;
+  if (!passive) return state;
 
-  const controllerId = state.players[playerIdx].id;
-  return {
-    ...state,
-    players: state.players.map((p) =>
-      p.id === controllerId ? p : { ...p, coinCapPerCardNextTurn: cap }
-    ),
-  };
+  let next = state;
+
+  // Praetor: active player is exempt from mandatory arena participation this turn.
+  if (passive.skip_arena_participation === true) {
+    next = { ...next, turnArenaExempt: true };
+  }
+
+  const cap = passive.opponent_coin_cap_per_card;
+  if (typeof cap === 'number' && cap > 0) {
+    const controllerId = next.players[playerIdx].id;
+    next = {
+      ...next,
+      players: next.players.map((p) =>
+        p.id === controllerId ? p : { ...p, coinCapPerCardNextTurn: cap }
+      ),
+    };
+  }
+
+  return next;
 }
 
 function beginPlaceCardOnDeckIfNeeded(
@@ -464,7 +498,7 @@ function applyCardPlayEffects(
   state: GameState,
   playerIdx: number,
   card: CardInstance,
-  options?: { skipDestroy?: boolean; skipOr?: boolean }
+  options?: { skipDestroy?: boolean; skipOr?: boolean; skipInteractivePicks?: boolean }
 ): GameState {
   let next = state;
   let coinGain = 0;
@@ -566,14 +600,25 @@ function applyCardPlayEffects(
       next = drawn.state;
       return drawn.player;
     };
-    const structuredEffects = massRedraw
-      ? ({ ...effects, draw_cards: 0 } as typeof effects)
-      : effects;
+    // War Banner: coins only after destroying — skip if mandatory destroy can't happen.
+    let structuredEffects = effects;
+    if (
+      handDiscardSpec &&
+      !handDiscardSpec.optional &&
+      handDiscardSpec.deferOtherEffects &&
+      !playerCanFulfillHandDiscardDestroy(next.players[playerIdx], handDiscardSpec)
+    ) {
+      structuredEffects = { ...effects, gain_coins: 0 };
+      coinGain = 0;
+    }
+    const structuredForApply = massRedraw
+      ? ({ ...structuredEffects, draw_cards: 0 } as typeof effects)
+      : structuredEffects;
     next = applyStructuredPlayEffects(
       next,
       playerIdx,
       card,
-      structuredEffects,
+      structuredForApply,
       drawForEffects
     );
 
@@ -636,10 +681,21 @@ function applyCardPlayEffects(
   }
 
   const conditional = getConditionalPlayEffect(card);
+  const conditionalArenaOk =
+    !conditional?.if_arena_defeated_this_turn || next.turnArenaDefeated === true;
   if (
     conditional &&
+    conditionalArenaOk &&
     meetsConditionalPlayedFactions(next.players[playerIdx], conditional.if_played_factions)
   ) {
+    if (conditional.gain_vp && conditional.gain_vp > 0) {
+      const players = [...next.players];
+      players[playerIdx] = {
+        ...players[playerIdx],
+        victoryPoints: players[playerIdx].victoryPoints + conditional.gain_vp,
+      };
+      next = { ...next, players };
+    }
     if (conditional.draw_cards && conditional.draw_cards > 0) {
       const drawn = drawCardsIntoState(
         next,
@@ -724,10 +780,31 @@ function applyCardPlayEffects(
   }
 
   const optionalSpec = options?.skipDestroy ? null : getOptionalBlockDestroySpec(card);
+  const disfavorSpec = options?.skipDestroy ? null : getDisfavorDestroySpec(card);
   if (
+    !next.pendingCardDestroyPick &&
+    disfavorSpec &&
+    playerHasDisfavorInZones(next.players[playerIdx], disfavorSpec.fromZones)
+  ) {
+    next = {
+      ...next,
+      pendingCardDestroyPick: {
+        playerId: next.players[playerIdx].id,
+        remaining: disfavorSpec.count,
+        fromZones: disfavorSpec.fromZones,
+        sourceCardName: card.definition.name,
+        sourceCardInstanceId: card.instanceId,
+        deferRemainingEffects: false,
+        optional: true,
+        disfavorOnly: true,
+        drawPerDestroyed: disfavorSpec.drawPerDestroyed,
+      },
+    };
+  } else if (
     optionalSpec &&
     playerCanFulfillHandDiscardDestroy(next.players[playerIdx], optionalSpec)
   ) {
+    const dynamicOffset = getDynamicGainOffset(card);
     next = {
       ...next,
       pendingCardDestroyPick: {
@@ -738,7 +815,9 @@ function applyCardPlayEffects(
         sourceCardInstanceId: card.instanceId,
         deferRemainingEffects: false,
         optional: true,
-        optionalBlockFollowUp: getOptionalBlockFollowUp(card) ?? undefined,
+        optionalBlockFollowUp:
+          dynamicOffset == null ? getOptionalBlockFollowUp(card) ?? undefined : undefined,
+        dynamicGainOffset: dynamicOffset,
       },
     };
   } else if (
@@ -804,6 +883,7 @@ function applyCardPlayEffects(
   }
 
   if (
+    !options?.skipInteractivePicks &&
     !options?.skipDestroy &&
     wantsDeckTopRevealPick(card)
   ) {
@@ -813,51 +893,59 @@ function applyCardPlayEffects(
     }
   }
 
-  next = beginInteractivePlayPicks(next, playerIdx, card, (_, id) =>
-    !isGalleryCardPurchased(next, id)
-  );
-  if (!next.pendingGainCardPick) {
-    next = beginHandDiscardIfNeeded(next, playerIdx, card, true);
-  }
+  if (!options?.skipInteractivePicks) {
+    next = beginInteractivePlayPicks(next, playerIdx, card, (_, id) =>
+      !isGalleryCardPurchased(next, id)
+    );
+    if (!next.pendingGainCardPick) {
+      next = beginHandDiscardIfNeeded(next, playerIdx, card, true);
+    }
 
-  next = beginPlaceCardOnDeckIfNeeded(next, playerIdx, card);
+    next = beginPlaceCardOnDeckIfNeeded(next, playerIdx, card);
 
-  if (
-    !options?.skipDestroy &&
-    getOptionalPlaceDestroyedOnMarket(card) &&
-    !next.pendingPlaceDestroyedOnMarketPick &&
-    !next.pendingGainCardPick &&
-    !next.pendingCopyCardPick &&
-    !next.pendingDeckLookPick &&
-    !next.pendingGainBandingBonusPick &&
-    listEligibleDestroyedPlaceCards(next).length > 0
-  ) {
-    next = {
-      ...next,
-      pendingPlaceDestroyedOnMarketPick: {
-        playerId: next.players[playerIdx].id,
-        sourceCardName: card.definition.name,
-        sourceCardInstanceId: card.instanceId,
-        optional: true,
-      },
-    };
-  }
+    if (
+      !options?.skipDestroy &&
+      getOptionalPlaceDestroyedOnMarket(card) &&
+      !next.pendingPlaceDestroyedOnMarketPick &&
+      !next.pendingGainCardPick &&
+      !next.pendingCopyCardPick &&
+      !next.pendingDeckLookPick &&
+      !next.pendingGainBandingBonusPick &&
+      listEligibleDestroyedPlaceCards(next).length > 0
+    ) {
+      next = {
+        ...next,
+        pendingPlaceDestroyedOnMarketPick: {
+          playerId: next.players[playerIdx].id,
+          sourceCardName: card.definition.name,
+          sourceCardInstanceId: card.instanceId,
+          optional: true,
+        },
+      };
+    }
 
-  const replaySpec = getReplayFavorFromDiscardSpec(card);
-  if (
-    !options?.skipDestroy &&
-    replaySpec &&
-    (next.flavorDiscard?.length ?? 0) > 0
-  ) {
-    next = {
-      ...next,
-      pendingFavorReplayPick: {
-        playerId: next.players[playerIdx].id,
-        sourceCardName: card.definition.name,
-        sourceCardInstanceId: card.instanceId,
-        removeFromGame: replaySpec.removeFromGame,
-      },
-    };
+    const replaySpec = getReplayFavorFromDiscardSpec(card);
+    if (
+      !options?.skipDestroy &&
+      replaySpec &&
+      (next.flavorDiscard?.length ?? 0) > 0
+    ) {
+      next = {
+        ...next,
+        pendingFavorReplayPick: {
+          playerId: next.players[playerIdx].id,
+          sourceCardName: card.definition.name,
+          sourceCardInstanceId: card.instanceId,
+          removeFromGame: replaySpec.removeFromGame,
+        },
+      };
+    }
+
+    next = applyStealCheapestFromOpponent(next, playerIdx, card);
+    next = beginReturnCardToHandIfNeeded(next, playerIdx, card);
+    next = beginRevealFavorsIfNeeded(next, playerIdx, card);
+    next = beginFlipMarketIfNeeded(next, playerIdx, card);
+    next = beginBriberyIfNeeded(next, playerIdx, card);
   }
 
   return applyOnPlayPassiveEffects(
@@ -865,6 +953,314 @@ function applyCardPlayEffects(
     playerIdx,
     card
   );
+}
+
+/** Germanicus / Supply Wagon: put a card from discard into hand. */
+function beginReturnCardToHandIfNeeded(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  if (state.pendingReturnCardToHandPick) return state;
+  const raw = getRawEffects(card).return_card_to_hand as
+    | Record<string, unknown>
+    | undefined;
+  if (!raw || typeof raw !== 'object') return state;
+
+  const excludeType = raw.exclude_type as string | undefined;
+  const player = state.players[playerIdx];
+  const eligible = player.discard.filter(
+    (c) => !returnCardExcluded(c, excludeType)
+  );
+  if (eligible.length === 0) return state;
+
+  return {
+    ...state,
+    pendingReturnCardToHandPick: {
+      playerId: player.id,
+      sourceCardName: card.definition.name,
+      sourceCardInstanceId: card.instanceId,
+      excludeType,
+      optional: /\bmay\b/i.test(card.definition.text ?? ''),
+    },
+  };
+}
+
+function returnCardExcluded(card: CardInstance, excludeType?: string): boolean {
+  if (!excludeType) return false;
+  return (
+    card.definition.type?.toLowerCase() === excludeType.toLowerCase()
+  );
+}
+
+/** Bribery: read the `play_opponent_random` spec. */
+function getPlayOpponentRandomSpec(
+  card: CardInstance
+): { destroyAtEndOfTurn: boolean } | null {
+  const raw = getRawEffects(card).play_opponent_random as
+    | Record<string, unknown>
+    | undefined;
+  if (!raw || typeof raw !== 'object') return null;
+  return { destroyAtEndOfTurn: raw.destroy_at_end_of_turn === true };
+}
+
+/** Deterministic (multiplayer-safe) index into an opponent's hand for Bribery. */
+function briberyRandomIndex(
+  state: GameState,
+  opponentId: string,
+  handLength: number
+): number {
+  if (handLength <= 0) return -1;
+  const seed = `${state.id}:${state.version ?? 0}:bribery:${opponentId}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (Math.imul(31, hash) + seed.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % handLength;
+}
+
+type BriberyPickBase = Pick<
+  NonNullable<GameState['pendingBriberyPick']>,
+  'playerId' | 'sourceCardName' | 'sourceCardInstanceId' | 'opponentCandidateIds'
+>;
+
+/** Reveal a random card from the chosen opponent's hand and offer play/skip. */
+function beginBriberyReveal(
+  state: GameState,
+  base: BriberyPickBase,
+  opponentId: string
+): GameState {
+  const opp = state.players.find((p) => p.id === opponentId);
+  if (!opp || opp.hand.length === 0) {
+    return { ...state, pendingBriberyPick: null };
+  }
+  const idx = briberyRandomIndex(state, opponentId, opp.hand.length);
+  const revealed = opp.hand[idx];
+  return {
+    ...state,
+    pendingBriberyPick: {
+      ...base,
+      phase: 'play_choice',
+      opponentId,
+      revealedCardInstanceId: revealed.instanceId,
+    },
+  };
+}
+
+/** Bribery (SEN-007): pick an opponent, reveal a random hand card, maybe play it. */
+function beginBriberyIfNeeded(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  if (state.pendingBriberyPick) return state;
+  const spec = getPlayOpponentRandomSpec(card);
+  if (!spec) return state;
+
+  const controller = state.players[playerIdx];
+  const candidates = state.players.filter(
+    (p) => p.id !== controller.id && p.hand.length > 0
+  );
+  if (candidates.length === 0) return state;
+
+  const base: BriberyPickBase = {
+    playerId: controller.id,
+    sourceCardName: card.definition.name,
+    sourceCardInstanceId: card.instanceId,
+    opponentCandidateIds: candidates.map((p) => p.id),
+  };
+
+  if (candidates.length === 1) {
+    return beginBriberyReveal(state, base, candidates[0].id);
+  }
+  return { ...state, pendingBriberyPick: { ...base, phase: 'choose_opponent' } };
+}
+
+/** Praeco / Vestal Priestess: reveal N favors, keep some. */
+function beginRevealFavorsIfNeeded(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  if (state.pendingRevealFavorsPick) return state;
+  const raw = getRawEffects(card).reveal_favors as
+    | { count?: number; pick?: number }
+    | undefined;
+  if (!raw || typeof raw !== 'object') return state;
+  const count = raw.count ?? 0;
+  const pick = raw.pick ?? 1;
+  if (count <= 0) return state;
+
+  const flavorDeck = [...state.flavorDeck];
+  const revealed: CardInstance[] = [];
+  for (let i = 0; i < count && flavorDeck.length > 0; i++) {
+    revealed.push({ ...flavorDeck.pop()!, faceUp: true });
+  }
+  if (revealed.length === 0) return state;
+
+  return {
+    ...state,
+    flavorDeck,
+    pendingRevealFavorsPick: {
+      playerId: state.players[playerIdx].id,
+      sourceCardName: card.definition.name,
+      sourceCardInstanceId: card.instanceId,
+      revealed,
+      pick: Math.min(pick, revealed.length),
+    },
+  };
+}
+
+/** Sententia: flip up to N market cards face down until the player's next turn. */
+function beginFlipMarketIfNeeded(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  if (state.pendingFlipMarketPick) return state;
+  const raw = getRawEffects(card).flip_market_face_down as
+    | { count?: number }
+    | undefined;
+  if (!raw || typeof raw !== 'object') return state;
+  const count = raw.count ?? 0;
+  if (count <= 0) return state;
+  const hasTargets = state.galleryCards.some((c) => c.faceUp !== false);
+  if (!hasTargets) return state;
+
+  return {
+    ...state,
+    pendingFlipMarketPick: {
+      playerId: state.players[playerIdx].id,
+      sourceCardName: card.definition.name,
+      sourceCardInstanceId: card.instanceId,
+      remaining: count,
+    },
+  };
+}
+
+/** The Emperor: when gained, place the gained card on top of the deck instead of discard. */
+function placeGainedCardOnDeckIfNeeded(
+  state: GameState,
+  playerIdx: number,
+  gainedCard: CardInstance
+): GameState {
+  const onGain = getRawEffects(gainedCard).on_gain as
+    | Record<string, unknown>
+    | undefined;
+  const spec = onGain?.place_card_on_deck as { position?: string } | undefined;
+  if (!spec || typeof spec !== 'object') return state;
+
+  const player = state.players[playerIdx];
+  const idx = player.discard.findIndex((c) => c.instanceId === gainedCard.instanceId);
+  if (idx === -1) return state;
+  const moved = { ...player.discard[idx], location: 'DECK' as const, faceUp: false };
+  const discard = player.discard.filter((_, i) => i !== idx);
+  const deck =
+    spec.position === 'bottom' ? [...player.deck, moved] : [moved, ...player.deck];
+
+  const players = [...state.players];
+  players[playerIdx] = { ...player, discard, deck };
+  return { ...state, players };
+}
+
+function isCrowdDisfavorCard(card: CardInstance): boolean {
+  return (
+    card.definition.type === 'CrowdDisfavor' ||
+    card.definition.faction === 'CrowdDisfavor'
+  );
+}
+
+type DisfavorDestroySpec = {
+  count: number;
+  fromZones: ('hand' | 'discard' | 'play_area')[];
+  drawPerDestroyed: number;
+};
+
+/** Flamma: destroy up to N Crowd Disfavor cards, drawing per destroyed. */
+function getDisfavorDestroySpec(card: CardInstance): DisfavorDestroySpec | null {
+  const opt = getRawEffects(card).optional as Record<string, unknown> | undefined;
+  const block = (opt?.destroy_disfavor ?? getRawEffects(card).destroy_disfavor) as
+    | { max?: number; zones?: string[] }
+    | undefined;
+  if (!block || typeof block !== 'object') return null;
+  const count = block.max ?? 1;
+  const zones = (block.zones ?? ['hand', 'discard']).filter(
+    (z): z is 'hand' | 'discard' | 'play_area' =>
+      z === 'hand' || z === 'discard' || z === 'play_area'
+  );
+  const drawPerDestroyed = Number(
+    opt?.draw_per_destroyed ?? getRawEffects(card).draw_per_destroyed ?? 0
+  );
+  return { count, fromZones: zones, drawPerDestroyed };
+}
+
+function playerHasDisfavorInZones(
+  player: PlayerState,
+  zones: ('hand' | 'discard' | 'play_area')[]
+): boolean {
+  const pools: CardInstance[] = [];
+  if (zones.includes('hand')) pools.push(...player.hand);
+  if (zones.includes('discard')) pools.push(...player.discard);
+  if (zones.includes('play_area')) pools.push(...player.playArea);
+  return pools.some(isCrowdDisfavorCard);
+}
+
+/** Unstoppable Legion: optional.then_gain_card with dynamic destroyed_cost_plus_N. */
+function getDynamicGainOffset(card: CardInstance): number | undefined {
+  const opt = getRawEffects(card).optional as Record<string, unknown> | undefined;
+  const spec = opt?.then_gain_card as { dynamic?: string } | undefined;
+  if (!spec || typeof spec !== 'object') return undefined;
+  const dyn = spec.dynamic;
+  if (typeof dyn === 'string') {
+    const match = dyn.match(/destroyed_cost_plus_(\d+)/);
+    if (match) return Number(match[1]);
+    if (dyn === 'destroyed_cost') return 0;
+  }
+  return undefined;
+}
+
+/** Julius Caesar: take the lowest-cost card from an opponent's hand. */
+function applyStealCheapestFromOpponent(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  if (getRawEffects(card).steal_cheapest_from_opponent_hand !== true) {
+    return state;
+  }
+  const controller = state.players[playerIdx];
+  const opponents = state.players.filter(
+    (p) => p.id !== controller.id && p.hand.length > 0
+  );
+  if (opponents.length === 0) return state;
+
+  // Target the most threatening opponent (highest VP) with cards in hand.
+  const target = opponents.reduce((best, p) =>
+    p.victoryPoints > best.victoryPoints ? p : best
+  );
+  const cheapest = target.hand.reduce((lo, c) =>
+    (c.definition.cost ?? 0) < (lo.definition.cost ?? 0) ? c : lo
+  );
+
+  const players = state.players.map((p) => {
+    if (p.id === target.id) {
+      return {
+        ...p,
+        hand: p.hand.filter((c) => c.instanceId !== cheapest.instanceId),
+      };
+    }
+    if (p.id === controller.id) {
+      return {
+        ...p,
+        discard: [
+          ...p.discard,
+          { ...cheapest, location: 'DISCARD' as const, ownerId: controller.id, faceUp: true },
+        ],
+      };
+    }
+    return p;
+  });
+  return { ...state, players };
 }
 
 function applyFavorEffects(
@@ -886,12 +1282,23 @@ function applyFavorEffects(
       ...card,
       definition: { ...card.definition, effects: stubEffects },
     };
-    let next = applyCardPlayEffects(state, playerIdx, stubCard);
+    let next = applyCardPlayEffects(state, playerIdx, stubCard, {
+      skipInteractivePicks: true,
+    });
     return maybeBeginForcedOpponentDiscards(next, playerIdx, card);
   }
-  let next = applyCardPlayEffects(state, playerIdx, card);
+  let next = applyCardPlayEffects(state, playerIdx, card, {
+    skipInteractivePicks: true,
+  });
+  next = maybeBeginDestroyOpponentHandPick(next, playerIdx, card);
   next = maybeBeginForcedOpponentDiscards(next, playerIdx, card);
-  return next;
+  return {
+    ...next,
+    pendingFavorFollowUp: {
+      playerId: state.players[playerIdx].id,
+      card: { ...card, faceUp: true },
+    },
+  };
 }
 
 function applyArenaWagerRewards(
@@ -927,6 +1334,80 @@ function applyArenaWagerRewards(
   }
 
   return next;
+}
+
+function applyForcedOpponentHandDestroy(
+  state: GameState,
+  targetPlayerId: string,
+  cardInstanceId: string
+): GameState {
+  const targetIdx = state.players.findIndex((p) => p.id === targetPlayerId);
+  if (targetIdx === -1) return state;
+
+  const target = { ...state.players[targetIdx] };
+  const handIdx = target.hand.findIndex((c) => c.instanceId === cardInstanceId);
+  if (handIdx === -1) return state;
+
+  const card = { ...target.hand[handIdx], ownerId: targetPlayerId };
+  target.hand = target.hand.filter((_, i) => i !== handIdx);
+
+  const players = [...state.players];
+  players[targetIdx] = target;
+  return addToDestroyedPile({ ...state, players }, [card]);
+}
+
+function getDestroyOpponentHandSpec(
+  card: CardInstance
+): { eachOpponent: boolean } | null {
+  const raw = getRawEffects(card).destroy_opponent_hand_card;
+  if (!raw || typeof raw !== 'object') return null;
+  return { eachOpponent: (raw as { each_opponent?: boolean }).each_opponent === true };
+}
+
+/** Spoils of Victory — look at each opponent's hand and destroy one card. */
+function maybeBeginDestroyOpponentHandPick(
+  state: GameState,
+  playerIdx: number,
+  card: CardInstance
+): GameState {
+  const spec = getDestroyOpponentHandSpec(card);
+  if (!spec) return state;
+  if (state.pendingForcedOpponentDiscards) return state;
+
+  const controller = state.players[playerIdx];
+  const opponents = state.players.filter(
+    (p) => p.id !== controller.id && p.hand.length > 0
+  );
+  if (opponents.length === 0) return state;
+
+  if (controller.isAI) {
+    let next = state;
+    for (const opponent of opponents) {
+      const current = next.players.find((p) => p.id === opponent.id);
+      if (!current || current.hand.length === 0) continue;
+      const pick = current.hand.reduce((worst, c) =>
+        (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
+      );
+      next = applyForcedOpponentHandDestroy(next, opponent.id, pick.instanceId);
+    }
+    return next;
+  }
+
+  const [first, ...rest] = opponents.map((p) => p.id);
+  return {
+    ...state,
+    pendingForcedOpponentDiscards: {
+      controllerId: controller.id,
+      sourceCardName: card.definition.name,
+      perOpponent: 1,
+      targetPlayerId: first,
+      remainingForTarget: 1,
+      remainingTargetIds: rest,
+      phase: 'discard',
+      controllerPicks: true,
+      destroyToPile: true,
+    },
+  };
 }
 
 function applyForcedOpponentDiscard(
@@ -1238,6 +1719,27 @@ function applyBranchEffects(
     return maybeOfferBandingBonus(next, playerIdx, sourceCard);
   }
 
+  // Rome: +N coins per matching-name card in the player's play area.
+  if (branch.gain_coins_per_matching_in_play) {
+    const spec = branch.gain_coins_per_matching_in_play as {
+      names?: string[];
+      per?: number;
+    };
+    const names = new Set((spec.names ?? []).map((n) => n.toLowerCase()));
+    const per = spec.per ?? 1;
+    const player = state.players[playerIdx];
+    const matches = [...player.playArea, ...player.itemsInPlay].filter((c) =>
+      names.has((c.definition.name ?? '').toLowerCase())
+    ).length;
+    const coins = matches * per;
+    let next = state;
+    if (coins > 0) {
+      next = { ...next, turnCoins: next.turnCoins + coins };
+      next = applyImperialTaxIfPending(next, playerIdx, coins);
+    }
+    return maybeOfferBandingBonus(next, playerIdx, sourceCard);
+  }
+
   const stub: CardInstance = {
     ...sourceCard,
     definition: {
@@ -1245,7 +1747,7 @@ function applyBranchEffects(
       effects: {
         ...sourceCard.definition.effects,
         ...branch,
-        gain_coins: 0,
+        gain_coins: Number(branch.gain_coins ?? 0),
       } as typeof sourceCard.definition.effects,
     },
   };
@@ -1429,11 +1931,17 @@ function handleForcedOpponentSelfDiscard(
   pending: NonNullable<GameState['pendingForcedOpponentDiscards']>,
   cardInstanceId: string
 ): GameState {
-  let next = applyForcedOpponentDiscard(
-    state,
-    pending.targetPlayerId,
-    cardInstanceId
-  );
+  let next = pending.destroyToPile
+    ? applyForcedOpponentHandDestroy(
+        state,
+        pending.targetPlayerId,
+        cardInstanceId
+      )
+    : applyForcedOpponentDiscard(
+        state,
+        pending.targetPlayerId,
+        cardInstanceId
+      );
   const remainingForTarget = pending.remainingForTarget - 1;
 
   if (remainingForTarget > 0) {
@@ -1546,20 +2054,25 @@ function allPlayersReady(state: GameState): boolean {
 
 function activateGameFromPregame(state: GameState): GameState {
   let flavorDeck = [...state.flavorDeck];
-  const players = state.players.map((p) => {
+  // The Crowd decides: randomize both who begins and the order the rest follow.
+  const players = shuffle(state.players).map((p) => {
     const { player, favorReturns } = drawCards({ ...p, hand: [] }, STARTING_HAND_SIZE);
     if (favorReturns.length > 0) {
       flavorDeck = [...flavorDeck, ...favorReturns];
     }
     return player;
   });
+  const starter = players[0];
   return {
     ...state,
     status: 'active',
     phase: 'MAIN',
     players,
     flavorDeck,
-    turnPlayerId: players[0]?.id ?? '',
+    turnPlayerId: starter?.id ?? '',
+    gameStartAnnouncement: starter
+      ? `The Crowd has roared in favor of ${starter.name} to begin the games!`
+      : null,
     turnNumber: 1,
     turnCoins: 0,
     turnValor: 0,
@@ -1579,6 +2092,7 @@ function activateGameFromPregame(state: GameState): GameState {
     pendingFavorArenaWagerPick: null,
     pendingFavorReplayPick: null,
     pendingFavorReplayRemovalId: null,
+    pendingFavorFollowUp: null,
     lastArenaWagerResult: null,
     pendingCardDestroyPick: null,
     pendingGalleryDestroyPick: null,
@@ -1589,13 +2103,17 @@ function activateGameFromPregame(state: GameState): GameState {
     pendingHandDiscard: null,
     pendingForcedOpponentDiscards: null,
     pendingGainCardPick: null,
+    deferredGainCardPick: null,
     pendingCopyCardPick: null,
     pendingPlaceCardOnDeckPick: null,
     pendingDeckLookPick: null,
+    pendingCrowdFrenzyPick: null,
+    pendingItemDeckPeek: null,
     pendingDeckTopRevealPick: null,
     pendingGainBandingBonusPick: null,
     pendingPlaceDestroyedOnMarketPick: null,
     arenaSabotageValorByPlayerId: {},
+    arenaSabotagesCancelled: 0,
     pendingArenaLoss: null,
     deferredTurnEnd: null,
     pendingArenaReplacement: false,
@@ -1629,6 +2147,28 @@ export function getArenaCommitValor(state: GameState): number {
   );
 }
 
+function getInPlayCards(state: GameState, playerId: string): CardInstance[] {
+  const player = state.players.find((p) => p.id === playerId);
+  return player ? [...player.playArea, ...player.itemsInPlay] : [];
+}
+
+/** Champion: challenger cannot be sabotaged while it is in play. */
+function challengerIsSabotageImmune(state: GameState, challengerId: string): boolean {
+  return getInPlayCards(state, challengerId).some(
+    (c) =>
+      (getRawEffects(c).passive as Record<string, unknown> | undefined)
+        ?.sabotage_immune === true
+  );
+}
+
+/** Veteran: each in-play copy reduces the magnitude of sabotage penalties by 1. */
+function challengerSabotageReduction(state: GameState, challengerId: string): number {
+  return getInPlayCards(state, challengerId).reduce((sum, c) => {
+    const passive = getRawEffects(c).passive as Record<string, unknown> | undefined;
+    return sum + Number(passive?.reduce_sabotage_valor ?? 0);
+  }, 0);
+}
+
 export function getArenaChallengeTotalValor(state: GameState): number {
   const challenge = state.arenaChallenge;
   if (!challenge) return getArenaCommitValor(state);
@@ -1637,14 +2177,37 @@ export function getArenaChallengeTotalValor(state: GameState): number {
     .filter((c): c is CardInstance => c != null)
     .reduce((sum, c) => sum + (c.definition?.valor ?? 0), 0);
 
-  const hinderValor = Object.entries(challenge.hinderByPlayerId)
-    .filter((entry): entry is [string, CardInstance] => entry[1] != null)
-    .reduce((sum, [playerId, c]) => {
-      const sabotage = state.arenaSabotageValorByPlayerId?.[playerId] ?? 0;
-      return sum + (c.definition?.valor ?? 0) + sabotage;
-    }, 0);
+  const immune = challengerIsSabotageImmune(state, challenge.challengerId);
+  const reduce = challengerSabotageReduction(state, challenge.challengerId);
+  // Bestiarii: the active player's challenge gets a flat valor bonus this turn.
+  // Wooden Gladius (item): flat valor bonus while in the challenger's play.
+  const turnBonus =
+    challenge.challengerId === state.turnPlayerId
+      ? state.turnArenaValorBonus ?? 0
+      : 0;
+  const arenaBonus =
+    turnBonus +
+    sumItemArenaValorBonus(getInPlayCards(state, challenge.challengerId));
 
-  return getArenaCommitValor(state) + supportValor - hinderValor;
+  let hinderContributions = immune
+    ? []
+    : Object.entries(challenge.hinderByPlayerId)
+        .filter((entry): entry is [string, CardInstance] => entry[1] != null)
+        .map(([playerId, c]) => {
+          const sabotage = state.arenaSabotageValorByPlayerId?.[playerId] ?? 0;
+          const contribution = (c.definition?.valor ?? 0) + sabotage;
+          return contribution > 0 ? Math.max(0, contribution - reduce) : contribution;
+        });
+
+  // Rudiarii: cancel the most damaging sabotages (largest positive contributions).
+  const cancelled = state.arenaSabotagesCancelled ?? 0;
+  if (cancelled > 0 && hinderContributions.length > 0) {
+    hinderContributions = [...hinderContributions].sort((a, b) => b - a);
+    hinderContributions = hinderContributions.slice(cancelled);
+  }
+  const hinderValor = hinderContributions.reduce((sum, v) => sum + v, 0);
+
+  return getArenaCommitValor(state) + supportValor - hinderValor + arenaBonus;
 }
 
 function discardCardToPlayer(
@@ -1705,7 +2268,48 @@ function resolveArenaChallenge(state: GameState): GameState {
   let lossSideEffects: Partial<GameState> = {};
   if (success) {
     challenger.victoryPoints += rewardVp;
+    const gratiaOnVictory = state.turnGratiaOnArenaVictory ?? 0;
+    if (gratiaOnVictory > 0 && challenge.challengerId === state.turnPlayerId) {
+      const gratiaCards = Array.from({ length: gratiaOnVictory }, () =>
+        createCardInstance(GRATIA_SUPPLY.id, 'DISCARD', challenger.id, true)
+      );
+      challenger = {
+        ...challenger,
+        discard: [...challenger.discard, ...gratiaCards],
+      };
+    }
   } else {
+    // Medicus: each hinder card with this passive destroys one committed fighter on failure.
+    const destroyChallengerCount = Object.values(challenge.hinderByPlayerId).filter(
+      (c) =>
+        c != null &&
+        (getRawEffects(c).passive as Record<string, unknown> | undefined)
+          ?.sabotage_on_fail_destroy_challenger === true
+    ).length;
+    if (destroyChallengerCount > 0) {
+      const committedIds = new Set(state.arenaCommitZone.map((c) => c.instanceId));
+      const fightersInDiscard = challenger.discard
+        .filter((c) => committedIds.has(c.instanceId))
+        .sort((a, b) => (b.definition?.valor ?? 0) - (a.definition?.valor ?? 0));
+      const toDestroy = fightersInDiscard.slice(0, destroyChallengerCount);
+      const destroyIds = new Set(toDestroy.map((c) => c.instanceId));
+      if (toDestroy.length > 0) {
+        challenger = {
+          ...challenger,
+          discard: challenger.discard.filter((c) => !destroyIds.has(c.instanceId)),
+        };
+        state = addToDestroyedPile(state, toDestroy.map((c) => ({ ...c, ownerId: challenger.id })));
+        players = state.players.map((p) => ({
+          ...p,
+          hand: [...p.hand],
+          discard: [...p.discard],
+          playArea: [...p.playArea],
+          deck: [...p.deck],
+        }));
+        players[challengerIdx] = challenger;
+      }
+    }
+
     const lossSpec = parseArenaLossSpec(state.arenaCard);
     const committedFighters = state.arenaCommitZone.map((c) => ({ ...c }));
 
@@ -1719,6 +2323,7 @@ function resolveArenaChallenge(state: GameState): GameState {
         arenaCommitZone: [],
         arenaChallenge: null,
         arenaSabotageValorByPlayerId: {},
+    arenaSabotagesCancelled: 0,
         pendingArenaLoss: beginPendingArenaLoss(
           state,
           challenge.challengerId,
@@ -1770,11 +2375,13 @@ function resolveArenaChallenge(state: GameState): GameState {
     arenaDeck,
     pendingArenaReplacement,
     arenaOpen,
+    turnArenaDefeated: success ? true : state.turnArenaDefeated ?? false,
     turnArenaResolved: true,
     turnValor: state.turnValor + (success ? valorGain : 0),
     arenaCommitZone: [],
     arenaChallenge: null,
     arenaSabotageValorByPlayerId: {},
+    arenaSabotagesCancelled: 0,
     lastArenaResult: {
       success,
       totalValor,
@@ -1849,7 +2456,8 @@ function rehydratePlayer(
 }
 
 /** Restore card definitions after Supabase JSON round-trip. */
-export function rehydrateGameState(state: GameState): GameState {
+export function rehydrateGameState(input: GameState): GameState {
+  const state = migrateGameState(input);
   const favorReturns: CardInstance[] = [];
   const players = (state.players ?? []).map((p) => rehydratePlayer(p, favorReturns));
   let phase = normalizePhase(state.phase);
@@ -1866,6 +2474,7 @@ export function rehydrateGameState(state: GameState): GameState {
     phase,
     players,
     readyPlayerIds: state.readyPlayerIds ?? [],
+    gameStartAnnouncement: state.gameStartAnnouncement ?? null,
     turnCoins: state.turnCoins ?? 0,
     turnValor: state.turnValor ?? 0,
     turnBandingClaimed: state.turnBandingClaimed ?? [],
@@ -1899,6 +2508,12 @@ export function rehydrateGameState(state: GameState): GameState {
     pendingFavorArenaWagerPick: state.pendingFavorArenaWagerPick ?? null,
     pendingFavorReplayPick: state.pendingFavorReplayPick ?? null,
     pendingFavorReplayRemovalId: state.pendingFavorReplayRemovalId ?? null,
+    pendingFavorFollowUp: state.pendingFavorFollowUp
+      ? {
+          ...state.pendingFavorFollowUp,
+          card: rehydrateCard(state.pendingFavorFollowUp.card),
+        }
+      : null,
     lastArenaWagerResult: state.lastArenaWagerResult
       ? {
           ...state.lastArenaWagerResult,
@@ -1917,9 +2532,25 @@ export function rehydrateGameState(state: GameState): GameState {
     pendingHandDiscard: state.pendingHandDiscard ?? null,
     pendingForcedOpponentDiscards: state.pendingForcedOpponentDiscards ?? null,
     pendingGainCardPick: state.pendingGainCardPick ?? null,
+    deferredGainCardPick: state.deferredGainCardPick ?? null,
     pendingCopyCardPick: state.pendingCopyCardPick ?? null,
     pendingPlaceCardOnDeckPick: state.pendingPlaceCardOnDeckPick ?? null,
     pendingDeckLookPick: state.pendingDeckLookPick ?? null,
+    pendingCrowdFrenzyPick: state.pendingCrowdFrenzyPick
+      ? {
+          ...state.pendingCrowdFrenzyPick,
+          replacements: state.pendingCrowdFrenzyPick.replacements.map((r) => ({
+            ...r,
+            destroyedCard: rehydrateCard(r.destroyedCard),
+          })),
+        }
+      : null,
+    pendingItemDeckPeek: state.pendingItemDeckPeek
+      ? {
+          ...state.pendingItemDeckPeek,
+          revealedCard: rehydrateCard(state.pendingItemDeckPeek.revealedCard),
+        }
+      : null,
     pendingDeckTopRevealPick: state.pendingDeckTopRevealPick
       ? {
           ...state.pendingDeckTopRevealPick,
@@ -1932,8 +2563,21 @@ export function rehydrateGameState(state: GameState): GameState {
     pendingGainBandingBonusPick: state.pendingGainBandingBonusPick ?? null,
     pendingPlaceDestroyedOnMarketPick:
       state.pendingPlaceDestroyedOnMarketPick ?? null,
+    pendingReturnCardToHandPick: state.pendingReturnCardToHandPick ?? null,
+    pendingBriberyPick: state.pendingBriberyPick ?? null,
+    pendingFlipMarketPick: state.pendingFlipMarketPick ?? null,
+    pendingRevealFavorsPick: state.pendingRevealFavorsPick
+      ? {
+          ...state.pendingRevealFavorsPick,
+          revealed: rehydrateCards(state.pendingRevealFavorsPick.revealed ?? []),
+          kept: state.pendingRevealFavorsPick.kept
+            ? rehydrateCards(state.pendingRevealFavorsPick.kept)
+            : undefined,
+        }
+      : null,
     lastEventGalleryDestroyNames: state.lastEventGalleryDestroyNames ?? null,
     arenaSabotageValorByPlayerId: state.arenaSabotageValorByPlayerId ?? {},
+    arenaSabotagesCancelled: state.arenaSabotagesCancelled ?? 0,
     pendingArenaLoss: state.pendingArenaLoss
       ? {
           ...state.pendingArenaLoss,
@@ -1948,6 +2592,9 @@ export function rehydrateGameState(state: GameState): GameState {
     purchaseCostCap: state.purchaseCostCap ?? null,
     purchaseCostCapActiveForPlayerId:
       state.purchaseCostCapActiveForPlayerId ?? null,
+    purchaseCostCapTurnsRemaining: state.purchaseCostCapTurnsRemaining ?? null,
+    purchaseCostCapSourceCardId: state.purchaseCostCapSourceCardId ?? null,
+    pendingGalleryEventSourceLabel: state.pendingGalleryEventSourceLabel ?? null,
     arenaOpen: state.arenaOpen ?? false,
     turnArenaResolved: state.turnArenaResolved ?? false,
     turnArenaExempt: state.turnArenaExempt ?? false,
@@ -1988,6 +2635,7 @@ export function rehydrateGameState(state: GameState): GameState {
       faceUp: true,
     })),
     winnerId: state.winnerId ?? null,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
   };
 }
 
@@ -2004,6 +2652,84 @@ function normalizePhase(phase: GamePhase | string | undefined): GamePhase {
       return 'MAIN';
     default:
       return 'PREGAME';
+  }
+}
+
+/** Interactive picks have their own validation blocks — never block them behind favor reveal. */
+function interactivePickOverridesFavorPause(
+  state: GameState,
+  action: GameAction
+): boolean {
+  const pid = action.playerId;
+  switch (action.type) {
+    case 'FAVOR_REPLAY_PICK':
+      return state.pendingFavorReplayPick?.playerId === pid;
+    case 'GAIN_CARD_PICK':
+      return state.pendingGainCardPick?.playerId === pid;
+    case 'COPY_CARD_PICK':
+      return state.pendingCopyCardPick?.playerId === pid;
+    case 'PLACE_CARD_ON_DECK_PICK':
+    case 'PLACE_CARD_ON_DECK_SKIP':
+      return state.pendingPlaceCardOnDeckPick?.playerId === pid;
+    case 'DECK_LOOK_CHOOSE_PLAYER':
+    case 'DECK_LOOK_KEEP_TOP':
+    case 'DECK_LOOK_REORDER':
+      return state.pendingDeckLookPick?.playerId === pid;
+    case 'CROWD_FRENZY_GAIN_PICK':
+    case 'CROWD_FRENZY_SKIP':
+      return state.pendingCrowdFrenzyPick?.playerId === pid;
+    case 'ITEM_PEEK_DRAW':
+    case 'ITEM_PEEK_SKIP':
+      return state.pendingItemDeckPeek?.playerId === pid;
+    case 'DECK_TOP_REVEAL_RESOLVE':
+      return state.pendingDeckTopRevealPick?.playerId === pid;
+    case 'RETURN_CARD_TO_HAND_PICK':
+    case 'RETURN_CARD_TO_HAND_SKIP':
+      return state.pendingReturnCardToHandPick?.playerId === pid;
+    case 'BRIBERY_CHOOSE_OPPONENT':
+    case 'BRIBERY_PLAY_REVEALED':
+    case 'BRIBERY_SKIP':
+      return state.pendingBriberyPick?.playerId === pid;
+    case 'REVEAL_FAVORS_PICK':
+      return state.pendingRevealFavorsPick?.playerId === pid;
+    case 'FLIP_MARKET_PICK':
+    case 'FLIP_MARKET_SKIP':
+      return state.pendingFlipMarketPick?.playerId === pid;
+    case 'CARD_DESTROY_PICK':
+    case 'CARD_DESTROY_SKIP':
+      return state.pendingCardDestroyPick?.playerId === pid;
+    case 'GALLERY_DESTROY_PICK':
+    case 'GALLERY_DESTROY_SKIP':
+      return state.pendingGalleryDestroyPick?.playerId === pid;
+    case 'EPIC_DESTROY_PICK':
+      return state.pendingEpicDestroyPick?.playerId === pid;
+    case 'ANY_DISCARD_DESTROY_PICK':
+      return state.pendingAnyDiscardDestroyPick?.playerId === pid;
+    case 'ON_GAIN_DESTROY_PICK':
+    case 'ON_GAIN_DESTROY_SKIP':
+      return state.pendingOnGainDestroyPick?.playerId === pid;
+    case 'PLACE_DESTROYED_ON_MARKET_PICK':
+    case 'PLACE_DESTROYED_ON_MARKET_SKIP':
+      return state.pendingPlaceDestroyedOnMarketPick?.playerId === pid;
+    case 'CHOOSE_OR_EFFECT':
+      return state.pendingOrEffectChoice?.playerId === pid;
+    case 'CHOOSE_GAIN_BANDING_BONUS':
+      return state.pendingGainBandingBonusPick?.playerId === pid;
+    case 'CHOOSE_FORCE_DISCARD_TARGET':
+      return state.pendingForcedOpponentDiscards?.controllerId === pid;
+    case 'FORCE_OPPONENT_DISCARD':
+      // The controller picks for opponents, or a target self-discards.
+      return (
+        state.pendingForcedOpponentDiscards?.controllerId === pid ||
+        state.pendingForcedOpponentDiscards?.targetPlayerId === pid
+      );
+    case 'DISCARD_CARD':
+      return (
+        state.pendingHandDiscard?.playerId === pid ||
+        state.pendingForcedOpponentDiscards?.targetPlayerId === pid
+      );
+    default:
+      return false;
   }
 }
 
@@ -2108,12 +2834,21 @@ export function validateGameAction(
       return null;
     }
     if (
+      action.type === 'FAVOR_REPLAY_PICK' &&
+      state.pendingFavorReplayPick?.playerId === action.playerId
+    ) {
+      return null;
+    }
+    if (
       action.type === 'GAIN_CARD_PICK' &&
       state.pendingGainCardPick?.playerId === action.playerId
     ) {
       return null;
     }
     if (action.type === 'DISMISS_ARENA_WAGER_RESULT') {
+      return null;
+    }
+    if (interactivePickOverridesFavorPause(state, action)) {
       return null;
     }
     return 'Resolve favor first';
@@ -2197,6 +2932,12 @@ export function validateGameAction(
       ) {
         return 'Not waiting for your event response';
       }
+      return null;
+    }
+    // A gallery event can flip while a player still owns an interactive pick
+    // (e.g. a gain/replace pick from the same effect). Let the pick owner resolve
+    // it instead of deadlocking behind the event.
+    if (interactivePickOverridesFavorPause(state, action)) {
       return null;
     }
     return 'Resolve gallery event first';
@@ -2371,7 +3112,15 @@ export function validateGameAction(
     return 'Choose a discard card for your deck';
   }
 
-  if (state.turnPlayerId !== action.playerId) {
+  // Some interactive picks are granted to players whose turn it isn't (e.g. Crowd
+  // Frenzy gives every player a replacement pick, Oracle's Warning / deck-look can
+  // target another player, and some effects grant opponents a gain pick). Let the
+  // pick owner's actions through to the specific handlers below instead of
+  // rejecting them as "not your turn".
+  if (
+    state.turnPlayerId !== action.playerId &&
+    !interactivePickOverridesFavorPause(state, action)
+  ) {
     return 'Not your turn';
   }
 
@@ -2617,8 +3366,31 @@ export function validateGameAction(
     if (action.type === 'DECK_LOOK_KEEP_TOP' && action.payload?.cardInstanceId) {
       return null;
     }
+    if (
+      action.type === 'DECK_LOOK_REORDER' &&
+      (action.payload?.cardInstanceIds?.length ?? 0) > 0
+    ) {
+      return null;
+    }
     if (action.type === 'END_PHASE') return null;
     return 'Resolve deck look effect';
+  }
+
+  if (state.pendingCrowdFrenzyPick?.playerId === action.playerId) {
+    if (action.type === 'CROWD_FRENZY_GAIN_PICK' && action.payload?.cardInstanceId) {
+      return null;
+    }
+    if (action.type === 'CROWD_FRENZY_SKIP') return null;
+    if (action.type === 'END_PHASE') return null;
+    return 'Choose market replacements for Crowd Frenzy';
+  }
+
+  if (state.pendingItemDeckPeek?.playerId === action.playerId) {
+    if (action.type === 'ITEM_PEEK_DRAW' || action.type === 'ITEM_PEEK_SKIP') {
+      return null;
+    }
+    if (action.type === 'END_PHASE') return null;
+    return 'Resolve the revealed card';
   }
 
   if (state.pendingGainBandingBonusPick?.playerId === action.playerId) {
@@ -2627,6 +3399,52 @@ export function validateGameAction(
     }
     if (action.type === 'END_PHASE') return null;
     return 'Choose a faction bonus';
+  }
+
+  if (state.pendingReturnCardToHandPick?.playerId === action.playerId) {
+    if (
+      (action.type === 'RETURN_CARD_TO_HAND_PICK' && action.payload?.cardInstanceId) ||
+      action.type === 'RETURN_CARD_TO_HAND_SKIP' ||
+      action.type === 'END_PHASE'
+    ) {
+      return null;
+    }
+    return 'Return a card to your hand';
+  }
+
+  if (state.pendingBriberyPick?.playerId === action.playerId) {
+    if (
+      (action.type === 'BRIBERY_CHOOSE_OPPONENT' && action.payload?.targetPlayerId) ||
+      action.type === 'BRIBERY_PLAY_REVEALED' ||
+      action.type === 'BRIBERY_SKIP' ||
+      action.type === 'END_PHASE'
+    ) {
+      return null;
+    }
+    return state.pendingBriberyPick.phase === 'choose_opponent'
+      ? 'Choose an opponent to bribe'
+      : 'Play or skip the revealed card';
+  }
+
+  if (state.pendingRevealFavorsPick?.playerId === action.playerId) {
+    if (
+      (action.type === 'REVEAL_FAVORS_PICK' && action.payload?.cardInstanceIds?.length) ||
+      action.type === 'END_PHASE'
+    ) {
+      return null;
+    }
+    return 'Choose favors to keep';
+  }
+
+  if (state.pendingFlipMarketPick?.playerId === action.playerId) {
+    if (
+      (action.type === 'FLIP_MARKET_PICK' && action.payload?.cardInstanceId) ||
+      action.type === 'FLIP_MARKET_SKIP' ||
+      action.type === 'END_PHASE'
+    ) {
+      return null;
+    }
+    return 'Flip market cards face down';
   }
 
   if (
@@ -2675,12 +3493,42 @@ export function validateGameAction(
       }
       return null;
     }
+    case 'USE_ITEM': {
+      if (state.turnPlayerId !== action.playerId) return 'Not your turn';
+      if (!action.payload?.cardInstanceId) return 'Missing item';
+      const item = player.itemsInPlay.find(
+        (c) => c.instanceId === action.payload!.cardInstanceId
+      );
+      if (!item) return 'Item not in play';
+      if (!isActivatableItem(item)) return 'This item has no activated effect';
+      if (getItemActivation(item) === 'tap' && item.tapped) {
+        return 'Item already tapped this turn';
+      }
+      return null;
+    }
+    case 'ITEM_PEEK_DRAW':
+    case 'ITEM_PEEK_SKIP': {
+      if (state.pendingItemDeckPeek?.playerId !== action.playerId) {
+        return 'No revealed card to resolve';
+      }
+      if (action.type === 'ITEM_PEEK_DRAW' && !state.pendingItemDeckPeek.canDraw) {
+        return 'That card is too expensive to draw';
+      }
+      return null;
+    }
     case 'BUY_CARD': {
       if (!action.payload?.cardInstanceId) return 'Missing card';
-      const card = findMarketCard(state, action.payload.cardInstanceId);
+      const destroyedBuy =
+        state.turnPurchaseFromDestroyed
+          ? (state.destroyedPile ?? []).find(
+              (c) => c.instanceId === action.payload!.cardInstanceId
+            )
+          : undefined;
+      const card = destroyedBuy ?? findMarketCard(state, action.payload.cardInstanceId);
       if (!card) return 'Card not available to buy';
       const cost = getEffectivePurchaseCost(state, card);
       if (state.turnCoins < cost) return 'Not enough coins';
+      if (destroyedBuy) return null;
       if (
         state.purchaseCostCap != null &&
         (card.definition.cost ?? 0) > state.purchaseCostCap
@@ -2819,18 +3667,65 @@ function playerHasPendingPlayInteraction(
     state.pendingCopyCardPick?.playerId === playerId ||
     state.pendingGainCardPick?.playerId === playerId ||
     state.pendingDeckLookPick?.playerId === playerId ||
+    state.pendingCrowdFrenzyPick?.playerId === playerId ||
+    state.pendingItemDeckPeek?.playerId === playerId ||
     state.pendingDeckTopRevealPick?.playerId === playerId ||
     state.pendingGainBandingBonusPick?.playerId === playerId ||
     state.pendingPlaceDestroyedOnMarketPick?.playerId === playerId ||
     state.pendingPlaceCardOnDeckPick?.playerId === playerId ||
+    state.pendingReturnCardToHandPick?.playerId === playerId ||
+    state.pendingBriberyPick?.playerId === playerId ||
+    state.pendingRevealFavorsPick?.playerId === playerId ||
+    state.pendingFlipMarketPick?.playerId === playerId ||
     state.pendingCardDestroyPick?.playerId === playerId ||
     state.pendingGalleryDestroyPick?.playerId === playerId ||
     state.pendingEpicDestroyPick?.playerId === playerId ||
     state.pendingAnyDiscardDestroyPick?.playerId === playerId ||
     state.pendingOrEffectChoice?.playerId === playerId ||
     state.pendingOnGainDestroyPick?.playerId === playerId ||
-    state.pendingHandDiscard?.playerId === playerId
+    state.pendingHandDiscard?.playerId === playerId ||
+    state.pendingForcedOpponentDiscards?.controllerId === playerId ||
+    state.pendingFavorReplayPick?.playerId === playerId
   );
+}
+
+function resumeDeferredGainCardPick(state: GameState): GameState {
+  const deferred = state.deferredGainCardPick;
+  if (!deferred) return state;
+  if (state.pendingGainCardPick) return state;
+  if (favorResolutionPaused(state)) return state;
+  if (playerHasPendingPlayInteraction(state, deferred.playerId)) return state;
+
+  const eligible =
+    deferred.gainSource === 'destroyed_pile'
+      ? listEligibleDestroyedGainCards(state, {
+          source: 'destroyed_pile',
+          maxCost: deferred.maxCost,
+          type: deferred.cardType,
+          faction: deferred.gainFaction,
+        })
+      : listEligibleMarketGainCards(
+          state,
+          {
+            source:
+              deferred.gainSource === 'market_or_epic'
+                ? 'market_or_epic'
+                : 'market',
+            maxCost: deferred.maxCost,
+            type: deferred.cardType,
+            faction: deferred.gainFaction,
+          },
+          (id) => !isGalleryCardPurchased(state, id)
+        );
+  if (eligible.length === 0) {
+    return { ...state, deferredGainCardPick: null };
+  }
+
+  return {
+    ...state,
+    deferredGainCardPick: null,
+    pendingGainCardPick: deferred,
+  };
 }
 
 function resumeDeferredBandingBonus(state: GameState): GameState {
@@ -2843,6 +3738,221 @@ function resumeDeferredBandingBonus(state: GameState): GameState {
     deferredBandingBonus: null,
     pendingBandingBonus: deferred,
   };
+}
+
+function advanceForcedOpponentDiscardPastEmptyTargets(state: GameState): GameState {
+  let pending = state.pendingForcedOpponentDiscards;
+  if (!pending || pending.phase !== 'discard') return state;
+
+  let next = state;
+  for (let guard = 0; guard < state.players.length + 1; guard++) {
+    pending = next.pendingForcedOpponentDiscards;
+    if (!pending || pending.phase !== 'discard') return next;
+
+    const target = next.players.find((p) => p.id === pending!.targetPlayerId);
+    if (target && target.hand.length > 0) return next;
+
+    if (pending.singleTarget) {
+      return { ...next, pendingForcedOpponentDiscards: null };
+    }
+
+    let remainingTargetIds = [...pending.remainingTargetIds];
+    let advanced = false;
+    while (remainingTargetIds.length > 0) {
+      const nextTargetId = remainingTargetIds.shift()!;
+      const nextTarget = next.players.find((p) => p.id === nextTargetId);
+      if (nextTarget && nextTarget.hand.length > 0) {
+        next = {
+          ...next,
+          pendingForcedOpponentDiscards: {
+            ...pending,
+            targetPlayerId: nextTargetId,
+            remainingForTarget: pending.perOpponent,
+            remainingTargetIds,
+          },
+        };
+        advanced = true;
+        break;
+      }
+    }
+    if (advanced) continue;
+    return { ...next, pendingForcedOpponentDiscards: null };
+  }
+  return next;
+}
+
+function applyPendingFavorFollowUp(state: GameState): GameState {
+  const followUp = state.pendingFavorFollowUp;
+  if (!followUp || favorResolutionPaused(state)) return state;
+
+  const playerIdx = state.players.findIndex((p) => p.id === followUp.playerId);
+  if (playerIdx === -1) {
+    return { ...state, pendingFavorFollowUp: null };
+  }
+
+  const card = followUp.card;
+  let next: GameState = { ...state, pendingFavorFollowUp: null };
+
+  if (wantsCrowdFrenzyEffect(card)) {
+    next = beginCrowdFrenzyPick(next, playerIdx, card, (s, id) =>
+      !isGalleryCardPurchased(s, id)
+    );
+    if (next.pendingCrowdFrenzyPick) {
+      return next;
+    }
+  }
+
+  if (wantsDeckTopRevealPick(card)) {
+    next = beginDeckTopRevealPick(next, playerIdx, card);
+    if (next.pendingDeckTopRevealPick) {
+      return next;
+    }
+  }
+
+  next = beginInteractivePlayPicks(next, playerIdx, card, (_, id) =>
+    !isGalleryCardPurchased(next, id)
+  );
+  if (!next.pendingGainCardPick) {
+    next = beginHandDiscardIfNeeded(next, playerIdx, card, true);
+  }
+
+  next = beginPlaceCardOnDeckIfNeeded(next, playerIdx, card);
+
+  if (
+    getOptionalPlaceDestroyedOnMarket(card) &&
+    !next.pendingPlaceDestroyedOnMarketPick &&
+    !next.pendingGainCardPick &&
+    !next.pendingCopyCardPick &&
+    !next.pendingDeckLookPick &&
+    !next.pendingCrowdFrenzyPick &&
+    !next.pendingGainBandingBonusPick &&
+    listEligibleDestroyedPlaceCards(next).length > 0
+  ) {
+    next = {
+      ...next,
+      pendingPlaceDestroyedOnMarketPick: {
+        playerId: next.players[playerIdx].id,
+        sourceCardName: card.definition.name,
+        sourceCardInstanceId: card.instanceId,
+        optional: true,
+      },
+    };
+  }
+
+  const replaySpec = getReplayFavorFromDiscardSpec(card);
+  if (replaySpec && (next.flavorDiscard?.length ?? 0) > 0) {
+    next = {
+      ...next,
+      pendingFavorReplayPick: {
+        playerId: next.players[playerIdx].id,
+        sourceCardName: card.definition.name,
+        sourceCardInstanceId: card.instanceId,
+        removeFromGame: replaySpec.removeFromGame,
+      },
+    };
+  }
+
+  next = applyStealCheapestFromOpponent(next, playerIdx, card);
+  next = beginReturnCardToHandIfNeeded(next, playerIdx, card);
+  next = beginRevealFavorsIfNeeded(next, playerIdx, card);
+  next = beginFlipMarketIfNeeded(next, playerIdx, card);
+
+  return next;
+}
+
+function clearStaleFavorReplayPick(state: GameState): GameState {
+  const pending = state.pendingFavorReplayPick;
+  if (!pending) return state;
+  if ((state.flavorDiscard?.length ?? 0) > 0) return state;
+  return { ...state, pendingFavorReplayPick: null };
+}
+
+function clearStaleEpicDestroyPick(state: GameState): GameState {
+  if (!state.pendingEpicDestroyPick) return state;
+  if (state.epicCards.length > 0) return state;
+  return { ...state, pendingEpicDestroyPick: null };
+}
+
+function clearStaleRevealFavorsPick(state: GameState): GameState {
+  const pick = state.pendingRevealFavorsPick;
+  if (!pick) return state;
+  if ((pick.revealed?.length ?? 0) > 0) return state;
+  return { ...state, pendingRevealFavorsPick: null };
+}
+
+function clearStaleFavorDestroyPick(state: GameState): GameState {
+  const pick = state.pendingFavorDestroyPick;
+  const pending = state.pendingFavorReveal;
+  if (!pick || !pending) return state;
+  if (playerHasFavorDestroyTargets(state, pick.playerId, pick.fromZones)) {
+    return state;
+  }
+
+  let next: GameState = { ...state, pendingFavorDestroyPick: null };
+  const beneficiaryIdx = next.players.findIndex((p) => p.id === pending.playerId);
+  if (beneficiaryIdx !== -1 && !favorIsOptional(pending.card)) {
+    next = applyFavorEffects(next, beneficiaryIdx, pending.card, { skipDestroy: true });
+  }
+  return finishFavorResolution(next, pending.card);
+}
+
+function clearStaleFavorArenaWagerPick(state: GameState): GameState {
+  const pick = state.pendingFavorArenaWagerPick;
+  const pending = state.pendingFavorReveal;
+  if (!pick || !pending) return state;
+  const beneficiary = state.players.find((p) => p.id === pick.beneficiaryId);
+  if (
+    beneficiary &&
+    (beneficiary.hand.length > 0 || beneficiary.playArea.length > 0)
+  ) {
+    return state;
+  }
+  return finishFavorResolution(
+    { ...state, pendingFavorArenaWagerPick: null },
+    pending.card
+  );
+}
+
+function advanceFavorQueueIfIdle(state: GameState): GameState {
+  if (state.pendingFavorReveal || state.pendingFavorDestroyPick) return state;
+  if (state.pendingFavorArenaWagerPick) return state;
+  return processFavorQueue(state);
+}
+
+/** Clear dead-end prompts and promote deferred picks — safe to call anytime. */
+function sanitizeInteractiveState(state: GameState): GameState {
+  let next = state;
+  for (let i = 0; i < 8; i++) {
+    const prev = next;
+    next = clearStaleFavorReplayPick(next);
+    next = clearStaleEpicDestroyPick(next);
+    next = clearStaleRevealFavorsPick(next);
+    next = advanceForcedOpponentDiscardPastEmptyTargets(next);
+    next = resumeDeferredGainCardPick(next);
+    next = resumeDeferredBandingBonus(next);
+    if (next === prev) break;
+  }
+  return next;
+}
+
+/** After a dispatched action — resolve favor follow-ups and stale favor sub-picks. */
+function finalizeInteractiveState(state: GameState): GameState {
+  let next = sanitizeInteractiveState(state);
+  for (let i = 0; i < 8; i++) {
+    const prev = next;
+    next = clearStaleFavorDestroyPick(next);
+    next = clearStaleFavorArenaWagerPick(next);
+    next = advanceFavorQueueIfIdle(next);
+    next = applyPendingFavorFollowUp(next);
+    next = sanitizeInteractiveState(next);
+    if (next === prev) break;
+  }
+  return next;
+}
+
+/** @deprecated alias — use sanitize/finalize; kept for callers that post-process actions. */
+export function normalizeInteractiveState(state: GameState): GameState {
+  return finalizeInteractiveState(state);
 }
 
 function maybeOfferBandingBonus(
@@ -3211,12 +4321,17 @@ function enrichActionLog(state: GameState, action: GameAction): GameAction {
       (c) => c.instanceId === action.payload!.cardInstanceId
     );
     if (card) {
+      const verb = pending?.destroyToPile ? 'Destroyed' : 'Discarded';
+      const src = pending?.sourceCardName
+        ? ` (${pending.sourceCardName})`
+        : '';
       return {
         ...action,
         payload: {
           ...action.payload,
           cardName: card.definition.name,
           definitionId: card.definitionId,
+          effectSummary: `${verb} ${card.definition.name} from ${target?.name ?? 'opponent'}${src}`,
         },
       };
     }
@@ -3313,9 +4428,9 @@ function cleanupTurnPlayer(player: PlayerState): {
   const existingDiscardSplit = splitPlayerDeckCycleCards(
     player.discard.map(toDiscard)
   );
+  // Items are permanents: they stay in play across turns (never discarded here).
   const fromPlaySplit = splitPlayerDeckCycleCards([
     ...player.playArea.map(toDiscard),
-    ...player.itemsInPlay.map(toDiscard),
     ...player.hand.map(toDiscard),
   ]);
 
@@ -3331,7 +4446,7 @@ function cleanupTurnPlayer(player: PlayerState): {
       deck: deckSplit.deckable,
       hand: [],
       playArea: [],
-      itemsInPlay: [],
+      itemsInPlay: player.itemsInPlay,
       discard: [...existingDiscardSplit.deckable, ...fromPlaySplit.deckable],
     },
     favorReturns,
@@ -3389,6 +4504,7 @@ export function createPregameState(
     pendingFavorArenaWagerPick: null,
     pendingFavorReplayPick: null,
     pendingFavorReplayRemovalId: null,
+    pendingFavorFollowUp: null,
     lastArenaWagerResult: null,
     pendingCardDestroyPick: null,
     pendingGalleryDestroyPick: null,
@@ -3403,6 +4519,9 @@ export function createPregameState(
     pendingArenaReplacement: false,
     purchaseCostCap: null,
     purchaseCostCapActiveForPlayerId: null,
+    purchaseCostCapTurnsRemaining: null,
+    purchaseCostCapSourceCardId: null,
+    pendingGalleryEventSourceLabel: null,
     arenaOpen: false,
     turnArenaResolved: false,
     turnArenaExempt: false,
@@ -3473,6 +4592,7 @@ export function createLobbyGameState(
     pendingFavorArenaWagerPick: null,
     pendingFavorReplayPick: null,
     pendingFavorReplayRemovalId: null,
+    pendingFavorFollowUp: null,
     lastArenaWagerResult: null,
     pendingCardDestroyPick: null,
     pendingGalleryDestroyPick: null,
@@ -3675,6 +4795,20 @@ export function processGameAction(
       if (!pending || action.playerId !== pending.playerId || !player) return next;
       if (!action.payload?.cardInstanceId) return next;
 
+      // Enforce faction eligibility (e.g. Secutor only allows Ludus cards).
+      const eligible = listEligiblePlaceOnDeckCards(player, {
+        source: 'discard',
+        faction: pending.faction,
+        anyFaction: pending.anyFaction,
+        position: pending.position,
+        optional: pending.optional ?? false,
+      });
+      if (
+        !eligible.some((c) => c.instanceId === action.payload!.cardInstanceId)
+      ) {
+        return next;
+      }
+
       const updated = placeCardFromDiscardOnDeck(
         player,
         action.payload.cardInstanceId,
@@ -3859,6 +4993,117 @@ export function processGameAction(
       return { ...next, pendingDeckLookPick: null };
     }
 
+    case 'DECK_LOOK_REORDER': {
+      const pending = next.pendingDeckLookPick;
+      const orderedIds = action.payload?.cardInstanceIds ?? [];
+      if (
+        !pending ||
+        pending.phase !== 'reorder' ||
+        action.playerId !== pending.playerId ||
+        !pending.targetPlayerId ||
+        orderedIds.length === 0
+      ) {
+        return next;
+      }
+      const targetIdx = next.players.findIndex((p) => p.id === pending.targetPlayerId);
+      if (targetIdx === -1) return next;
+      const viewed = pending.viewedCards ?? [];
+      const updated = applyDeckTopOrder(
+        next.players[targetIdx],
+        viewed,
+        orderedIds
+      );
+      next.players = [...next.players];
+      next.players[targetIdx] = updated;
+      return { ...next, pendingDeckLookPick: null };
+    }
+
+    case 'CROWD_FRENZY_GAIN_PICK': {
+      const pending = next.pendingCrowdFrenzyPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      if (!action.payload?.cardInstanceId) return next;
+
+      const current = getCurrentCrowdFrenzyReplacement(pending);
+      if (!current) {
+        return { ...next, pendingCrowdFrenzyPick: null };
+      }
+
+      const targetIdx = next.players.findIndex(
+        (p) => p.id === current.targetPlayerId
+      );
+      if (targetIdx === -1) {
+        return { ...next, pendingCrowdFrenzyPick: null };
+      }
+
+      const eligible = listCrowdFrenzyMarketCards(
+        next,
+        current.targetCost,
+        (s, id) => !isGalleryCardPurchased(s, id)
+      );
+      if (
+        !eligible.some((c) => c.instanceId === action.payload!.cardInstanceId)
+      ) {
+        return next;
+      }
+
+      const gained = gainMarketCardToPlayerDeckTop(
+        next,
+        targetIdx,
+        action.payload.cardInstanceId,
+        (s, id) => !isGalleryCardPurchased(s, id)
+      );
+      if (!gained.gained) return next;
+
+      return advanceCrowdFrenzyAfterResolve(gained.state, (s, id) =>
+        !isGalleryCardPurchased(s, id)
+      );
+    }
+
+    case 'CROWD_FRENZY_SKIP': {
+      const pending = next.pendingCrowdFrenzyPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      return advanceCrowdFrenzyAfterResolve(next, (s, id) =>
+        !isGalleryCardPurchased(s, id)
+      );
+    }
+
+    case 'USE_ITEM': {
+      if (!player || !action.payload?.cardInstanceId) return next;
+      const itemIdx = player.itemsInPlay.findIndex(
+        (c) => c.instanceId === action.payload!.cardInstanceId
+      );
+      if (itemIdx === -1) return next;
+      const item = player.itemsInPlay[itemIdx];
+      const activation = getItemActivation(item);
+      if (activation !== 'tap' && activation !== 'destroy') return next;
+      if (activation === 'tap' && item.tapped) return next;
+
+      if (activation === 'tap') {
+        return applyItemTapEffect(next, playerIdx, itemIdx, item);
+      }
+      return applyItemDestroyEffect(next, playerIdx, itemIdx, item);
+    }
+
+    case 'ITEM_PEEK_DRAW':
+    case 'ITEM_PEEK_SKIP': {
+      const pending = next.pendingItemDeckPeek;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      if (action.type === 'ITEM_PEEK_DRAW' && pending.canDraw && player) {
+        const p = { ...next.players[playerIdx] };
+        const deckIdx = p.deck.findIndex(
+          (c) => c.instanceId === pending.revealedCard.instanceId
+        );
+        if (deckIdx !== -1) {
+          const drawn = { ...p.deck[deckIdx], location: 'HAND' as const, faceUp: true };
+          p.deck = p.deck.filter((_, i) => i !== deckIdx);
+          p.hand = [...p.hand, drawn];
+          next.players = [...next.players];
+          next.players[playerIdx] = p;
+        }
+      }
+      return { ...next, pendingItemDeckPeek: null };
+    }
+
     case 'DECK_TOP_REVEAL_RESOLVE': {
       const pending = next.pendingDeckTopRevealPick;
       const choice = action.payload?.deckTopRevealChoice;
@@ -3918,6 +5163,179 @@ export function processGameAction(
       if (!faction) return next;
       next = { ...next, pendingGainBandingBonusPick: null };
       return applyBandingBonus(next, playerIdx, faction);
+    }
+
+    case 'RETURN_CARD_TO_HAND_PICK': {
+      const pending = next.pendingReturnCardToHandPick;
+      if (!pending || action.playerId !== pending.playerId || !player) return next;
+      const cardId = action.payload?.cardInstanceId;
+      const idx = player.discard.findIndex((c) => c.instanceId === cardId);
+      if (idx === -1) return next;
+      if (returnCardExcluded(player.discard[idx], pending.excludeType)) return next;
+      const moved = {
+        ...player.discard[idx],
+        location: 'HAND' as const,
+        faceUp: true,
+      };
+      const updated: PlayerState = {
+        ...player,
+        discard: player.discard.filter((_, i) => i !== idx),
+        hand: [...player.hand, moved],
+      };
+      next.players = [...next.players];
+      next.players[playerIdx] = updated;
+      return { ...next, pendingReturnCardToHandPick: null };
+    }
+
+    case 'RETURN_CARD_TO_HAND_SKIP': {
+      const pending = next.pendingReturnCardToHandPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      return { ...next, pendingReturnCardToHandPick: null };
+    }
+
+    case 'BRIBERY_CHOOSE_OPPONENT': {
+      const pending = next.pendingBriberyPick;
+      if (
+        !pending ||
+        pending.playerId !== action.playerId ||
+        pending.phase !== 'choose_opponent'
+      ) {
+        return next;
+      }
+      const targetId = action.payload?.targetPlayerId;
+      if (!targetId || !pending.opponentCandidateIds.includes(targetId)) {
+        return next;
+      }
+      return beginBriberyReveal(
+        next,
+        {
+          playerId: pending.playerId,
+          sourceCardName: pending.sourceCardName,
+          sourceCardInstanceId: pending.sourceCardInstanceId,
+          opponentCandidateIds: pending.opponentCandidateIds,
+        },
+        targetId
+      );
+    }
+
+    case 'BRIBERY_PLAY_REVEALED': {
+      const pending = next.pendingBriberyPick;
+      if (
+        !pending ||
+        pending.playerId !== action.playerId ||
+        pending.phase !== 'play_choice' ||
+        !pending.opponentId ||
+        !pending.revealedCardInstanceId
+      ) {
+        return next;
+      }
+      const oppIdx = next.players.findIndex((p) => p.id === pending.opponentId);
+      const ctrlIdx = next.players.findIndex((p) => p.id === pending.playerId);
+      if (oppIdx === -1 || ctrlIdx === -1) {
+        return { ...next, pendingBriberyPick: null };
+      }
+      const opp = { ...next.players[oppIdx] };
+      const handIdx = opp.hand.findIndex(
+        (c) => c.instanceId === pending.revealedCardInstanceId
+      );
+      if (handIdx === -1) {
+        return { ...next, pendingBriberyPick: null };
+      }
+
+      const borrowed: CardInstance = {
+        ...opp.hand[handIdx],
+        location: 'PLAY_AREA',
+        faceUp: true,
+        ownerId: pending.playerId,
+        borrowedFromPlayerId: pending.opponentId,
+      };
+      opp.hand = opp.hand.filter((_, i) => i !== handIdx);
+      next.players = [...next.players];
+      next.players[oppIdx] = opp;
+
+      const ctrl = {
+        ...next.players[ctrlIdx],
+        playArea: [...next.players[ctrlIdx].playArea, borrowed],
+      };
+      next.players[ctrlIdx] = recordTurnPlayedCard(ctrl, borrowed);
+      next = { ...next, pendingBriberyPick: null };
+
+      // Play the borrowed card for the controller (resolves its effects/picks).
+      let result = applyCardPlayEffects(next, ctrlIdx, borrowed);
+      result = maybeOfferBandingBonus(result, ctrlIdx, borrowed);
+      return result;
+    }
+
+    case 'BRIBERY_SKIP': {
+      const pending = next.pendingBriberyPick;
+      if (!pending || pending.playerId !== action.playerId) return next;
+      return { ...next, pendingBriberyPick: null };
+    }
+
+    case 'REVEAL_FAVORS_PICK': {
+      const pending = next.pendingRevealFavorsPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      const chosenId = action.payload?.cardInstanceIds?.[0];
+      const idx = pending.revealed.findIndex((c) => c.instanceId === chosenId);
+      if (idx === -1) return next;
+
+      const chosen = pending.revealed[idx];
+      const remainingRevealed = pending.revealed.filter((_, i) => i !== idx);
+      const kept = [...(pending.kept ?? []), chosen];
+      const remainingPick = pending.pick - 1;
+
+      if (remainingPick > 0 && remainingRevealed.length > 0) {
+        return {
+          ...next,
+          pendingRevealFavorsPick: {
+            ...pending,
+            revealed: remainingRevealed,
+            pick: remainingPick,
+            kept,
+          },
+        };
+      }
+
+      // Selection complete: discard the rest, then resolve kept favors in order.
+      next = {
+        ...next,
+        pendingRevealFavorsPick: null,
+        flavorDiscard: [...(next.flavorDiscard ?? []), ...remainingRevealed],
+      };
+      for (const favor of kept) {
+        next = beginFavorResolution(next, favor, pending.playerId);
+      }
+      return processFavorQueue(next);
+    }
+
+    case 'FLIP_MARKET_PICK': {
+      const pending = next.pendingFlipMarketPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      const cardId = action.payload?.cardInstanceId;
+      const target = next.galleryCards.find(
+        (c) => c.instanceId === cardId && c.faceUp !== false
+      );
+      if (!target) return next;
+      next = {
+        ...next,
+        galleryCards: next.galleryCards.map((c) =>
+          c.instanceId === cardId ? { ...c, faceUp: false } : c
+        ),
+        flippedMarketCardIds: [...(next.flippedMarketCardIds ?? []), cardId!],
+        flippedMarketByPlayerId: pending.playerId,
+      };
+      const remaining = pending.remaining - 1;
+      const moreTargets = next.galleryCards.some((c) => c.faceUp !== false);
+      if (remaining > 0 && moreTargets) {
+        return { ...next, pendingFlipMarketPick: { ...pending, remaining } };
+      }
+      return { ...next, pendingFlipMarketPick: null };
+    }
+
+    case 'FLIP_MARKET_SKIP': {
+      const pending = next.pendingFlipMarketPick;
+      if (!pending || action.playerId !== pending.playerId) return next;
+      return { ...next, pendingFlipMarketPick: null };
     }
 
     case 'RESOLVE_ARENA_LOSS': {
@@ -3998,6 +5416,12 @@ export function processGameAction(
       if (!action.payload?.cardInstanceId) return next;
 
       const zone = action.payload.sourceZone ?? 'HAND';
+      if (pending.disfavorOnly) {
+        const pool =
+          zone === 'HAND' ? player.hand : zone === 'DISCARD' ? player.discard : player.playArea;
+        const target = pool.find((c) => c.instanceId === action.payload!.cardInstanceId);
+        if (!target || !isCrowdDisfavorCard(target)) return next;
+      }
       const removed = removeCardFromPlayerZone(
         player,
         action.payload.cardInstanceId,
@@ -4018,11 +5442,22 @@ export function processGameAction(
         };
       }
 
+      const destroyedCost = removed.card.definition?.cost ?? 0;
+      const destroyedMaxCost = Math.max(pending.destroyedMaxCost ?? 0, destroyedCost);
+
+      // Flamma: draw a card for each disfavor destroyed.
+      if (pending.drawPerDestroyed && pending.drawPerDestroyed > 0) {
+        const drawn = drawCardsIntoState(next, next.players[playerIdx], pending.drawPerDestroyed);
+        next = drawn.state;
+        next.players = [...next.players];
+        next.players[playerIdx] = drawn.player;
+      }
+
       const remaining = pending.remaining - 1;
       if (remaining > 0) {
         return {
           ...next,
-          pendingCardDestroyPick: { ...pending, remaining },
+          pendingCardDestroyPick: { ...pending, remaining, destroyedMaxCost },
         };
       }
 
@@ -4032,6 +5467,30 @@ export function processGameAction(
           playerIdx,
           pending.optionalBlockFollowUp
         );
+      }
+
+      // Unstoppable Legion: gain a market card costing up to destroyed cost + offset.
+      if (pending.dynamicGainOffset != null) {
+        const maxCost = destroyedMaxCost + pending.dynamicGainOffset;
+        const eligible = listEligibleMarketGainCards(
+          next,
+          { source: 'market', maxCost },
+          (id) => !isGalleryCardPurchased(next, id)
+        );
+        if (eligible.length > 0) {
+          next = {
+            ...next,
+            pendingCardDestroyPick: null,
+            pendingGainCardPick: {
+              playerId: pending.playerId,
+              sourceCardName: pending.sourceCardName,
+              sourceCardInstanceId: pending.sourceCardInstanceId,
+              maxCost,
+              gainSource: 'market',
+            },
+          };
+          return next;
+        }
       }
 
       return finishCardDestroyPick(next, playerIdx, pending);
@@ -4341,6 +5800,14 @@ export function processGameAction(
 
         if (responseType === 'support') {
           updatedChallenge.supportByPlayerId[action.playerId] = card;
+          // Rudiarii: a support card that cancels a sabotage.
+          const cancels = Number(getRawEffects(card).cancel_sabotage ?? 0);
+          if (cancels > 0) {
+            next = {
+              ...next,
+              arenaSabotagesCancelled: (next.arenaSabotagesCancelled ?? 0) + cancels,
+            };
+          }
         } else {
           updatedChallenge.hinderByPlayerId[action.playerId] = card;
         }
@@ -4397,6 +5864,24 @@ export function processGameAction(
         const newEpic = [...next.epicCards];
         newEpic.splice(epicIdx, 1);
         next.epicCards = newEpic;
+      } else if (
+        next.turnPurchaseFromDestroyed &&
+        (next.destroyedPile ?? []).some(
+          (c) => c.instanceId === action.payload!.cardInstanceId
+        )
+      ) {
+        // Lanista: purchase a card from the destroyed pile this turn.
+        const pile = next.destroyedPile ?? [];
+        const dIdx = pile.findIndex(
+          (c) => c.instanceId === action.payload!.cardInstanceId
+        );
+        boughtCard = {
+          ...pile[dIdx],
+          location: 'DISCARD' as const,
+          ownerId: player.id,
+        };
+        marketSource = 'gallery';
+        next.destroyedPile = pile.filter((_, i) => i !== dIdx);
       } else if (next.recruitCard?.instanceId === action.payload!.cardInstanceId) {
         boughtCard = {
           ...next.recruitCard,
@@ -4435,8 +5920,19 @@ export function processGameAction(
         card: boughtCard,
       };
 
-      player.discard = [...player.discard, boughtCard];
+      if (next.turnNextGainToHand) {
+        player.hand = [...player.hand, { ...boughtCard, location: 'HAND' as const, faceUp: true }];
+        next.turnNextGainToHand = false;
+      } else {
+        player.discard = [...player.discard, boughtCard];
+      }
       next.turnCoins -= purchaseCost;
+
+      // Laurel Crown & similar: the epic discount applies to the NEXT epic only.
+      // Consume it once an epic has been purchased so later epics pay full cost.
+      if (isEpicMarketCard(boughtCard) && (next.turnEpicDiscount ?? 0) > 0) {
+        next.turnEpicDiscount = 0;
+      }
 
       next.players = [...next.players];
       next.players[playerIdx] = player;
@@ -4451,6 +5947,7 @@ export function processGameAction(
         drawForOnGain,
         (_, id) => !isGalleryCardPurchased(next, id)
       );
+      next = placeGainedCardOnDeckIfNeeded(next, playerIdx, boughtCard);
       return beginOnGainDestroyIfNeeded(next, playerIdx, boughtCard);
     }
 
@@ -4620,6 +6117,49 @@ export function processGameAction(
         next = applyFavorEffects(next, beneficiaryIdx, card, {
           skipDestroy: true,
         });
+      }
+
+      // Gladiator's Funeral: after destroying, gain a replacement card. The max
+      // cost can be dynamic relative to the destroyed card's cost.
+      const gainSpec = beneficiaryIdx !== -1 ? getGainCardSpec(card) : null;
+      if (gainSpec) {
+        const rawGain = getRawEffects(card).gain_card as
+          | { dynamic?: string }
+          | undefined;
+        let maxCost = gainSpec.maxCost;
+        const dyn = rawGain?.dynamic;
+        if (typeof dyn === 'string') {
+          const match = dyn.match(/destroyed_cost_plus_(\d+)/);
+          if (match) {
+            maxCost = (removed?.definition.cost ?? 0) + Number(match[1]);
+          }
+        }
+        const eligible = listEligibleMarketGainCards(
+          next,
+          {
+            source: gainSpec.source,
+            maxCost,
+            type: gainSpec.type,
+            faction: gainSpec.faction,
+          },
+          (id) => !isGalleryCardPurchased(next, id)
+        );
+        if (eligible.length > 0) {
+          next = {
+            ...next,
+            pendingGainCardPick: {
+              playerId: next.players[beneficiaryIdx].id,
+              sourceCardName: card.definition.name,
+              sourceCardInstanceId: card.instanceId,
+              maxCost,
+              cardType: gainSpec.type,
+              gainFaction: gainSpec.faction,
+              gainSource:
+                gainSpec.source === 'market_or_epic' ? 'market_or_epic' : 'market',
+            },
+          };
+          return finishFavorResolution(next, card);
+        }
       }
 
       return finishFavorResolution(next, card);
@@ -4908,6 +6448,7 @@ function finishGalleryEventPlayerResponses(state: GameState): GameState {
   let next: GameState = {
     ...state,
     pendingGalleryEvent: null,
+    pendingGalleryEventSourceLabel: null,
     galleryEventOutcomes: null,
     galleryEventDecreeOutcomes: null,
     lastEventGalleryDestroyNames: null,
@@ -5021,10 +6562,17 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     turnPlayerId: state.players[nextPlayerIdx].id,
     turnNumber: state.turnNumber + 1,
     phase: 'MAIN',
+    gameStartAnnouncement: null,
     turnCoins: 0,
     turnValor: 0,
     turnEpicDiscount: 0,
     turnFactionDiscount: 0,
+    turnItemDiscount: 0,
+    turnArenaValorBonus: 0,
+    turnNextGainToHand: false,
+    turnPurchaseFromDestroyed: false,
+    turnArenaDefeated: false,
+    turnGratiaOnArenaVictory: 0,
     deferredGalleryRefillSlots: 0,
     deferredEpicRefillSlots: 0,
     turnBandingClaimed: [],
@@ -5040,18 +6588,24 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
     pendingOnGainDestroyPick: null,
     pendingForcedOpponentDiscards: null,
     pendingGainCardPick: null,
+    deferredGainCardPick: null,
+    pendingFavorFollowUp: null,
     pendingCopyCardPick: null,
     pendingPlaceCardOnDeckPick: null,
     pendingDeckLookPick: null,
+    pendingCrowdFrenzyPick: null,
+    pendingItemDeckPeek: null,
     pendingDeckTopRevealPick: null,
     pendingGainBandingBonusPick: null,
     pendingPlaceDestroyedOnMarketPick: null,
+    pendingReturnCardToHandPick: null,
+    pendingBriberyPick: null,
+    pendingRevealFavorsPick: null,
+    pendingFlipMarketPick: null,
     arenaSabotageValorByPlayerId: {},
+    arenaSabotagesCancelled: 0,
     pendingArenaLoss: null,
     deferredTurnEnd: null,
-    purchaseCostCap: state.purchaseCostCap ?? null,
-    purchaseCostCapActiveForPlayerId:
-      state.purchaseCostCapActiveForPlayerId ?? null,
     turnArenaResolved: false,
     turnArenaExempt: false,
     lastArenaResult: null,
@@ -5059,8 +6613,17 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
 
   const nextPlayer = next.players[nextPlayerIdx];
   const carry = nextPlayer.carryCoins ?? 0;
-  let turnCoins = Math.max(0, carry);
-  let updatedPlayer = { ...nextPlayer, carryCoins: 0 };
+  // Treasury Keys and similar items grant coins at the start of each turn.
+  const itemCoins = sumItemCoinsPerTurn(nextPlayer.itemsInPlay);
+  let turnCoins = Math.max(0, carry) + itemCoins;
+  // Untap the active player's items at the start of their turn.
+  let updatedPlayer = {
+    ...nextPlayer,
+    carryCoins: 0,
+    itemsInPlay: nextPlayer.itemsInPlay.map((c) =>
+      c.tapped ? { ...c, tapped: false } : c
+    ),
+  };
   if (updatedPlayer.imperialTaxPending) {
     turnCoins = Math.max(0, turnCoins - 1);
     updatedPlayer = { ...updatedPlayer, imperialTaxPending: false };
@@ -5073,7 +6636,249 @@ function completeTurnPass(state: GameState, endingPlayerIdx: number): GameState 
       idx === endingPlayerIdx ? undefined : p.coinCapPerCardNextTurn,
   }));
 
+  // Grain Shortage: each player is restricted for one of their upcoming turns.
+  // Decrement at each turn start; clear the cap once every player has had a turn.
+  if (next.purchaseCostCap != null) {
+    const remaining = (next.purchaseCostCapTurnsRemaining ?? 0) - 1;
+    if (remaining < 0) {
+      next = {
+        ...next,
+        purchaseCostCap: null,
+        purchaseCostCapTurnsRemaining: null,
+        purchaseCostCapSourceCardId: null,
+      };
+    } else {
+      next = { ...next, purchaseCostCapTurnsRemaining: remaining };
+    }
+  }
+
+  next = restoreFlippedMarketIfOwnersTurn(next);
+  next = maybeTriggerItemTurnStartEvent(next, nextPlayerIdx);
+
   return finishGameIfNeeded(next);
+}
+
+function tapItemInPlace(
+  state: GameState,
+  playerIdx: number,
+  itemIdx: number
+): GameState {
+  const player = { ...state.players[playerIdx] };
+  player.itemsInPlay = player.itemsInPlay.map((c, i) =>
+    i === itemIdx ? { ...c, tapped: true } : c
+  );
+  const players = [...state.players];
+  players[playerIdx] = player;
+  return { ...state, players };
+}
+
+/** Apply a tap-activated item effect (Trident Head, Centurion Baton, Bloodied Sand). */
+function applyItemTapEffect(
+  state: GameState,
+  playerIdx: number,
+  itemIdx: number,
+  item: CardInstance
+): GameState {
+  const spec = getItemTapSpec(item);
+  if (!spec) return state;
+
+  let next = tapItemInPlace(state, playerIdx, itemIdx);
+  const playerId = next.players[playerIdx].id;
+
+  if (spec.flipGalleryFacedown && spec.flipGalleryFacedown > 0) {
+    if (next.galleryCards.some((c) => c.faceUp !== false)) {
+      next = {
+        ...next,
+        pendingFlipMarketPick: {
+          playerId,
+          sourceCardName: item.definition.name,
+          sourceCardInstanceId: item.instanceId,
+          remaining: spec.flipGalleryFacedown,
+        },
+      };
+    }
+    return next;
+  }
+
+  if (spec.gainFavor && spec.gainFavor > 0) {
+    let player = next.players[playerIdx];
+    for (let i = 0; i < spec.gainFavor; i++) {
+      const gained = gainFlavorCard(next, player);
+      next = gained.state;
+      player = gained.player;
+    }
+    const players = [...next.players];
+    players[playerIdx] = player;
+    return { ...next, players };
+  }
+
+  if (spec.revealTopDrawMaxCost != null) {
+    let player = { ...next.players[playerIdx] };
+    const refilled = refillPlayerDeckFromDiscard(player);
+    player = { ...player, ...refilled.player };
+    next = { ...next, players: [...next.players] };
+    next.players[playerIdx] = player;
+    if (refilled.favorReturns.length > 0) {
+      next = { ...next, flavorDeck: [...next.flavorDeck, ...refilled.favorReturns] };
+    }
+    if (player.deck.length === 0) return next;
+    const top = { ...player.deck[0], faceUp: true };
+    const canDraw = (top.definition.cost ?? 0) <= spec.revealTopDrawMaxCost;
+    return {
+      ...next,
+      pendingItemDeckPeek: {
+        playerId,
+        sourceCardName: item.definition.name,
+        sourceCardInstanceId: item.instanceId,
+        revealedCard: top,
+        canDraw,
+      },
+    };
+  }
+
+  return next;
+}
+
+/** Apply a destroy-activated item effect; shuffles the item back into the market deck. */
+function applyItemDestroyEffect(
+  state: GameState,
+  playerIdx: number,
+  itemIdx: number,
+  item: CardInstance
+): GameState {
+  const spec = getItemDestroySpec(item);
+  if (!spec) return state;
+
+  let next: GameState = { ...state, players: [...state.players] };
+  const player = { ...next.players[playerIdx] };
+  player.itemsInPlay = player.itemsInPlay.filter((_, i) => i !== itemIdx);
+  next.players[playerIdx] = player;
+
+  if (spec.shuffleBack) {
+    const returned: CardInstance = {
+      ...item,
+      location: 'GALLERY',
+      ownerId: 'market',
+      faceUp: false,
+      tapped: false,
+      chosenFaction: undefined,
+    };
+    next = {
+      ...next,
+      gallerySupply: shuffle([...(next.gallerySupply ?? []), returned]),
+    };
+  } else {
+    next = addToDestroyedPile(next, [{ ...item, ownerId: player.id }]);
+  }
+
+  if (spec.epicDiscount && spec.epicDiscount > 0) {
+    next = {
+      ...next,
+      turnEpicDiscount: (next.turnEpicDiscount ?? 0) + spec.epicDiscount,
+    };
+  }
+
+  if (spec.discardHandDraw && spec.discardHandDraw > 0) {
+    let p = { ...next.players[playerIdx] };
+    if (p.hand.length > 0) {
+      const discarded = p.hand.map((c) => ({
+        ...c,
+        location: 'DISCARD' as const,
+        faceUp: true,
+        chosenFaction: undefined,
+      }));
+      p = { ...p, hand: [], discard: [...p.discard, ...discarded] };
+    }
+    next = { ...next, players: [...next.players] };
+    next.players[playerIdx] = p;
+    const drawn = drawCardsIntoState(next, p, spec.discardHandDraw);
+    next = drawn.state;
+    next.players = [...next.players];
+    next.players[playerIdx] = drawn.player;
+  }
+
+  if (spec.gainCardFaction) {
+    const faction = spec.gainCardFaction;
+    const eligible = listEligibleMarketGainCards(
+      next,
+      { source: 'market', faction, type: 'faction' },
+      (id) => !isGalleryCardPurchased(next, id)
+    );
+    if (eligible.length > 0) {
+      next = {
+        ...next,
+        pendingGainCardPick: {
+          playerId: next.players[playerIdx].id,
+          sourceCardName: item.definition.name,
+          gainFaction: faction,
+          cardType: 'faction',
+          gainSource: 'market',
+        },
+      };
+    }
+  }
+
+  return next;
+}
+
+/** Ivory Dice: a random Event occurs at the start of the owner's turn. */
+function maybeTriggerItemTurnStartEvent(
+  state: GameState,
+  playerIdx: number
+): GameState {
+  const player = state.players[playerIdx];
+  if (!player?.itemsInPlay.some(itemTriggersRandomEventTurnStart)) {
+    return state;
+  }
+  if (galleryRefillPaused(state)) return state;
+
+  const eventIds = getGalleryEventDefinitionIds();
+  if (eventIds.length === 0) return state;
+
+  const chosenId = eventIds[Math.floor(Math.random() * eventIds.length)];
+  const event = {
+    ...createCardInstance(chosenId, 'GALLERY', 'market', true),
+    faceUp: true,
+  };
+
+  const eventFavorReturns: CardInstance[] = [];
+  const drawForEvent = (p: PlayerState, count: number) =>
+    drawCards(p, count, eventFavorReturns).player;
+
+  let next = beginGalleryEventResolution(
+    state,
+    event,
+    drawForEvent,
+    gainFlavorCard,
+    createCardInstance
+  );
+  next = { ...next, pendingGalleryEventSourceLabel: 'Ivory Dice' };
+  if (eventFavorReturns.length > 0) {
+    next = {
+      ...next,
+      flavorDeck: [...next.flavorDeck, ...eventFavorReturns],
+    };
+  }
+  return next;
+}
+
+/** Sententia: market cards flipped face-down are restored when the flipper's next turn begins. */
+function restoreFlippedMarketIfOwnersTurn(state: GameState): GameState {
+  const ids = state.flippedMarketCardIds ?? [];
+  if (ids.length === 0 || state.flippedMarketByPlayerId !== state.turnPlayerId) {
+    return state;
+  }
+  const idSet = new Set(ids);
+  const restore = (card: CardInstance): CardInstance =>
+    idSet.has(card.instanceId) ? { ...card, faceUp: true } : card;
+  return {
+    ...state,
+    galleryCards: state.galleryCards.map(restore),
+    epicCards: state.epicCards.map(restore),
+    recruitCard: state.recruitCard ? restore(state.recruitCard) : state.recruitCard,
+    flippedMarketCardIds: [],
+    flippedMarketByPlayerId: null,
+  };
 }
 
 function clearExpiredImperialTax(player: PlayerState): PlayerState {
@@ -5088,22 +6893,28 @@ function endTurnAndPass(
 ): GameState {
   let next: GameState = { ...state, phase: 'CLEANUP' };
 
-  if (
-    player &&
-    next.purchaseCostCapActiveForPlayerId === player.id
-  ) {
-    next = {
-      ...next,
-      purchaseCostCap: null,
-      purchaseCostCapActiveForPlayerId: null,
-    };
-  }
-
   if (player) {
-    const cleaned = cleanupTurnPlayer(player);
+    // Bribery: cards borrowed from an opponent's hand are destroyed (removed from
+    // the game to the destroyed pile) at end of turn, not discarded or returned.
+    let activePlayer = player;
+    const borrowed = activePlayer.playArea.filter((c) => c.borrowedFromPlayerId);
+    if (borrowed.length > 0) {
+      activePlayer = {
+        ...activePlayer,
+        playArea: activePlayer.playArea.filter((c) => !c.borrowedFromPlayerId),
+      };
+      next = addToDestroyedPile(
+        next,
+        borrowed.map((c) => ({ ...c, borrowedFromPlayerId: undefined }))
+      );
+    }
+
+    // Emperor's Seal and similar items: extra card(s) at end of turn.
+    const itemExtraDraw = sumItemExtraDrawTurnEnd(activePlayer.itemsInPlay);
+    const cleaned = cleanupTurnPlayer(activePlayer);
     const drawCount = Math.max(
       0,
-      STARTING_HAND_SIZE - (cleaned.player.drawPenalty ?? 0)
+      STARTING_HAND_SIZE + itemExtraDraw - (cleaned.player.drawPenalty ?? 0)
     );
     const drawn = drawCardsIntoState(next, cleaned.player, drawCount);
     let withDraw = clearExpiredImperialTax(drawn.player);
@@ -5245,43 +7056,15 @@ function buildAIPlayCardAction(
 }
 
 export function getNextAIAction(state: GameState): GameAction | null {
+  state = sanitizeInteractiveState(rehydrateGameState(state));
+
   if (
     (state.pendingEventOptionalDiscards?.pendingPlayerIds.length ?? 0) > 0
   ) {
-    const playerId = state.pendingEventOptionalDiscards!.pendingPlayerIds[0];
-    const player = state.players.find((p) => p.id === playerId);
-    if (player?.isAI && player.hand.length > 0) {
-      const card = player.hand.reduce((worst, c) =>
-        (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
-      );
-      return {
-        type: 'EVENT_DISCARD_CARD',
-        playerId: player.id,
-        payload: { cardInstanceId: card.instanceId },
-        timestamp: Date.now(),
-      };
-    }
-    if (player?.isAI) {
-      return {
-        type: 'EVENT_SKIP_GALLERY_CHOICE',
-        playerId: player.id,
-        timestamp: Date.now(),
-      };
-    }
-    return null;
-  }
-
-  const pendingHandChoiceIds = getPendingEventHandChoicePlayerIds(state);
-  if (pendingHandChoiceIds.length > 0) {
-    const playerId = pendingHandChoiceIds[0];
-    const player = state.players.find((p) => p.id === playerId);
-    const choice = getPendingEventHandChoiceForPlayer(state, playerId);
-    if (player?.isAI && choice) {
-      const candidates = player.hand.filter((card) =>
-        handCardValidForEventChoice(card, choice.kind)
-      );
-      if (candidates.length > 0) {
-        const card = candidates.reduce((worst, c) =>
+    for (const playerId of state.pendingEventOptionalDiscards!.pendingPlayerIds) {
+      const player = state.players.find((p) => p.id === playerId);
+      if (player?.isAI && player.hand.length > 0) {
+        const card = player.hand.reduce((worst, c) =>
           (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
         );
         return {
@@ -5291,24 +7074,57 @@ export function getNextAIAction(state: GameState): GameAction | null {
           timestamp: Date.now(),
         };
       }
+      if (player?.isAI) {
+        return {
+          type: 'EVENT_SKIP_GALLERY_CHOICE',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
+    }
+    return null;
+  }
+
+  const pendingHandChoiceIds = getPendingEventHandChoicePlayerIds(state);
+  if (pendingHandChoiceIds.length > 0) {
+    for (const playerId of pendingHandChoiceIds) {
+      const player = state.players.find((p) => p.id === playerId);
+      const choice = getPendingEventHandChoiceForPlayer(state, playerId);
+      if (player?.isAI && choice) {
+        const candidates = player.hand.filter((card) =>
+          handCardValidForEventChoice(card, choice.kind)
+        );
+        if (candidates.length > 0) {
+          const card = candidates.reduce((worst, c) =>
+            (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
+          );
+          return {
+            type: 'EVENT_DISCARD_CARD',
+            playerId: player.id,
+            payload: { cardInstanceId: card.instanceId },
+            timestamp: Date.now(),
+          };
+        }
+      }
     }
     return null;
   }
 
   const pendingItemChoiceIds = getPendingEventItemChoicePlayerIds(state);
   if (pendingItemChoiceIds.length > 0) {
-    const playerId = pendingItemChoiceIds[0];
-    const player = state.players.find((p) => p.id === playerId);
-    if (player?.isAI && player.itemsInPlay.length > 0) {
-      const item = player.itemsInPlay.reduce((worst, c) =>
-        (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
-      );
-      return {
-        type: 'EVENT_LOSE_ITEM',
-        playerId: player.id,
-        payload: { cardInstanceId: item.instanceId },
-        timestamp: Date.now(),
-      };
+    for (const playerId of pendingItemChoiceIds) {
+      const player = state.players.find((p) => p.id === playerId);
+      if (player?.isAI && player.itemsInPlay.length > 0) {
+        const item = player.itemsInPlay.reduce((worst, c) =>
+          (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
+        );
+        return {
+          type: 'EVENT_LOSE_ITEM',
+          playerId: player.id,
+          payload: { cardInstanceId: item.instanceId },
+          timestamp: Date.now(),
+        };
+      }
     }
     return null;
   }
@@ -5438,16 +7254,25 @@ export function getNextAIAction(state: GameState): GameAction | null {
   if (state.pendingEpicDestroyPick) {
     const pick = state.pendingEpicDestroyPick;
     const player = state.players.find((p) => p.id === pick.playerId);
-    if (player?.isAI && state.epicCards.length > 0) {
-      const card = state.epicCards.reduce((worst, c) =>
-        (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
-      );
-      return {
-        type: 'EPIC_DESTROY_PICK',
-        playerId: player.id,
-        payload: { cardInstanceId: card.instanceId },
-        timestamp: Date.now(),
-      };
+    if (player?.isAI) {
+      if (state.epicCards.length > 0) {
+        const card = state.epicCards.reduce((worst, c) =>
+          (c.definition?.cost ?? 0) < (worst.definition?.cost ?? 0) ? c : worst
+        );
+        return {
+          type: 'EPIC_DESTROY_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: card.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      if (state.turnPlayerId === player.id) {
+        return {
+          type: 'END_PHASE',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
     }
     return null;
   }
@@ -5654,11 +7479,22 @@ export function getNextAIAction(state: GameState): GameAction | null {
     const pick = state.pendingCopyCardPick;
     const player = state.players.find((p) => p.id === pick.playerId);
     if (player?.isAI) {
-      const eligible = listEligibleMarketCopyCards(
-        state,
-        { source: 'market', maxCost: pick.maxCost },
-        (id) => !isGalleryCardPurchased(state, id)
-      );
+      const eligible =
+        pick.copySource === 'in_play'
+          ? listEligibleInPlayCopyCards(
+              state,
+              { source: 'in_play', maxCost: pick.maxCost },
+              pick.sourceCardInstanceId
+            )
+          : listEligibleMarketCopyCards(
+              state,
+              {
+                source:
+                  pick.copySource === 'market_or_epic' ? 'market_or_epic' : 'market',
+                maxCost: pick.maxCost,
+              },
+              (id) => !isGalleryCardPurchased(state, id)
+            );
       if (eligible.length > 0) {
         const card = eligible.reduce((best, c) =>
           (c.definition?.cost ?? 0) > (best.definition?.cost ?? 0) ? c : best
@@ -5677,6 +7513,108 @@ export function getNextAIAction(state: GameState): GameAction | null {
           timestamp: Date.now(),
         };
       }
+    }
+    return null;
+  }
+
+  if (state.pendingReturnCardToHandPick) {
+    const pick = state.pendingReturnCardToHandPick;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      const eligible = player.discard.filter(
+        (c) => !returnCardExcluded(c, pick.excludeType)
+      );
+      if (eligible.length > 0) {
+        const best = eligible.reduce((hi, c) =>
+          (c.definition?.cost ?? 0) > (hi.definition?.cost ?? 0) ? c : hi
+        );
+        return {
+          type: 'RETURN_CARD_TO_HAND_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: best.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      return {
+        type: 'RETURN_CARD_TO_HAND_SKIP',
+        playerId: player.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
+  if (state.pendingBriberyPick) {
+    const pick = state.pendingBriberyPick;
+    const controller = state.players.find((p) => p.id === pick.playerId);
+    if (controller?.isAI) {
+      if (pick.phase === 'choose_opponent') {
+        // Target the opponent holding the most cards (best pickings).
+        const target = pick.opponentCandidateIds
+          .map((id) => state.players.find((p) => p.id === id))
+          .filter((p): p is PlayerState => !!p)
+          .reduce((hi, p) => (p.hand.length > hi.hand.length ? p : hi));
+        return {
+          type: 'BRIBERY_CHOOSE_OPPONENT',
+          playerId: controller.id,
+          payload: { targetPlayerId: target.id },
+          timestamp: Date.now(),
+        };
+      }
+      // AI always plays the revealed card.
+      return {
+        type: 'BRIBERY_PLAY_REVEALED',
+        playerId: controller.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
+  if (state.pendingRevealFavorsPick) {
+    const pick = state.pendingRevealFavorsPick;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      if (pick.revealed.length > 0) {
+        return {
+          type: 'REVEAL_FAVORS_PICK',
+          playerId: player.id,
+          payload: { cardInstanceIds: [pick.revealed[0].instanceId] },
+          timestamp: Date.now(),
+        };
+      }
+      if (state.turnPlayerId === player.id) {
+        return {
+          type: 'END_PHASE',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
+    }
+    return null;
+  }
+
+  if (state.pendingFlipMarketPick) {
+    const pick = state.pendingFlipMarketPick;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      const targets = state.galleryCards.filter((c) => c.faceUp !== false);
+      if (targets.length > 0) {
+        const best = targets.reduce((hi, c) =>
+          (c.definition?.cost ?? 0) > (hi.definition?.cost ?? 0) ? c : hi
+        );
+        return {
+          type: 'FLIP_MARKET_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: best.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      return {
+        type: 'FLIP_MARKET_SKIP',
+        playerId: player.id,
+        timestamp: Date.now(),
+      };
     }
     return null;
   }
@@ -5710,6 +7648,53 @@ export function getNextAIAction(state: GameState): GameAction | null {
     return null;
   }
 
+  if (state.pendingCrowdFrenzyPick) {
+    const pick = state.pendingCrowdFrenzyPick;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      const current = getCurrentCrowdFrenzyReplacement(pick);
+      if (!current) return null;
+      const eligible = listCrowdFrenzyMarketCards(
+        state,
+        current.targetCost,
+        (s, id) => !isGalleryCardPurchased(s, id)
+      );
+      if (eligible.length > 0) {
+        const best = eligible.reduce((a, b) =>
+          (b.definition?.valor ?? 0) + (b.definition?.cost ?? 0) >
+          (a.definition?.valor ?? 0) + (a.definition?.cost ?? 0)
+            ? b
+            : a
+        );
+        return {
+          type: 'CROWD_FRENZY_GAIN_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: best.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      return {
+        type: 'CROWD_FRENZY_SKIP',
+        playerId: player.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
+  if (state.pendingItemDeckPeek) {
+    const pick = state.pendingItemDeckPeek;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      return {
+        type: pick.canDraw ? 'ITEM_PEEK_DRAW' : 'ITEM_PEEK_SKIP',
+        playerId: player.id,
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }
+
   if (state.pendingDeckLookPick) {
     const pick = state.pendingDeckLookPick;
     const player = state.players.find((p) => p.id === pick.playerId);
@@ -5733,6 +7718,14 @@ export function getNextAIAction(state: GameState): GameAction | null {
         };
       }
       const viewed = pick.viewedCards ?? [];
+      if (pick.phase === 'reorder' && viewed.length > 0) {
+        return {
+          type: 'DECK_LOOK_REORDER',
+          playerId: player.id,
+          payload: { cardInstanceIds: viewed.map((c) => c.instanceId) },
+          timestamp: Date.now(),
+        };
+      }
       if (viewed.length > 0) {
         const keep = viewed.reduce((best, c) =>
           (c.definition?.cost ?? 0) > (best.definition?.cost ?? 0) ? c : best
@@ -5741,6 +7734,53 @@ export function getNextAIAction(state: GameState): GameAction | null {
           type: 'DECK_LOOK_KEEP_TOP',
           playerId: player.id,
           payload: { cardInstanceId: keep.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      if (state.turnPlayerId === player.id) {
+        return {
+          type: 'END_PHASE',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
+    }
+    return null;
+  }
+
+  if (state.pendingPlaceCardOnDeckPick) {
+    const pick = state.pendingPlaceCardOnDeckPick;
+    const player = state.players.find((p) => p.id === pick.playerId);
+    if (player?.isAI) {
+      const eligible = listEligiblePlaceOnDeckCards(player, {
+        source: 'discard',
+        faction: pick.faction,
+        anyFaction: pick.anyFaction,
+        position: pick.position,
+        optional: pick.optional ?? false,
+      });
+      if (eligible.length > 0) {
+        const card = eligible.reduce((best, c) =>
+          (c.definition?.cost ?? 0) > (best.definition?.cost ?? 0) ? c : best
+        );
+        return {
+          type: 'PLACE_CARD_ON_DECK_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: card.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      if (pick.optional) {
+        return {
+          type: 'PLACE_CARD_ON_DECK_SKIP',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
+      if (state.turnPlayerId === player.id) {
+        return {
+          type: 'END_PHASE',
+          playerId: player.id,
           timestamp: Date.now(),
         };
       }
@@ -5912,14 +7952,23 @@ export function getNextAIAction(state: GameState): GameAction | null {
   if (state.pendingFavorReplayPick) {
     const pick = state.pendingFavorReplayPick;
     const player = state.players.find((p) => p.id === pick.playerId);
-    if (player?.isAI && (state.flavorDiscard?.length ?? 0) > 0) {
-      const card = state.flavorDiscard![0];
-      return {
-        type: 'FAVOR_REPLAY_PICK',
-        playerId: player.id,
-        payload: { cardInstanceId: card.instanceId },
-        timestamp: Date.now(),
-      };
+    if (player?.isAI) {
+      if ((state.flavorDiscard?.length ?? 0) > 0) {
+        const card = state.flavorDiscard![0];
+        return {
+          type: 'FAVOR_REPLAY_PICK',
+          playerId: player.id,
+          payload: { cardInstanceId: card.instanceId },
+          timestamp: Date.now(),
+        };
+      }
+      if (state.turnPlayerId === player.id) {
+        return {
+          type: 'END_PHASE',
+          playerId: player.id,
+          timestamp: Date.now(),
+        };
+      }
     }
     return null;
   }
@@ -6137,6 +8186,7 @@ export function applyActionWithPhaseRules(
   state: GameState,
   action: GameAction
 ): GameState {
-  const next = finishGameIfNeeded(processGameAction(state, action));
-  return resumeDeferredBandingBonus(next);
+  const prepared = sanitizeInteractiveState(state);
+  const next = finishGameIfNeeded(processGameAction(prepared, action));
+  return finalizeInteractiveState(next);
 }

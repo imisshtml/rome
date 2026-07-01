@@ -12,6 +12,8 @@ import { getPlayerTotalVp } from '../game/postGame';
 import { getValorInPlay } from '../utils/combatStatsUtils';
 import { costIcon, valorIcon, victoryIcon, cardBack } from '../assets/images';
 import { CARD_PORTRAIT_RATIO } from '../utils/cardDisplayUtils';
+import Card from './Card';
+import TurnTimerRing from './TurnTimerRing';
 
 interface OpponentStripProps {
   opponents: PlayerState[];
@@ -20,6 +22,9 @@ interface OpponentStripProps {
   turnValor: number;
   barHeight: number;
   onPressOpponent: (player: PlayerState) => void;
+  /** Wall-clock ms the active turn started; enables the countdown ring. */
+  turnStartMs?: number;
+  turnDurationMs?: number;
 }
 
 function playAreaValor(player: PlayerState, turnValorBonus = 0): number {
@@ -60,17 +65,37 @@ const OpponentChip: React.FC<{
   turnCoins: number;
   turnValor: number;
   barHeight: number;
+  turnStartMs?: number;
+  turnDurationMs?: number;
   onPress: () => void;
-}> = ({ opponent, isTurn, turnCoins, turnValor, barHeight, onPress }) => {
+}> = ({
+  opponent,
+  isTurn,
+  turnCoins,
+  turnValor,
+  barHeight,
+  turnStartMs,
+  turnDurationMs,
+  onPress,
+}) => {
   const { iconSize, handW, handH } = layoutMetrics(barHeight);
   const valorTotal = isTurn ? playAreaValor(opponent, turnValor) : playAreaValor(opponent);
   const coinsTotal = isTurn ? turnCoins : 0;
+  const showTimer = isTurn && !!turnStartMs && !!turnDurationMs;
 
   return (
     <Pressable
       onPress={onPress}
       style={[styles.chip, isTurn && styles.chipActive]}
     >
+      {showTimer ? (
+        <TurnTimerRing
+          key={turnStartMs}
+          startMs={turnStartMs!}
+          durationMs={turnDurationMs!}
+          size={Math.max(20, iconSize + 2)}
+        />
+      ) : null}
       <View style={styles.chipBody}>
         <Text style={styles.name} numberOfLines={1}>
           {opponent.name}
@@ -97,6 +122,24 @@ const OpponentChip: React.FC<{
               </Text>
             </View>
           </View>
+
+          {opponent.itemsInPlay.length > 0 ? (
+            <View style={styles.itemsRow}>
+              {opponent.itemsInPlay.map((item) => (
+                <Card
+                  key={item.instanceId}
+                  card={{ ...item, faceUp: true }}
+                  width={handW}
+                  height={handH}
+                  sizeMode="full"
+                  draggable={false}
+                  rotated={!!item.tapped}
+                  hoverPreview
+                  hideEffectText
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -110,6 +153,8 @@ export const OpponentStrip: React.FC<OpponentStripProps> = ({
   turnValor,
   barHeight,
   onPressOpponent,
+  turnStartMs,
+  turnDurationMs,
 }) => {
   return (
     <View style={[styles.row, { height: barHeight }]}>
@@ -121,6 +166,8 @@ export const OpponentStrip: React.FC<OpponentStripProps> = ({
           turnCoins={turnCoins}
           turnValor={turnValor}
           barHeight={barHeight}
+          turnStartMs={turnStartMs}
+          turnDurationMs={turnDurationMs}
           onPress={() => onPressOpponent(opp)}
         />
       ))}
@@ -183,6 +230,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     flexShrink: 0,
+  },
+  itemsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
+    marginLeft: 2,
   },
   statBadgeImage: {
     width: '100%',

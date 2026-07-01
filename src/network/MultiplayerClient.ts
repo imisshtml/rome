@@ -69,7 +69,7 @@ export class MultiplayerGameClient {
   }
 
   private pushState(state: GameState) {
-    this.onStateChange?.(state);
+    this.onStateChange?.(rehydrateGameState(state));
     if (state.status !== 'active') return;
 
     if (state.phase === 'PREGAME') {
@@ -210,7 +210,13 @@ export class MultiplayerGameClient {
     if (last?.type === 'FAVOR_DESTROY_CARD') return 800;
     if (last?.type === 'DISMISS_ARENA_RESULT') return 800;
     if (state.pendingGalleryEvent) return 5000;
-    if (state.pendingFavorReveal) return 5000;
+    if (state.pendingFavorReveal) {
+      const beneficiary = state.players.find(
+        (p) => p.id === state.pendingFavorReveal?.playerId
+      );
+      if (beneficiary?.isAI) return 400;
+      return 5000;
+    }
     if (last?.type === 'DISMISS_ARENA_WAGER_RESULT') return 800;
     if (state.lastArenaWagerResult) return 5000;
     if ((state.pendingEventHandChoices?.length ?? 0) > 0) return 800;
@@ -234,16 +240,17 @@ export class MultiplayerGameClient {
       this.aiTimer = null;
     }
 
-    if (getNextAIAction(state) === null) return;
+    const latest = rehydrateGameState(state);
+    if (getNextAIAction(latest) === null) return;
 
-    const delayMs = this.getAIDelayMs(state);
+    const delayMs = this.getAIDelayMs(latest);
 
     this.aiTimer = setTimeout(async () => {
       try {
-        const latest = readGameStateSnapshot();
-        const action = getNextAIAction(latest);
+        const snapshot = rehydrateGameState(readGameStateSnapshot());
+        const action = getNextAIAction(snapshot);
         if (!action) return;
-        await this.dispatchAction(latest, action);
+        await this.dispatchAction(snapshot, action);
       } catch (err) {
         console.warn('[AI] action failed', err);
       }
